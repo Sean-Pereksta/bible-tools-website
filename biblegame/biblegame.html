@@ -1,1 +1,259 @@
-<!-- Paste your full working Bible Game HTML code here -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bible Verse Guess Game</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
+      authDomain: "bible-game-246c0.firebaseapp.com",
+      projectId: "bible-game-246c0",
+      storageBucket: "bible-game-246c0.appspot.com",
+      messagingSenderId: "959619818996",
+      appId: "1:959619818996:web:5a9fbf492e23c765e445a1"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.firebaseDB = db;
+    window.firebaseFns = { collection, addDoc, getDocs, query, orderBy, limit };
+
+    window.addEventListener("DOMContentLoaded", () => {
+      setTimeout(loadLeaderboard, 500);
+    });
+
+    let bibleData = [];
+    let uniqueBooks = [];
+    let currentVerse = null;
+    let score = 0;
+    let timer;
+    let timeLeft = 60;
+    let lives = 5;
+    let round = 0;
+
+    const csvURL = "https://raw.githubusercontent.com/Sean-Pereksta/Bible-Data/main/web.csv";
+
+    document.getElementById("startBtn").addEventListener("click", () => {
+      loadBibleData();
+      document.getElementById("startContainer").style.display = "none";
+    });
+
+    async function loadBibleData() {
+      const response = await fetch(csvURL);
+      const csvText = await response.text();
+      const results = Papa.parse(csvText, { header: true });
+      bibleData = results.data.filter(v => v.Text && v.BookName && v.Chapter && v.Verse);
+      extractUniqueBooks();
+      document.getElementById("game").style.display = "block";
+      nextRound();
+    }
+
+    function extractUniqueBooks() {
+      uniqueBooks = [];
+      bibleData.forEach(v => {
+        if (!uniqueBooks.includes(v.BookName)) {
+          uniqueBooks.push(v.BookName);
+        }
+      });
+      const bookSelect = document.getElementById("bookSelect");
+      bookSelect.innerHTML = "";
+      uniqueBooks.forEach(book => {
+        const option = document.createElement("option");
+        option.value = book;
+        option.text = book;
+        bookSelect.appendChild(option);
+      });
+    }
+
+    function nextRound() {
+      clearInterval(timer);
+      round++;
+      updateDisplay();
+      pickRandomVerse();
+      clearInputs();
+      startTimer();
+    }
+
+    function updateDisplay() {
+      document.getElementById("score").innerText = score;
+      document.getElementById("lives").innerText = "❤️".repeat(lives);
+      document.getElementById("round").innerText = round;
+    }
+
+    function pickRandomVerse() {
+      const randomIndex = Math.floor(Math.random() * bibleData.length);
+      currentVerse = bibleData[randomIndex];
+      document.getElementById("verseText").innerText = currentVerse.Text;
+    }
+
+    function startTimer() {
+      timeLeft = 60;
+      document.getElementById("timer").innerText = timeLeft;
+      timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById("timer").innerText = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          loseLife(`⏰ Time's up! Answer: ${currentVerse.BookName} ${currentVerse.Chapter}:${currentVerse.Verse}`);
+        }
+      }, 1000);
+    }
+
+    window.submitAnswer = function () {
+      clearInterval(timer);
+      const book = document.getElementById("bookSelect").value;
+      const chapter = document.getElementById("chapterInput").value.trim();
+      const verse = document.getElementById("verseInput").value.trim();
+      let points = 0;
+      if (book === currentVerse.BookName) {
+        points += 1;
+        if (chapter === currentVerse.Chapter) points += 3;
+        if (verse === currentVerse.Verse) points += 5;
+        score += points;
+        showResult(`✅ Correct! ${currentVerse.BookName} ${currentVerse.Chapter}:${currentVerse.Verse} (+${points} pts)`, true);
+      } else {
+        loseLife(`❌ Wrong! Answer: ${currentVerse.BookName} ${currentVerse.Chapter}:${currentVerse.Verse}`);
+      }
+    };
+
+    function loseLife(message) {
+      lives--;
+      updateDisplay();
+      showResult(message, false);
+      if (lives <= 0) {
+        document.getElementById("result").innerText = `💀 Game Over! Final Score: ${score}`;
+        document.getElementById("restartBtn").style.display = "inline-block";
+        setTimeout(() => saveScorePrompt(score, round), 500);
+      }
+    }
+
+    function showResult(message, correct) {
+      const result = document.getElementById("result");
+      result.innerText = message;
+      setTimeout(() => {
+        if (lives > 0) {
+          result.innerText = "";
+          nextRound();
+        }
+      }, 2500);
+    }
+
+    function clearInputs() {
+      document.getElementById("chapterInput").value = "";
+      document.getElementById("verseInput").value = "";
+    }
+
+    window.restartGame = function () {
+      score = 0;
+      lives = 5;
+      round = 0;
+      document.getElementById("restartBtn").style.display = "none";
+      updateDisplay();
+      nextRound();
+    };
+
+    async function saveScorePrompt(score, rounds) {
+      const name = prompt("🎯 Enter your name for the leaderboard:");
+      if (!name) return;
+      const db = window.firebaseDB;
+      const { collection, addDoc } = window.firebaseFns;
+      try {
+        await addDoc(collection(db, "highscores"), {
+          name: name,
+          score: score,
+          rounds: rounds,
+          timestamp: new Date().toISOString()
+        });
+        loadLeaderboard();
+      } catch (e) {
+        console.error("Error saving score: ", e);
+      }
+    }
+
+    async function loadLeaderboard() {
+      const db = window.firebaseDB;
+      const { collection, getDocs, query, orderBy, limit } = window.firebaseFns;
+      const q = query(collection(db, "highscores"), orderBy("score", "desc"), limit(100));
+      const querySnapshot = await getDocs(q);
+      const leaderboard = document.getElementById("leaderboardList");
+      leaderboard.innerHTML = "";
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        leaderboard.innerHTML += `<li>${data.name}: ${data.score} pts (Rounds: ${data.rounds})</li>`;
+      });
+    }
+  </script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f5f5f5;
+      color: #333;
+      padding: 20px;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-around;
+      margin: 10px 0;
+    }
+    #verseText {
+      font-size: 1.2em;
+      margin: 20px 0;
+    }
+    input, select, button {
+      margin: 5px;
+      padding: 10px;
+      font-size: 1em;
+    }
+    #restartBtn {
+      margin-top: 15px;
+    }
+    #leaderboard {
+      margin-top: 30px;
+      text-align: left;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <h1>Bible Verse Guess Game</h1>
+  <div id="startContainer">
+    <button id="startBtn">▶️ Start Game (WEB)</button>
+  </div>
+
+  <div id="game" style="display:none;">
+    <div class="top-bar">
+      <div>❤️ Lives: <span id="lives">5</span></div>
+      <div>⭐ Score: <span id="score">0</span></div>
+      <div>🔢 Round: <span id="round">0</span></div>
+    </div>
+
+    <p><strong>Guess the Reference:</strong></p>
+    <p id="verseText"></p>
+
+    <div>
+      <select id="bookSelect"></select>
+      <input id="chapterInput" placeholder="Chapter" />
+      <input id="verseInput" placeholder="Verse" />
+      <button onclick="submitAnswer()">Submit</button>
+    </div>
+
+    <p>⏰ Time left: <span id="timer">60</span>s</p>
+    <p id="result"></p>
+    <button id="restartBtn" onclick="restartGame()" style="display:none;">🔄 Restart Game</button>
+
+    <div id="leaderboard">
+      <h3>🏆 Leaderboard</h3>
+      <ol id="leaderboardList"></ol>
+    </div>
+  </div>
+</body>
+</html>
+
+
+
