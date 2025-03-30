@@ -12,7 +12,6 @@
     .player-name { font-weight: bold; }
     .player-score { font-size: 1.5em; margin-top: 5px; }
     #result { margin-top: 10px; font-weight: bold; }
-    #nextBtn { display: none; margin-top: 20px; }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -99,8 +98,6 @@
 
       startTime = Date.now();
       syncTimer();
-
-      if (isHost) document.getElementById("nextBtn").style.display = "block";
     }
 
     function syncTimer() {
@@ -112,7 +109,9 @@
         document.getElementById("timer").innerText = `⏰ ${timeLeft}s`;
         if (timeLeft <= 0) {
           clearInterval(timer);
-          evaluateAnswer();
+          evaluateAnswer().then(() => {
+            if (isHost) advanceRound();
+          });
         }
       }, 1000);
     }
@@ -147,10 +146,9 @@
       document.getElementById("result").innerText = message;
     }
 
-    async function nextRound() {
+    async function advanceRound() {
       const gameRef = doc(db, "games", gameId);
       await updateDoc(gameRef, { currentRound: currentRound + 1 });
-      document.getElementById("nextBtn").style.display = "none";
     }
 
     async function endGame() {
@@ -180,8 +178,6 @@
         scoreboard.appendChild(box);
       }
     }
-
-    window.nextRound = nextRound;
   </script>
 </head>
 <body>
@@ -196,7 +192,6 @@
     <input type="text" id="chapter" placeholder="Chapter" />
     <input type="text" id="verse" placeholder="Verse" />
     <p id="result"></p>
-    <button id="nextBtn" onclick="nextRound()">➡️ Next Round (Host Only)</button>
   </div>
 </body>
 </html>
