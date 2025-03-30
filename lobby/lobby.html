@@ -86,7 +86,6 @@
     }
 
     function startHostTimer() {
-      const gameRef = doc(db, "games", gameId);
       let timeLeft = 180;
       document.getElementById("timer").innerText = `⏰ Time Left: ${timeLeft}s`;
       timerInterval = setInterval(async () => {
@@ -142,12 +141,18 @@
     async function fetchRandomVerses(count) {
       const response = await fetch("https://raw.githubusercontent.com/Sean-Pereksta/Bible-Data/main/web.csv");
       const csvText = await response.text();
-      const rows = Papa.parse(csvText, { header: true }).data;
-      const allVerses = rows.map(r => ({ BookName: r.Bookname, Chapter: r.Chapter, Verse: r.Verse, Text: r.text })).filter(v => v.Text);
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+      const allVerses = parsed.map(r => ({
+        BookName: r.Bookname.trim(),
+        Chapter: r.Chapter.trim(),
+        Verse: r.Verse.trim(),
+        Text: (r.text || r.Text || "").trim().replace(/\r|\n/g, " ")
+      })).filter(v => v.Text && v.BookName && v.Chapter && v.Verse);
       const selected = [];
       while (selected.length < count) {
         const random = allVerses[Math.floor(Math.random() * allVerses.length)];
-        if (!selected.find(v => v.Text === random.Text)) selected.push(random);
+        const exists = selected.find(v => v.BookName === random.BookName && v.Chapter === random.Chapter && v.Verse === random.Verse);
+        if (!exists) selected.push(random);
       }
       return selected;
     }
