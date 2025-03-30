@@ -46,7 +46,6 @@
         const data = gameSnap.data();
         verseList = data.verses;
         listenForScores();
-        startGame();
       }
     }
 
@@ -56,7 +55,7 @@
         if (docSnap.exists()) {
           const data = docSnap.data();
           updateScoreboard(data.scores || {});
-          checkEndCondition(data.playerStatus || {});
+          if (data.playerStatus && Object.keys(data.playerStatus).length > 0) checkEndCondition(data.playerStatus);
         }
       });
     }
@@ -128,6 +127,7 @@
     }
 
     function checkEndCondition(playerStatus) {
+      if (Object.keys(playerStatus).length === 0) return;
       const allDone = Object.values(playerStatus).every(status => status === "done");
       if (allDone) declareWinner();
     }
@@ -157,6 +157,11 @@
         scoreboard.appendChild(box);
       }
     }
+
+    // Start game once data is loaded
+    setTimeout(() => {
+      if (verseList.length === 10) startGame();
+    }, 500);
   </script>
 </head>
 <body>
@@ -174,5 +179,6 @@
   </div>
 </body>
 </html>
+
 
 
