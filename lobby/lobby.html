@@ -7,7 +7,7 @@
     body { font-family: Arial, sans-serif; text-align: center; background: #f0f0f0; margin: 0; padding: 20px; }
     .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
     input, button { margin: 10px; padding: 10px; font-size: 1em; }
-    #players, #timer { margin-top: 20px; }
+    #players { margin-top: 20px; }
     #host, #joined { margin-top: 10px; }
     #startBtn { display: none; margin-top: 20px; }
     #loadingBar { display: none; margin-top: 20px; width: 100%; height: 20px; background: #ddd; border-radius: 10px; overflow: hidden; }
@@ -15,7 +15,7 @@
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, doc, getDoc, updateDoc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -32,7 +32,6 @@
     let gameId = "";
     let username = "";
     let isHost = false;
-    let timerInterval;
     let gameStarted = false;
 
     async function login() {
@@ -72,7 +71,6 @@
         gameId = newGame.id;
         isHost = true;
         document.getElementById("startBtn").style.display = "block";
-        startHostTimer();
       } else {
         snap.forEach(async g => {
           gameId = g.id;
@@ -86,19 +84,6 @@
         });
       }
       listenForPlayers();
-    }
-
-    function startHostTimer() {
-      let timeLeft = 180;
-      document.getElementById("timer").innerText = `⏰ Time Left: ${timeLeft}s`;
-      timerInterval = setInterval(async () => {
-        timeLeft--;
-        document.getElementById("timer").innerText = `⏰ Time Left: ${timeLeft}s`;
-        if (timeLeft <= 0) {
-          clearInterval(timerInterval);
-          if (!gameStarted) startGame();
-        }
-      }, 1000);
     }
 
     function listenForPlayers() {
@@ -116,11 +101,6 @@
             document.getElementById("startBtn").style.display = "block";
           }
 
-          if (data.players.length >= 4 && data.status === "waiting") {
-            clearInterval(timerInterval);
-            if (!gameStarted) startGame();
-          }
-
           if (data.status === "playing") {
             window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
           }
@@ -131,9 +111,8 @@
     async function startGame() {
       if (gameStarted) return;
       gameStarted = true;
-      clearInterval(timerInterval);
       document.getElementById("startBtn").disabled = true;
-      document.getElementById("startBtn").innerText = "Starting Game...";
+      document.getElementById("startBtn").innerText = "Loading Verses...";
       document.getElementById("loadingBar").style.display = "block";
 
       const verses = await fetchRandomVerses(10);
@@ -156,7 +135,7 @@
           clearInterval(interval);
           window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
         }
-      }, 200);
+      }, 150);
     }
 
     async function fetchRandomVerses(count) {
@@ -192,7 +171,6 @@
     <p id="players">Players: </p>
     <p id="host"></p>
     <p id="joined"></p>
-    <p id="timer"></p>
     <button id="startBtn" onclick="startGame()">🚀 Start Game (Host Only)</button>
     <div id="loadingBar"><div id="loadingProgress"></div></div>
   </div>
