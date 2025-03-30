@@ -8,10 +8,17 @@
     .container { max-width: 700px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
     input, select { margin: 10px; padding: 10px; font-size: 1em; }
     #players, #round, #timer, #scoreboard, #completed { margin-top: 20px; }
-    .score-box { display: inline-block; margin: 5px; padding: 10px; background: #eee; border-radius: 8px; text-align: center; width: 120px; }
+    #scoreboard { display: flex; flex-wrap: wrap; justify-content: center; }
+    .score-box { margin: 5px; padding: 10px; border-radius: 8px; text-align: center; width: 120px; color: white; }
+    .bronze { background: #cd7f32; }
+    .silver { background: #c0c0c0; color: black; }
+    .gold { background: #ffd700; color: black; }
+    .blue { background: #007bff; }
+    .red { background: #dc3545; }
     .player-name { font-weight: bold; }
     .player-score { font-size: 1.5em; margin-top: 5px; }
     #result { margin-top: 10px; font-weight: bold; }
+    #winner { margin-top: 20px; font-size: 1.3em; color: green; }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -186,14 +193,33 @@
         }
       }
       document.getElementById("verseText").innerText = `🎉 Winner: ${winner} (${highScore} pts)`;
+      document.getElementById("winner").innerText = `🏆 ${winner} wins the game!`;
+
+      const userRef = doc(db, "users", winner);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.exists() ? userSnap.data() : {};
+      const currentWins = userData.wins || 0;
+      await updateDoc(userRef, {
+        wins: currentWins + 1
+      });
     }
 
-    function updateScoreboard(scores) {
+    async function updateScoreboard(scores) {
       const scoreboard = document.getElementById("scoreboard");
       scoreboard.innerHTML = "";
       for (const [player, score] of Object.entries(scores)) {
+        const userRef = doc(db, "users", player);
+        const userSnap = await getDoc(userRef);
+        const userData = userSnap.exists() ? userSnap.data() : {};
+        const wins = userData.wins || 0;
+        let colorClass = "bronze";
+        if (wins >= 5 && wins < 10) colorClass = "silver";
+        else if (wins >= 10 && wins < 15) colorClass = "gold";
+        else if (wins >= 15 && wins < 25) colorClass = "blue";
+        else if (wins >= 25) colorClass = "red";
+
         const box = document.createElement("div");
-        box.className = "score-box";
+        box.className = `score-box ${colorClass}`;
         box.innerHTML = `<div class="player-name">${player}</div><div class="player-score">${score}</div>`;
         scoreboard.appendChild(box);
       }
@@ -219,8 +245,8 @@
     <input type="text" id="chapter" placeholder="Chapter" />
     <input type="text" id="verse" placeholder="Verse" />
     <p id="result"></p>
+    <p id="winner"></p>
   </div>
 </body>
 </html>
-
 
