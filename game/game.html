@@ -8,6 +8,8 @@
     .container { max-width: 700px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
     input, button { margin: 10px; padding: 10px; font-size: 1em; }
     #players, #round, #timer, #scoreboard { margin-top: 20px; }
+    .score-box { display: inline-block; margin: 5px; padding: 10px; background: #eee; border-radius: 8px; }
+    #result { margin-top: 10px; font-weight: bold; }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -31,6 +33,7 @@
     let timeLeft = 30;
     let timer;
     let verseData = [];
+    let currentVerse = null;
 
     window.addEventListener('DOMContentLoaded', () => {
       fetchVerseData();
@@ -49,6 +52,7 @@
       onSnapshot(gameRef, (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
+          updateScoreboard(data.scores || {});
           document.getElementById("players").innerText = `Players: ${data.players.join(", ")}`;
           if (data.status === "playing" && round === 1) startRound();
         }
@@ -62,42 +66,61 @@
       }
       clearInterval(timer);
       document.getElementById("round").innerText = `Round: ${round}/10`;
-      const verse = verseData[Math.floor(Math.random() * verseData.length)];
-      document.getElementById("verseText").innerText = verse.Text;
+      currentVerse = verseData[Math.floor(Math.random() * verseData.length)];
+      document.getElementById("verseText").innerText = currentVerse.Text;
+      document.getElementById("result").innerText = "";
+
       timeLeft = 30;
       document.getElementById("timer").innerText = `⏰ ${timeLeft}s`;
+
       timer = setInterval(() => {
         timeLeft--;
         document.getElementById("timer").innerText = `⏰ ${timeLeft}s`;
         if (timeLeft <= 0) {
           clearInterval(timer);
-          submitAnswer("", "", "", verse);
+          evaluateAnswer();
         }
       }, 1000);
+
       document.getElementById("submitBtn").onclick = () => {
-        const book = document.getElementById("book").value.trim();
-        const chapter = document.getElementById("chapter").value.trim();
-        const verseNum = document.getElementById("verse").value.trim();
-        submitAnswer(book, chapter, verseNum, verse);
+        evaluateAnswer();
       };
     }
 
-    async function submitAnswer(book, chapter, verseNum, correctVerse) {
+    async function evaluateAnswer() {
       clearInterval(timer);
+      const book = document.getElementById("book").value.trim();
+      const chapter = document.getElementById("chapter").value.trim();
+      const verseNum = document.getElementById("verse").value.trim();
+
       let points = 0;
-      if (book === correctVerse.BookName) points += 1;
-      if (chapter === correctVerse.Chapter) points += 3;
-      if (verseNum === correctVerse.Verse) points += 5;
+      let message = "";
+
+      if (book === currentVerse.BookName) points += 1;
+      if (chapter === currentVerse.Chapter) points += 3;
+      if (verseNum === currentVerse.Verse) points += 5;
+
+      if (points > 0) {
+        message = `✅ Correct! +${points} pts`;
+      } else {
+        message = `❌ Incorrect. Answer: ${currentVerse.BookName} ${currentVerse.Chapter}:${currentVerse.Verse}`;
+      }
 
       const gameRef = doc(db, "games", gameId);
       const gameSnap = await getDoc(gameRef);
       const data = gameSnap.data();
       const currentScore = data.scores?.[username] || 0;
+
       await updateDoc(gameRef, {
         [`scores.${username}`]: currentScore + points
       });
-      round++;
-      startRound();
+
+      document.getElementById("result").innerText = message;
+
+      setTimeout(() => {
+        round++;
+        startRound();
+      }, 3000);
     }
 
     async function endGame() {
@@ -115,11 +138,23 @@
       document.getElementById("verseText").innerText = `🎉 Game Over! Winner: ${winner} (${highScore} pts)`;
       document.getElementById("submitBtn").style.display = "none";
     }
+
+    function updateScoreboard(scores) {
+      const scoreboard = document.getElementById("scoreboard");
+      scoreboard.innerHTML = "";
+      for (const [player, score] of Object.entries(scores)) {
+        const box = document.createElement("div");
+        box.className = "score-box";
+        box.innerText = `${player}: ${score}`;
+        scoreboard.appendChild(box);
+      }
+    }
   </script>
 </head>
 <body>
   <div class="container">
     <h1>📖 Bible Multiplayer Game</h1>
+    <div id="scoreboard"></div>
     <p id="players">Players: </p>
     <p id="round">Round: </p>
     <p id="timer">⏰ 30s</p>
@@ -128,6 +163,7 @@
     <input type="text" id="chapter" placeholder="Chapter" />
     <input type="text" id="verse" placeholder="Verse" />
     <button id="submitBtn">Submit</button>
+    <p id="result"></p>
   </div>
 </body>
 </html>
