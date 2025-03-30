@@ -105,6 +105,11 @@
           const joinedPlayers = data.players.filter(p => p !== data.host);
           document.getElementById("joined").innerText = `🙋‍♂️ Joined: ${joinedPlayers.join(", ")}`;
 
+          if (data.host === username) {
+            isHost = true;
+            document.getElementById("startBtn").style.display = "block";
+          }
+
           if (data.players.length >= 4 && data.status === "waiting") {
             updateDoc(gameRef, { status: "playing", startTime: new Date().toISOString() });
           }
