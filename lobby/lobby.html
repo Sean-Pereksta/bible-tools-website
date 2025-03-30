@@ -8,10 +8,11 @@
     .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
     input, button { margin: 10px; padding: 10px; font-size: 1em; }
     #players, #timer { margin-top: 20px; }
+    #startBtn { display: none; margin-top: 20px; }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, doc, getDoc, setDoc, updateDoc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, doc, getDoc, updateDoc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -27,6 +28,7 @@
 
     let gameId = "";
     let username = "";
+    let isHost = false;
 
     async function login() {
       username = document.getElementById("username").value.trim();
@@ -61,6 +63,8 @@
           scores: {}
         });
         gameId = newGame.id;
+        isHost = true;
+        document.getElementById("startBtn").style.display = "block";
         startHostTimer();
       } else {
         // Join existing game
@@ -103,13 +107,19 @@
           }
           if (data.status === "playing") {
             window.location.href = `game/game.html?gameId=${gameId}&username=${username}`;
-
           }
         }
       });
     }
 
+    async function startGame() {
+      if (!isHost) return;
+      const gameRef = doc(db, "games", gameId);
+      await updateDoc(gameRef, { status: "playing", startTime: new Date().toISOString() });
+    }
+
     window.login = login;
+    window.startGame = startGame;
   </script>
 </head>
 <body>
@@ -120,6 +130,8 @@
     <button onclick="login()">Join Game</button>
     <p id="players">Players: </p>
     <p id="timer"></p>
+    <button id="startBtn" onclick="startGame()">🚀 Start Game (Host Only)</button>
   </div>
 </body>
 </html>
+
