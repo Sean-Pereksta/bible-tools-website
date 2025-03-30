@@ -54,7 +54,6 @@
       const waitingQuery = query(collection(db, "games"), where("status", "==", "waiting"));
       const snap = await getDocs(waitingQuery);
       if (snap.empty) {
-        // No game, create one
         const newGame = await addDoc(collection(db, "games"), {
           host: username,
           players: [username],
@@ -67,7 +66,6 @@
         document.getElementById("startBtn").style.display = "block";
         startHostTimer();
       } else {
-        // Join existing game
         snap.forEach(async g => {
           gameId = g.id;
           const gameRef = doc(db, "games", gameId);
@@ -106,7 +104,7 @@
             updateDoc(gameRef, { status: "playing", startTime: new Date().toISOString() });
           }
           if (data.status === "playing") {
-            window.location.href = `game/game.html?gameId=${gameId}&username=${username}`;
+            window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
           }
         }
       });
@@ -134,4 +132,3 @@
   </div>
 </body>
 </html>
-
