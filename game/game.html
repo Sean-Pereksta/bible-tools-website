@@ -62,6 +62,10 @@
             return;
           }
 
+          if (data.status === "waiting" && data.host === username) {
+            await updateDoc(gameRef, { status: "playing", startTime: new Date().toISOString() });
+          }
+
           if (data.status === "playing" && round === 1) {
             startTime = data.startTime ? new Date(data.startTime).getTime() : Date.now();
             await startRound(data);
