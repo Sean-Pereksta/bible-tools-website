@@ -8,8 +8,8 @@
     .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
     input, button { margin: 10px; padding: 10px; font-size: 1em; }
     #players, #timer { margin-top: 20px; }
-    #startBtn { display: none; margin-top: 20px; }
     #host, #joined { margin-top: 10px; }
+    #startBtn { display: none; margin-top: 20px; }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -30,6 +30,7 @@
     let gameId = "";
     let username = "";
     let isHost = false;
+    let timerInterval;
 
     async function login() {
       username = document.getElementById("username").value.trim();
@@ -60,19 +61,22 @@
           players: [username],
           status: "waiting",
           startTime: null,
-          scores: {}
+          scores: {},
+          currentRound: 0
         });
         gameId = newGame.id;
         isHost = true;
-        document.getElementById("startBtn").style.display = "block";
         startHostTimer();
       } else {
         snap.forEach(async g => {
           gameId = g.id;
           const gameRef = doc(db, "games", gameId);
-          await updateDoc(gameRef, {
-            players: [...g.data().players, username]
-          });
+          const data = g.data();
+          if (!data.players.includes(username)) {
+            await updateDoc(gameRef, {
+              players: [...data.players, username]
+            });
+          }
         });
       }
       listenForPlayers();
@@ -82,15 +86,12 @@
       const gameRef = doc(db, "games", gameId);
       let timeLeft = 180;
       document.getElementById("timer").innerText = `⏰ Time Left: ${timeLeft}s`;
-      const timer = setInterval(async () => {
+      timerInterval = setInterval(async () => {
         timeLeft--;
         document.getElementById("timer").innerText = `⏰ Time Left: ${timeLeft}s`;
         if (timeLeft <= 0) {
-          clearInterval(timer);
-          const gameDoc = await getDoc(gameRef);
-          if (gameDoc.exists() && gameDoc.data().status === "waiting") {
-            await updateDoc(gameRef, { status: "playing", startTime: new Date().toISOString() });
-          }
+          clearInterval(timerInterval);
+          startGame();
         }
       }, 1000);
     }
@@ -105,14 +106,11 @@
           const joinedPlayers = data.players.filter(p => p !== data.host);
           document.getElementById("joined").innerText = `🙋‍♂️ Joined: ${joinedPlayers.join(", ")}`;
 
-          if (data.host === username) {
-            isHost = true;
-            document.getElementById("startBtn").style.display = "block";
+          if (data.players.length >= 4 && data.status === "waiting") {
+            clearInterval(timerInterval);
+            startGame();
           }
 
-          if (data.players.length >= 4 && data.status === "waiting") {
-            updateDoc(gameRef, { status: "playing", startTime: new Date().toISOString() });
-          }
           if (data.status === "playing") {
             window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
           }
@@ -121,13 +119,15 @@
     }
 
     async function startGame() {
-      if (!isHost) return;
       const gameRef = doc(db, "games", gameId);
-      await updateDoc(gameRef, { status: "playing", startTime: new Date().toISOString() });
+      await updateDoc(gameRef, {
+        status: "playing",
+        startTime: new Date().toISOString(),
+        currentRound: 1
+      });
     }
 
     window.login = login;
-    window.startGame = startGame;
   </script>
 </head>
 <body>
@@ -140,7 +140,7 @@
     <p id="host"></p>
     <p id="joined"></p>
     <p id="timer"></p>
-    <button id="startBtn" onclick="startGame()">🚀 Start Game (Host Only)</button>
   </div>
 </body>
 </html>
+
