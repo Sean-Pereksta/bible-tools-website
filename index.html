@@ -45,14 +45,18 @@
     <button onclick="loadTab('biblegame')">🎮 Bible Game</button>
     <button onclick="loadTab('biblereader')">📚 Bible Reader</button>
     <button onclick="loadTab('createUsername')">🔑 Create Account</button>
+    <button onclick="loadTab('lobby/lobby')">🟢 Multiplayer Lobby</button>
   </div>
   <iframe id="contentFrame" src="biblegame/biblegame.html"></iframe>
 
   <script>
     function loadTab(tab) {
-      document.getElementById("contentFrame").src = `${tab}/${tab}.html`;
+      document.getElementById("contentFrame").src = `${tab}.html`.includes('/')
+        ? `${tab}.html`
+        : `${tab}/${tab}.html`;
     }
   </script>
 </body>
 </html>
+
 
