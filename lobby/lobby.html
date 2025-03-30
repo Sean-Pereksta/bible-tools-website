@@ -9,6 +9,7 @@
     input, button { margin: 10px; padding: 10px; font-size: 1em; }
     #players, #timer { margin-top: 20px; }
     #startBtn { display: none; margin-top: 20px; }
+    #host, #joined { margin-top: 10px; }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -100,6 +101,10 @@
         if (docSnap.exists()) {
           const data = docSnap.data();
           document.getElementById("players").innerText = `Players: ${data.players.join(", ")}`;
+          document.getElementById("host").innerText = `👑 Host: ${data.host}`;
+          const joinedPlayers = data.players.filter(p => p !== data.host);
+          document.getElementById("joined").innerText = `🙋‍♂️ Joined: ${joinedPlayers.join(", ")}`;
+
           if (data.players.length >= 4 && data.status === "waiting") {
             updateDoc(gameRef, { status: "playing", startTime: new Date().toISOString() });
           }
@@ -127,6 +132,8 @@
     <input type="password" id="password" placeholder="Password" /><br>
     <button onclick="login()">Join Game</button>
     <p id="players">Players: </p>
+    <p id="host"></p>
+    <p id="joined"></p>
     <p id="timer"></p>
     <button id="startBtn" onclick="startGame()">🚀 Start Game (Host Only)</button>
   </div>
