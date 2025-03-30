@@ -15,7 +15,7 @@
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, updateDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, updateDoc, onSnapshot, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -65,15 +65,20 @@
 
           if (data.host === username) isHost = true;
 
+          if (isHost && data.status !== "playing") {
+            await updateDoc(gameRef, {
+              status: "playing",
+              scores: {},
+              currentRound: 1,
+              startTime: new Date().toISOString()
+            });
+          }
+
           if (data.currentRound !== currentRound) {
             currentRound = data.currentRound;
             startTime = data.startTime ? new Date(data.startTime).getTime() : Date.now();
             currentVerse = data.currentVerse;
             if (currentRound > 0) startRound();
-          }
-
-          if (data.status === "waiting" && isHost) {
-            await updateDoc(gameRef, { status: "playing", startTime: new Date().toISOString(), currentRound: 1 });
           }
         }
       });
@@ -195,4 +200,5 @@
   </div>
 </body>
 </html>
+
 
