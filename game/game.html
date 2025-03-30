@@ -6,7 +6,7 @@
   <style>
     body { font-family: Arial, sans-serif; text-align: center; background: #f0f0f0; margin: 0; padding: 20px; }
     .container { max-width: 700px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
-    input { margin: 10px; padding: 10px; font-size: 1em; }
+    input, select { margin: 10px; padding: 10px; font-size: 1em; }
     #players, #round, #timer, #scoreboard, #completed { margin-top: 20px; }
     .score-box { display: inline-block; margin: 5px; padding: 10px; background: #eee; border-radius: 8px; text-align: center; width: 120px; }
     .player-name { font-weight: bold; }
@@ -34,6 +34,7 @@
     let currentRound = 0;
     let currentVerse = null;
     let bibleData = [];
+    let uniqueBooks = [];
     let timer;
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -47,7 +48,25 @@
       const csvText = await response.text();
       const parsed = Papa.parse(csvText, { header: true }).data;
       bibleData = parsed.filter(v => v.Text && v.BookName && v.Chapter && v.Verse);
+      extractUniqueBooks();
       startGame();
+    }
+
+    function extractUniqueBooks() {
+      uniqueBooks = [];
+      bibleData.forEach(v => {
+        if (!uniqueBooks.includes(v.BookName)) {
+          uniqueBooks.push(v.BookName);
+        }
+      });
+      const bookSelect = document.getElementById("book");
+      bookSelect.innerHTML = "";
+      uniqueBooks.forEach(book => {
+        const option = document.createElement("option");
+        option.value = book;
+        option.text = book;
+        bookSelect.appendChild(option);
+      });
     }
 
     function listenForScores() {
@@ -196,7 +215,7 @@
     <p id="round">Round:</p>
     <p id="timer">⏰ 30s</p>
     <p id="verseText">Loading verse...</p>
-    <input type="text" id="book" placeholder="Book" />
+    <select id="book"></select>
     <input type="text" id="chapter" placeholder="Chapter" />
     <input type="text" id="verse" placeholder="Verse" />
     <p id="result"></p>
