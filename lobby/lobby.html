@@ -31,6 +31,7 @@
     let username = "";
     let isHost = false;
     let timerInterval;
+    let gameStarted = false;
 
     async function login() {
       username = document.getElementById("username").value.trim();
@@ -93,7 +94,7 @@
         document.getElementById("timer").innerText = `⏰ Time Left: ${timeLeft}s`;
         if (timeLeft <= 0) {
           clearInterval(timerInterval);
-          startGame();
+          if (!gameStarted) startGame();
         }
       }, 1000);
     }
@@ -115,7 +116,7 @@
 
           if (data.players.length >= 4 && data.status === "waiting") {
             clearInterval(timerInterval);
-            startGame();
+            if (!gameStarted) startGame();
           }
 
           if (data.status === "playing") {
@@ -126,6 +127,9 @@
     }
 
     async function startGame() {
+      if (gameStarted) return;
+      gameStarted = true;
+      clearInterval(timerInterval);
       const gameRef = doc(db, "games", gameId);
       const verses = await fetchRandomVerses(10);
       await updateDoc(gameRef, {
