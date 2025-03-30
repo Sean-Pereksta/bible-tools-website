@@ -6,16 +6,17 @@
   <style>
     body { font-family: Arial, sans-serif; text-align: center; background: #f0f0f0; margin: 0; padding: 20px; }
     .container { max-width: 700px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
-    input, button { margin: 10px; padding: 10px; font-size: 1em; }
+    input { margin: 10px; padding: 10px; font-size: 1em; }
     #players, #round, #timer, #scoreboard { margin-top: 20px; }
     .score-box { display: inline-block; margin: 5px; padding: 10px; background: #eee; border-radius: 8px; text-align: center; width: 120px; }
     .player-name { font-weight: bold; }
     .player-score { font-size: 1.5em; margin-top: 5px; }
     #result { margin-top: 10px; font-weight: bold; }
+    #nextBtn { display: none; margin-top: 20px; }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, updateDoc, onSnapshot, getDoc, setDoc, deleteDoc, query, collection, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, updateDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -31,11 +32,12 @@
 
     let gameId = new URLSearchParams(window.location.search).get('gameId');
     let username = new URLSearchParams(window.location.search).get('username');
-    let round = 1;
+    let currentRound = 0;
     let timer;
     let verseData = [];
     let currentVerse = null;
     let startTime = 0;
+    let isHost = false;
 
     window.addEventListener('DOMContentLoaded', () => {
       fetchVerseData();
@@ -62,46 +64,47 @@
             return;
           }
 
-          if (data.status === "waiting" && data.host === username) {
-            await updateDoc(gameRef, { status: "playing", startTime: new Date().toISOString() });
+          if (data.host === username) isHost = true;
+
+          if (data.currentRound !== currentRound) {
+            currentRound = data.currentRound;
+            startTime = data.startTime ? new Date(data.startTime).getTime() : Date.now();
+            currentVerse = data.currentVerse;
+            if (currentRound > 0) startRound();
           }
 
-          if (data.status === "playing" && round === 1) {
-            startTime = data.startTime ? new Date(data.startTime).getTime() : Date.now();
-            await startRound(data);
+          if (data.status === "waiting" && isHost) {
+            await updateDoc(gameRef, { status: "playing", startTime: new Date().toISOString(), currentRound: 1 });
           }
         }
       });
     }
 
-    async function startRound(data) {
-      if (round > 10) {
+    async function startRound() {
+      if (currentRound > 10) {
         endGame();
         return;
       }
+
       const gameRef = doc(db, "games", gameId);
-      if (!data.currentVerse || round > 1) {
+
+      if (!currentVerse || currentRound > 1) {
         currentVerse = verseData[Math.floor(Math.random() * verseData.length)];
-        await updateDoc(gameRef, { currentVerse: currentVerse });
-      } else {
-        currentVerse = data.currentVerse;
+        await updateDoc(gameRef, { currentVerse: currentVerse, startTime: new Date().toISOString() });
       }
 
-      document.getElementById("round").innerText = `Round: ${round}/10`;
+      document.getElementById("round").innerText = `Round: ${currentRound}/10`;
       document.getElementById("verseText").innerText = currentVerse.Text;
       document.getElementById("result").innerText = "";
 
+      startTime = Date.now();
       syncTimer();
 
-      document.getElementById("submitBtn").onclick = () => {
-        evaluateAnswer();
-      };
+      if (isHost) document.getElementById("nextBtn").style.display = "block";
     }
 
     function syncTimer() {
-      const now = Date.now();
-      const elapsed = Math.floor((now - startTime) / 1000) % 33;
-      let timeLeft = Math.max(0, 30 - elapsed);
+      let timeLeft = 30;
       document.getElementById("timer").innerText = `⏰ ${timeLeft}s`;
 
       timer = setInterval(() => {
@@ -115,7 +118,6 @@
     }
 
     async function evaluateAnswer() {
-      clearInterval(timer);
       const book = document.getElementById("book").value.trim();
       const chapter = document.getElementById("chapter").value.trim();
       const verseNum = document.getElementById("verse").value.trim();
@@ -143,11 +145,12 @@
       });
 
       document.getElementById("result").innerText = message;
+    }
 
-      setTimeout(() => {
-        round++;
-        startRound(data);
-      }, 3000);
+    async function nextRound() {
+      const gameRef = doc(db, "games", gameId);
+      await updateDoc(gameRef, { currentRound: currentRound + 1 });
+      document.getElementById("nextBtn").style.display = "none";
     }
 
     async function endGame() {
@@ -165,7 +168,6 @@
         }
       }
       document.getElementById("verseText").innerText = `🎉 Game Over! Winner: ${winner} (${highScore} pts)`;
-      document.getElementById("submitBtn").style.display = "none";
     }
 
     function updateScoreboard(scores) {
@@ -178,6 +180,8 @@
         scoreboard.appendChild(box);
       }
     }
+
+    window.nextRound = nextRound;
   </script>
 </head>
 <body>
@@ -191,8 +195,9 @@
     <input type="text" id="book" placeholder="Book" />
     <input type="text" id="chapter" placeholder="Chapter" />
     <input type="text" id="verse" placeholder="Verse" />
-    <button id="submitBtn">Submit</button>
     <p id="result"></p>
+    <button id="nextBtn" onclick="nextRound()">➡️ Next Round (Host Only)</button>
   </div>
 </body>
 </html>
+
