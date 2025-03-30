@@ -7,7 +7,7 @@
     body { font-family: Arial, sans-serif; text-align: center; background: #f0f0f0; margin: 0; padding: 20px; }
     .container { max-width: 700px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
     input { margin: 10px; padding: 10px; font-size: 1em; }
-    #players, #round, #timer, #scoreboard { margin-top: 20px; }
+    #players, #round, #timer, #scoreboard, #completed { margin-top: 20px; }
     .score-box { display: inline-block; margin: 5px; padding: 10px; background: #eee; border-radius: 8px; text-align: center; width: 120px; }
     .player-name { font-weight: bold; }
     .player-score { font-size: 1.5em; margin-top: 5px; }
@@ -37,6 +37,7 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       fetchGameData();
+      setInterval(checkWinnerCondition, 30000);
     });
 
     async function fetchGameData() {
@@ -45,6 +46,7 @@
       if (gameSnap.exists()) {
         const data = gameSnap.data();
         verseList = data.verses;
+        updatePlayerCount(data);
         listenForScores();
       }
     }
@@ -55,6 +57,7 @@
         if (docSnap.exists()) {
           const data = docSnap.data();
           updateScoreboard(data.scores || {});
+          updatePlayerCount(data);
           if (data.playerStatus && Object.keys(data.playerStatus).length > 0) checkEndCondition(data.playerStatus);
         }
       });
@@ -127,9 +130,24 @@
     }
 
     function checkEndCondition(playerStatus) {
-      if (Object.keys(playerStatus).length === 0) return;
-      const allDone = Object.values(playerStatus).every(status => status === "done");
-      if (allDone) declareWinner();
+      const doneCount = Object.values(playerStatus).filter(status => status === "done").length;
+      document.getElementById("completed").innerText = `Players Done: ${doneCount}`;
+    }
+
+    async function checkWinnerCondition() {
+      const gameRef = doc(db, "games", gameId);
+      const gameSnap = await getDoc(gameRef);
+      const data = gameSnap.data();
+      if (!data.playerStatus) return;
+      const totalPlayers = Object.keys(data.scores || {}).length;
+      const donePlayers = Object.values(data.playerStatus).filter(status => status === "done").length;
+      if (totalPlayers > 0) {
+        document.getElementById("players").innerText = `Players: ${totalPlayers}`;
+        document.getElementById("completed").innerText = `Players Done: ${donePlayers}`;
+      }
+      if (totalPlayers > 0 && donePlayers === totalPlayers) {
+        declareWinner();
+      }
     }
 
     async function declareWinner() {
@@ -158,7 +176,11 @@
       }
     }
 
-    // Start game once data is loaded
+    function updatePlayerCount(data) {
+      const totalPlayers = Object.keys(data.scores || {}).length;
+      document.getElementById("players").innerText = `Players: ${totalPlayers}`;
+    }
+
     setTimeout(() => {
       if (verseList.length === 10) startGame();
     }, 500);
@@ -169,6 +191,7 @@
     <h1>📖 Bible Multiplayer Game</h1>
     <div id="scoreboard"></div>
     <p id="players">Players:</p>
+    <p id="completed">Players Done:</p>
     <p id="round">Round:</p>
     <p id="timer">⏰ 30s</p>
     <p id="verseText">Loading verses...</p>
