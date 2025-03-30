@@ -45,7 +45,7 @@
         BookName: r.BookName ? r.BookName.trim() : "",
         Chapter: r.Chapter ? r.Chapter.trim() : "",
         Verse: r.Verse ? r.Verse.trim() : "",
-        Text: (r.text || r.Text || "").trim().replace(/\r|\n/g, " ")
+        Text: r.Text ? r.Text.trim().replace(/\r|\n/g, " ") : ""
       })).filter(v => v.Text && v.BookName && v.Chapter && v.Verse);
     }
 
@@ -173,4 +173,3 @@
   </div>
 </body>
 </html>
-
