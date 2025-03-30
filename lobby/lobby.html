@@ -11,7 +11,7 @@
     #host, #joined { margin-top: 10px; }
     #startBtn { display: none; margin-top: 20px; }
     #loadingBar { display: none; margin-top: 20px; width: 100%; height: 20px; background: #ddd; border-radius: 10px; overflow: hidden; }
-    #loadingProgress { height: 100%; width: 0; background: #4caf50; }
+    #loadingProgress { height: 100%; width: 0; background: #4caf50; transition: width 0.3s; }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -33,6 +33,21 @@
     let username = "";
     let isHost = false;
     let gameStarted = false;
+    let allVerses = [];
+
+    window.addEventListener("DOMContentLoaded", preloadVerses);
+
+    async function preloadVerses() {
+      const response = await fetch("https://raw.githubusercontent.com/Sean-Pereksta/Bible-Data/main/web.csv");
+      const csvText = await response.text();
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
+      allVerses = parsed.map(r => ({
+        BookName: r.Bookname.trim(),
+        Chapter: r.Chapter.trim(),
+        Verse: r.Verse.trim(),
+        Text: (r.text || r.Text || "").trim().replace(/\r|\n/g, " ")
+      })).filter(v => v.Text && v.BookName && v.Chapter && v.Verse);
+    }
 
     async function login() {
       username = document.getElementById("username").value.trim();
@@ -109,13 +124,21 @@
     }
 
     async function startGame() {
-      if (gameStarted) return;
+      if (gameStarted || allVerses.length === 0) return;
       gameStarted = true;
       document.getElementById("startBtn").disabled = true;
       document.getElementById("startBtn").innerText = "Loading Verses...";
       document.getElementById("loadingBar").style.display = "block";
 
-      const verses = await fetchRandomVerses(10);
+      const verses = [];
+      while (verses.length < 10) {
+        const random = allVerses[Math.floor(Math.random() * allVerses.length)];
+        const exists = verses.find(v => v.BookName === random.BookName && v.Chapter === random.Chapter && v.Verse === random.Verse);
+        if (!exists) verses.push(random);
+        const progress = Math.floor((verses.length / 10) * 100);
+        document.getElementById("loadingProgress").style.width = progress + "%";
+      }
+
       const gameRef = doc(db, "games", gameId);
       await updateDoc(gameRef, {
         status: "playing",
@@ -126,35 +149,9 @@
         playerStatus: {}
       });
 
-      let progress = 0;
-      const loadingProgress = document.getElementById("loadingProgress");
-      const interval = setInterval(() => {
-        progress += 10;
-        loadingProgress.style.width = progress + "%";
-        if (progress >= 100) {
-          clearInterval(interval);
-          window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
-        }
-      }, 150);
-    }
-
-    async function fetchRandomVerses(count) {
-      const response = await fetch("https://raw.githubusercontent.com/Sean-Pereksta/Bible-Data/main/web.csv");
-      const csvText = await response.text();
-      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      const allVerses = parsed.map(r => ({
-        BookName: r.Bookname.trim(),
-        Chapter: r.Chapter.trim(),
-        Verse: r.Verse.trim(),
-        Text: (r.text || r.Text || "").trim().replace(/\r|\n/g, " ")
-      })).filter(v => v.Text && v.BookName && v.Chapter && v.Verse);
-      const selected = [];
-      while (selected.length < count) {
-        const random = allVerses[Math.floor(Math.random() * allVerses.length)];
-        const exists = selected.find(v => v.BookName === random.BookName && v.Chapter === random.Chapter && v.Verse === random.Verse);
-        if (!exists) selected.push(random);
-      }
-      return selected;
+      setTimeout(() => {
+        window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
+      }, 500);
     }
 
     window.login = login;
