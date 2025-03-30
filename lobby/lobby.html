@@ -40,15 +40,8 @@
     async function preloadVerses() {
       const response = await fetch("https://raw.githubusercontent.com/Sean-Pereksta/Bible-Data/main/web.csv");
       const csvText = await response.text();
-      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
-      allVerses = parsed
-        .filter(r => r.BookName && r.Chapter && r.Verse && r.Text)
-        .map(r => ({
-          BookName: r.BookName.trim(),
-          Chapter: r.Chapter.trim(),
-          Verse: r.Verse.trim(),
-          Text: r.Text.trim().replace(/\r|\n/g, " ")
-        }));
+      const results = Papa.parse(csvText, { header: true });
+      allVerses = results.data.filter(v => v.Text && v.BookName && v.Chapter && v.Verse);
     }
 
     async function login() {
