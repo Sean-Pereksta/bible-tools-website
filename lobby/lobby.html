@@ -32,6 +32,13 @@
     let isHost = false;
     let timerInterval;
     let gameStarted = false;
+    let preloadedVerses = [];
+
+    window.addEventListener("DOMContentLoaded", preloadVerses);
+
+    async function preloadVerses() {
+      preloadedVerses = await fetchRandomVerses(10);
+    }
 
     async function login() {
       username = document.getElementById("username").value.trim();
@@ -131,12 +138,11 @@
       gameStarted = true;
       clearInterval(timerInterval);
       const gameRef = doc(db, "games", gameId);
-      const verses = await fetchRandomVerses(10);
       await updateDoc(gameRef, {
         status: "playing",
         startTime: new Date().toISOString(),
         currentRound: 1,
-        verses: verses,
+        verses: preloadedVerses,
         scores: {},
         playerStatus: {}
       });
@@ -181,5 +187,3 @@
   </div>
 </body>
 </html>
-
-
