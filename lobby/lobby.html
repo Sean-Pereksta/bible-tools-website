@@ -32,16 +32,6 @@
     let isHost = false;
     let timerInterval;
     let gameStarted = false;
-    let preloadedVerses = [];
-
-    window.addEventListener("DOMContentLoaded", preloadVerses);
-
-    async function preloadVerses() {
-      document.getElementById("startBtn").innerText = "⏳ Loading Verses...";
-      preloadedVerses = await fetchRandomVerses(10);
-      document.getElementById("startBtn").disabled = false;
-      document.getElementById("startBtn").innerText = "🚀 Start Game (Host Only)";
-    }
 
     async function login() {
       username = document.getElementById("username").value.trim();
@@ -80,7 +70,6 @@
         gameId = newGame.id;
         isHost = true;
         document.getElementById("startBtn").style.display = "block";
-        document.getElementById("startBtn").disabled = true;
         startHostTimer();
       } else {
         snap.forEach(async g => {
@@ -138,15 +127,16 @@
     }
 
     async function startGame() {
-      if (gameStarted || preloadedVerses.length === 0) return;
+      if (gameStarted) return;
       gameStarted = true;
       clearInterval(timerInterval);
+      const verses = await fetchRandomVerses(10);
       const gameRef = doc(db, "games", gameId);
       await updateDoc(gameRef, {
         status: "playing",
         startTime: new Date().toISOString(),
         currentRound: 1,
-        verses: preloadedVerses,
+        verses: verses,
         scores: {},
         playerStatus: {}
       });
@@ -187,7 +177,7 @@
     <p id="host"></p>
     <p id="joined"></p>
     <p id="timer"></p>
-    <button id="startBtn" onclick="startGame()" disabled>🚀 Start Game (Host Only)</button>
+    <button id="startBtn" onclick="startGame()">🚀 Start Game (Host Only)</button>
   </div>
 </body>
 </html>
