@@ -10,6 +10,8 @@
     #players, #timer { margin-top: 20px; }
     #host, #joined { margin-top: 10px; }
     #startBtn { display: none; margin-top: 20px; }
+    #loadingBar { display: none; margin-top: 20px; width: 100%; height: 20px; background: #ddd; border-radius: 10px; overflow: hidden; }
+    #loadingProgress { height: 100%; width: 0; background: #4caf50; }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -130,6 +132,10 @@
       if (gameStarted) return;
       gameStarted = true;
       clearInterval(timerInterval);
+      document.getElementById("startBtn").disabled = true;
+      document.getElementById("startBtn").innerText = "Starting Game...";
+      document.getElementById("loadingBar").style.display = "block";
+
       const verses = await fetchRandomVerses(10);
       const gameRef = doc(db, "games", gameId);
       await updateDoc(gameRef, {
@@ -140,7 +146,17 @@
         scores: {},
         playerStatus: {}
       });
-      window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
+
+      let progress = 0;
+      const loadingProgress = document.getElementById("loadingProgress");
+      const interval = setInterval(() => {
+        progress += 10;
+        loadingProgress.style.width = progress + "%";
+        if (progress >= 100) {
+          clearInterval(interval);
+          window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
+        }
+      }, 200);
     }
 
     async function fetchRandomVerses(count) {
@@ -178,6 +194,7 @@
     <p id="joined"></p>
     <p id="timer"></p>
     <button id="startBtn" onclick="startGame()">🚀 Start Game (Host Only)</button>
+    <div id="loadingBar"><div id="loadingProgress"></div></div>
   </div>
 </body>
 </html>
