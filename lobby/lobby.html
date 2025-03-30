@@ -62,10 +62,13 @@
           status: "waiting",
           startTime: null,
           scores: {},
-          currentRound: 0
+          currentRound: 0,
+          verses: [],
+          playerStatus: {}
         });
         gameId = newGame.id;
         isHost = true;
+        document.getElementById("startBtn").style.display = "block";
         startHostTimer();
       } else {
         snap.forEach(async g => {
@@ -106,6 +109,11 @@
           const joinedPlayers = data.players.filter(p => p !== data.host);
           document.getElementById("joined").innerText = `🙋‍♂️ Joined: ${joinedPlayers.join(", ")}`;
 
+          if (data.host === username && data.status === "waiting") {
+            isHost = true;
+            document.getElementById("startBtn").style.display = "block";
+          }
+
           if (data.players.length >= 4 && data.status === "waiting") {
             clearInterval(timerInterval);
             startGame();
@@ -120,14 +128,30 @@
 
     async function startGame() {
       const gameRef = doc(db, "games", gameId);
+      const verses = await fetchRandomVerses(10);
       await updateDoc(gameRef, {
         status: "playing",
         startTime: new Date().toISOString(),
-        currentRound: 1
+        currentRound: 1,
+        verses: verses
       });
     }
 
+    async function fetchRandomVerses(count) {
+      const response = await fetch("https://raw.githubusercontent.com/Sean-Pereksta/Bible-Data/main/web.csv");
+      const csvText = await response.text();
+      const rows = csvText.split("\n").slice(1).map(row => row.split(","));
+      const allVerses = rows.map(r => ({ BookName: r[1], Chapter: r[3], Verse: r[4], Text: r[5] })).filter(v => v.Text);
+      const selected = [];
+      while (selected.length < count) {
+        const random = allVerses[Math.floor(Math.random() * allVerses.length)];
+        if (!selected.find(v => v.Text === random.Text)) selected.push(random);
+      }
+      return selected;
+    }
+
     window.login = login;
+    window.startGame = startGame;
   </script>
 </head>
 <body>
@@ -140,7 +164,7 @@
     <p id="host"></p>
     <p id="joined"></p>
     <p id="timer"></p>
+    <button id="startBtn" onclick="startGame()">🚀 Start Game (Host Only)</button>
   </div>
 </body>
 </html>
-
