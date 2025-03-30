@@ -42,9 +42,9 @@
       const csvText = await response.text();
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true }).data;
       allVerses = parsed.map(r => ({
-        BookName: r.Bookname.trim(),
-        Chapter: r.Chapter.trim(),
-        Verse: r.Verse.trim(),
+        BookName: r.BookName ? r.BookName.trim() : "",
+        Chapter: r.Chapter ? r.Chapter.trim() : "",
+        Verse: r.Verse ? r.Verse.trim() : "",
         Text: (r.text || r.Text || "").trim().replace(/\r|\n/g, " ")
       })).filter(v => v.Text && v.BookName && v.Chapter && v.Verse);
     }
@@ -173,3 +173,4 @@
   </div>
 </body>
 </html>
+
