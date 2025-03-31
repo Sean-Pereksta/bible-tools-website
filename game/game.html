@@ -17,6 +17,7 @@
     .red { background: #dc3545; }
     .player-name { font-weight: bold; }
     .player-score { font-size: 1.5em; margin-top: 5px; }
+    .player-wins { font-size: 0.9em; margin-top: 2px; }
     #result { margin-top: 10px; font-weight: bold; }
     #winner { margin-top: 20px; font-size: 1.3em; color: green; }
   </style>
@@ -156,7 +157,7 @@
         [`scores.${username}`]: currentScore + points
       });
 
-      if (currentRound >= 3) {
+      if (currentRound >= 10) {
         finishGame();
       } else {
         setTimeout(nextRound, 1000);
@@ -246,7 +247,7 @@
 
         const box = document.createElement("div");
         box.className = `score-box ${colorClass}`;
-        box.innerHTML = `<div class="player-name">${player}</div><div class="player-score">${score}</div>`;
+        box.innerHTML = `<div class="player-name">${player}</div><div class="player-score">${score}</div><div class="player-wins">🏆 ${wins} wins</div>`;
         scoreboard.appendChild(box);
       }
     }
@@ -275,4 +276,5 @@
   </div>
 </body>
 </html>
+
 
