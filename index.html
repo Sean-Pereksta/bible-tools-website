@@ -182,25 +182,29 @@
         }
       });
       document.getElementById("sendBtn").addEventListener("click", sendMessage);
+
+      document.querySelector(".tabs button:nth-child(1)").addEventListener("click", () => loadTab('biblegame/biblegame'));
+      document.querySelector(".tabs button:nth-child(2)").addEventListener("click", () => loadTab('biblereader/biblereader'));
+      document.querySelector(".tabs button:nth-child(3)").addEventListener("click", () => loadTab('lobby/lobby'));
+      document.querySelector(".left-link button").addEventListener("click", () => loadTab('username/username'));
     });
 
     function loadTab(tab) {
       document.getElementById("contentFrame").src = `${tab}.html`;
     }
-    window.loadTab = loadTab;
   </script>
 </head>
 <body>
   <h1>
     📖 My Bible Tools
     <span class="left-link">
-      <button onclick="loadTab('username/username')">➕ Create New User</button>
+      <button>➕ Create New User</button>
     </span>
   </h1>
   <div class="tabs">
-    <button onclick="loadTab('biblegame/biblegame')">🎮 Bible Game</button>
-    <button onclick="loadTab('biblereader/biblereader')">📚 Bible Reader</button>
-    <button onclick="loadTab('lobby/lobby')">🟢 Multiplayer Lobby</button>
+    <button>🎮 Bible Game</button>
+    <button>📚 Bible Reader</button>
+    <button>🟢 Multiplayer Lobby</button>
   </div>
   <iframe id="contentFrame" src="biblegame/biblegame.html"></iframe>
 
