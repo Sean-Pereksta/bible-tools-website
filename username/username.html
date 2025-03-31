@@ -52,19 +52,19 @@
       }
 
       try {
-        const profileRef = doc(db, username, "profile");
-        const existing = await getDoc(profileRef);
+        const userRef = doc(db, "users", username);
+        const existing = await getDoc(userRef);
         if (existing.exists()) {
           message.innerText = "❌ Username already exists.";
           return;
         }
 
-        await setDoc(profileRef, {
-          username: username,
-          password: password, // For learning purposes
-          createdAt: new Date().toISOString(),
+        await setDoc(userRef, {
+          Username: username,
+          Password: password, // for learning only
           wins: 0
         });
+
         message.innerText = `✅ Account "${username}" created!`;
         document.getElementById("username").value = "";
         document.getElementById("password").value = "";
