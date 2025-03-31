@@ -107,13 +107,14 @@
     <div id="chatInput">
       <input type="text" id="chatName" placeholder="Name" />
       <input type="text" id="chatMessage" placeholder="Type a message..." />
-      <button onclick="sendMessage()">Send</button>
+      <button id="sendBtn">Send</button>
     </div>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
       authDomain: "bible-game-246c0.firebaseapp.com",
@@ -123,24 +124,25 @@
       appId: "1:959619818996:web:5a9fbf492e23c765e445a1"
     };
 
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
     async function sendMessage() {
       const name = document.getElementById("chatName").value.trim();
       const text = document.getElementById("chatMessage").value.trim();
       if (!name || !text) return;
 
-      await db.collection("chat").add({
+      await addDoc(collection(db, "chat"), {
         username: name,
         text: text,
-        timestamp: new Date()
+        timestamp: serverTimestamp()
       });
       document.getElementById("chatMessage").value = "";
     }
 
     function loadMessages() {
-      db.collection("chat").orderBy("timestamp", "desc").limit(10).onSnapshot(snapshot => {
+      const q = query(collection(db, "chat"), orderBy("timestamp", "desc"), limit(10));
+      onSnapshot(q, (snapshot) => {
         const chatMessages = document.getElementById("chatMessages");
         chatMessages.innerHTML = "";
         snapshot.docs.reverse().forEach(doc => {
@@ -157,7 +159,8 @@
       document.getElementById("contentFrame").src = `${tab}.html`;
     }
 
-    window.onload = loadMessages;
+    document.getElementById("sendBtn").addEventListener("click", sendMessage);
+    window.addEventListener("DOMContentLoaded", loadMessages);
   </script>
 </body>
 </html>
