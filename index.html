@@ -169,6 +169,10 @@
       });
     }
 
+    function loadTab(tab) {
+      document.getElementById("contentFrame").src = `${tab}.html`;
+    }
+
     window.addEventListener("DOMContentLoaded", () => {
       loadMessages();
       document.getElementById("chatToggle").addEventListener("click", () => {
@@ -188,10 +192,6 @@
       document.querySelector(".tabs button:nth-child(3)").addEventListener("click", () => loadTab('lobby/lobby'));
       document.querySelector(".left-link button").addEventListener("click", () => loadTab('username/username'));
     });
-
-    function loadTab(tab) {
-      document.getElementById("contentFrame").src = `${tab}.html`;
-    }
   </script>
 </head>
 <body>
