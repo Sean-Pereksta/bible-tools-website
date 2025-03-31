@@ -43,6 +43,7 @@
     let bibleData = [];
     let uniqueBooks = [];
     let timer;
+    let winnerDeclared = false;
 
     window.addEventListener('DOMContentLoaded', async () => {
       await preloadScores();
@@ -176,6 +177,7 @@
     }
 
     async function checkWinnerCondition() {
+      if (winnerDeclared) return;
       const gameRef = doc(db, "games", gameId);
       const gameSnap = await getDoc(gameRef);
       const data = gameSnap.data();
@@ -187,6 +189,7 @@
         document.getElementById("completed").innerText = `Players Done: ${donePlayers}`;
       }
       if (totalPlayers > 0 && donePlayers === totalPlayers) {
+        winnerDeclared = true;
         declareWinner();
       }
     }
@@ -215,6 +218,7 @@
       } else {
         await setDoc(userRef, { wins: 0 });
       }
+
       await updateDoc(userRef, {
         wins: currentWins + 1
       });
@@ -230,7 +234,10 @@
         if (userSnap.exists()) {
           const userData = userSnap.data();
           wins = userData.wins || 0;
+        } else {
+          await setDoc(userRef, { wins: 0 });
         }
+
         let colorClass = "bronze";
         if (wins >= 5 && wins < 10) colorClass = "silver";
         else if (wins >= 10 && wins < 15) colorClass = "gold";
