@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>📖 Bible Tools + Chat</title>
+  <title>📖 Bible Tools</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -15,12 +15,13 @@
       color: white;
       margin: 0;
       padding: 15px;
-      text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     .left-link {
-      position: absolute;
-      left: 10px;
-      top: 15px;
+      margin-left: 20px;
+      font-size: 0.9em;
     }
     .left-link button {
       background: #4CAF50;
@@ -30,6 +31,9 @@
       font-size: 0.9em;
       cursor: pointer;
       border-radius: 4px;
+    }
+    .left-link button:hover {
+      background: #45a049;
     }
     .tabs {
       display: flex;
@@ -44,178 +48,35 @@
       cursor: pointer;
       font-size: 1.1em;
     }
+    .tabs button:hover {
+      background: #555;
+    }
     iframe {
       width: 100%;
       height: 90vh;
       border: none;
     }
-    #chatToggle {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      background: #555;
-      color: white;
-      border: none;
-      padding: 10px 30px 10px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      z-index: 10;
-    }
-    #notificationDot {
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      width: 12px;
-      height: 12px;
-      background: red;
-      border-radius: 50%;
-      display: none;
-    }
-    #chatBox {
-      position: fixed;
-      top: 50px;
-      right: 10px;
-      background: white;
-      width: 300px;
-      max-height: 400px;
-      overflow-y: auto;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-      display: none;
-      z-index: 10;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-    }
-    #chatBox.active {
-      pointer-events: auto;
-      opacity: 1;
-    }
-    #chatMessages {
-      padding: 10px;
-      text-align: left;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-    #chatInput {
-      display: flex;
-      flex-direction: column;
-      border-top: 1px solid #ccc;
-    }
-    #chatInput input {
-      padding: 8px;
-      border: none;
-      outline: none;
-      margin: 5px;
-    }
-    #chatInput button {
-      background: #4CAF50;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      margin: 5px;
-      cursor: pointer;
-    }
   </style>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
-      authDomain: "bible-game-246c0.firebaseapp.com",
-      projectId: "bible-game-246c0",
-      storageBucket: "bible-game-246c0.appspot.com",
-      messagingSenderId: "959619818996",
-      appId: "1:959619818996:web:5a9fbf492e23c765e445a1"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    let lastMessageTime = 0;
-
-    async function sendMessage() {
-      const name = document.getElementById("chatName").value.trim();
-      const text = document.getElementById("chatMessage").value.trim();
-      if (!text || !name) return;
-
-      await addDoc(collection(db, "chat"), {
-        username: name,
-        text: text,
-        timestamp: serverTimestamp()
-      });
-      document.getElementById("chatMessage").value = "";
-    }
-
-    function loadMessages() {
-      const chatMessages = document.getElementById("chatMessages");
-      chatMessages.innerHTML = "";
-      const q = query(collection(db, "chat"), orderBy("timestamp"), limit(10));
-      onSnapshot(q, (snapshot) => {
-        chatMessages.innerHTML = "";
-        snapshot.forEach(docSnap => {
-          const data = docSnap.data();
-          const p = document.createElement("p");
-          p.innerHTML = `<strong>${data.username}:</strong> ${data.text}`;
-          chatMessages.appendChild(p);
-          if (data.timestamp?.seconds > lastMessageTime) {
-            lastMessageTime = data.timestamp.seconds;
-            if (!document.getElementById("chatBox").classList.contains("active")) {
-              document.getElementById("notificationDot").style.display = "block";
-            }
-          }
-        });
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-      });
-    }
-
-    function loadTab(tab) {
-      document.getElementById("contentFrame").src = `${tab}.html`;
-    }
-
-    window.addEventListener("DOMContentLoaded", () => {
-      loadMessages();
-      document.getElementById("chatToggle").addEventListener("click", () => {
-        const box = document.getElementById("chatBox");
-        box.classList.toggle("active");
-        if (box.classList.contains("active")) {
-          document.getElementById("notificationDot").style.display = "none";
-          setTimeout(() => {
-            document.getElementById("chatMessages").scrollTop = document.getElementById("chatMessages").scrollHeight;
-          }, 100);
-        }
-      });
-      document.getElementById("sendBtn").addEventListener("click", sendMessage);
-
-      document.querySelector(".tabs button:nth-child(1)").addEventListener("click", () => loadTab('biblegame/biblegame'));
-      document.querySelector(".tabs button:nth-child(2)").addEventListener("click", () => loadTab('biblereader/biblereader'));
-      document.querySelector(".tabs button:nth-child(3)").addEventListener("click", () => loadTab('lobby/lobby'));
-      document.querySelector(".left-link button").addEventListener("click", () => loadTab('username/username'));
-    });
-  </script>
 </head>
 <body>
   <h1>
-    📖 My Bible Tools
     <span class="left-link">
-      <button>➕ Create New User</button>
+      <button onclick="loadTab('username/username')">➕ Create New User</button>
     </span>
+    📖 My Bible Tools
+    <span></span>
   </h1>
   <div class="tabs">
-    <button>🎮 Bible Game</button>
-    <button>📚 Bible Reader</button>
-    <button>🟢 Multiplayer Lobby</button>
+    <button onclick="loadTab('biblegame/biblegame')">🎮 Bible Game</button>
+    <button onclick="loadTab('biblereader/biblereader')">📚 Bible Reader</button>
+    <button onclick="loadTab('lobby/lobby')">🟢 Multiplayer Lobby</button>
   </div>
   <iframe id="contentFrame" src="biblegame/biblegame.html"></iframe>
 
-  <button id="chatToggle">💬 Chat <span id="notificationDot"></span></button>
-  <div id="chatBox">
-    <div id="chatMessages"></div>
-    <div id="chatInput">
-      <input id="chatName" placeholder="Your Name..." />
-      <input id="chatMessage" placeholder="Type a message..." />
-      <button id="sendBtn">Send</button>
-    </div>
-  </div>
+  <script>
+    function loadTab(tab) {
+      document.getElementById("contentFrame").src = ${tab}.html;
+    }
+  </script>
 </body>
 </html>
