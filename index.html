@@ -15,6 +15,25 @@
       color: white;
       margin: 0;
       padding: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .left-link {
+      margin-left: 20px;
+      font-size: 0.9em;
+    }
+    .left-link button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      font-size: 0.9em;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .left-link button:hover {
+      background: #45a049;
     }
     .tabs {
       display: flex;
@@ -40,11 +59,16 @@
   </style>
 </head>
 <body>
-  <h1>📖 My Bible Tools</h1>
+  <h1>
+    <span class="left-link">
+      <button onclick="loadTab('username/username')">➕ Create New User</button>
+    </span>
+    📖 My Bible Tools
+    <span></span>
+  </h1>
   <div class="tabs">
     <button onclick="loadTab('biblegame/biblegame')">🎮 Bible Game</button>
     <button onclick="loadTab('biblereader/biblereader')">📚 Bible Reader</button>
-    <button onclick="loadTab('username/username')">🔑 Create Account</button>
     <button onclick="loadTab('lobby/lobby')">🟢 Multiplayer Lobby</button>
   </div>
   <iframe id="contentFrame" src="biblegame/biblegame.html"></iframe>
@@ -56,5 +80,3 @@
   </script>
 </body>
 </html>
-
-
