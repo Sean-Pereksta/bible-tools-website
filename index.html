@@ -59,7 +59,7 @@
       padding: 10px 30px 10px 10px;
       border-radius: 5px;
       cursor: pointer;
-      z-index: 100;
+      z-index: 10;
     }
     #notificationDot {
       position: absolute;
@@ -82,7 +82,14 @@
       border-radius: 10px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.3);
       display: none;
-      z-index: 100;
+      z-index: 10;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    #chatBox.active {
+      pointer-events: auto;
+      opacity: 1;
     }
     #chatMessages {
       padding: 10px;
@@ -153,7 +160,7 @@
           chatMessages.appendChild(p);
           if (data.timestamp?.seconds > lastMessageTime) {
             lastMessageTime = data.timestamp.seconds;
-            if (document.getElementById("chatBox").style.display === "none") {
+            if (!document.getElementById("chatBox").classList.contains("active")) {
               document.getElementById("notificationDot").style.display = "block";
             }
           }
@@ -166,10 +173,8 @@
       loadMessages();
       document.getElementById("chatToggle").addEventListener("click", () => {
         const box = document.getElementById("chatBox");
-        if (box.style.display === "block") {
-          box.style.display = "none";
-        } else {
-          box.style.display = "block";
+        box.classList.toggle("active");
+        if (box.classList.contains("active")) {
           document.getElementById("notificationDot").style.display = "none";
           setTimeout(() => {
             document.getElementById("chatMessages").scrollTop = document.getElementById("chatMessages").scrollHeight;
