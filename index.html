@@ -87,37 +87,27 @@
     #chatMessages {
       padding: 10px;
       text-align: left;
-      max-height: 350px;
+      max-height: 300px;
       overflow-y: auto;
     }
     #chatInput {
       display: flex;
+      flex-direction: column;
       border-top: 1px solid #ccc;
     }
     #chatInput input {
-      flex: 1;
       padding: 8px;
       border: none;
       outline: none;
+      margin: 5px;
     }
     #chatInput button {
       background: #4CAF50;
       color: white;
       border: none;
       padding: 8px 12px;
+      margin: 5px;
       cursor: pointer;
-    }
-    #loginPrompt {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-      display: none;
-      z-index: 10000;
     }
   </style>
   <script type="module">
@@ -135,21 +125,19 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
-    let username = localStorage.getItem("username") || "";
     let lastMessageTime = 0;
 
     async function sendMessage() {
-      const input = document.getElementById("chatMessage");
-      const text = input.value.trim();
-      if (!text || !username) return;
+      const name = document.getElementById("chatName").value.trim();
+      const text = document.getElementById("chatMessage").value.trim();
+      if (!text || !name) return;
 
       await addDoc(collection(db, "chat"), {
-        username: username,
+        username: name,
         text: text,
         timestamp: serverTimestamp()
       });
-      input.value = "";
+      document.getElementById("chatMessage").value = "";
     }
 
     function loadMessages() {
@@ -174,25 +162,13 @@
       });
     }
 
-    function checkLogin() {
-      if (!username) {
-        document.getElementById("loginPrompt").style.display = "block";
-      } else {
-        loadMessages();
-      }
-    }
-
     window.addEventListener("DOMContentLoaded", () => {
-      checkLogin();
+      loadMessages();
       document.getElementById("chatToggle").addEventListener("click", () => {
         const box = document.getElementById("chatBox");
         if (box.style.display === "block") {
           box.style.display = "none";
         } else {
-          if (!username) {
-            document.getElementById("loginPrompt").style.display = "block";
-            return;
-          }
           box.style.display = "block";
           document.getElementById("notificationDot").style.display = "none";
           setTimeout(() => {
@@ -201,15 +177,6 @@
         }
       });
       document.getElementById("sendBtn").addEventListener("click", sendMessage);
-      document.getElementById("loginBtn").addEventListener("click", () => {
-        const name = document.getElementById("loginName").value.trim();
-        if (name) {
-          username = name;
-          localStorage.setItem("username", username);
-          document.getElementById("loginPrompt").style.display = "none";
-          loadMessages();
-        }
-      });
     });
 
     function loadTab(tab) {
@@ -235,16 +202,10 @@
   <div id="chatBox">
     <div id="chatMessages"></div>
     <div id="chatInput">
+      <input id="chatName" placeholder="Your Name..." />
       <input id="chatMessage" placeholder="Type a message..." />
       <button id="sendBtn">Send</button>
     </div>
-  </div>
-
-  <div id="loginPrompt">
-    <h3>🔑 Enter Chat Username</h3>
-    <input type="text" id="loginName" placeholder="Username" />
-    <br />
-    <button id="loginBtn">Log In</button>
   </div>
 </body>
 </html>
