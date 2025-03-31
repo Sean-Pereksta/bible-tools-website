@@ -13,7 +13,7 @@
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query, where, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -35,17 +35,15 @@
     async function login() {
       username = document.getElementById("username").value.trim();
       const password = document.getElementById("password").value.trim();
-      const userQuery = query(collection(db, "users"), where("username", "==", username));
-      const userSnap = await getDocs(userQuery);
-      if (userSnap.empty) {
+
+      const userRef = doc(db, "users", username);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
         alert("❌ Username not found.");
         return;
       }
-      let valid = false;
-      userSnap.forEach(doc => {
-        if (doc.data().password === password) valid = true;
-      });
-      if (!valid) {
+      const userData = userSnap.data();
+      if (userData.password !== password) {
         alert("❌ Incorrect password.");
         return;
       }
@@ -63,7 +61,6 @@
           startTime: null,
           scores: {},
           currentRound: 0,
-          verses: [],
           playerStatus: {}
         });
         gameId = newGame.id;
@@ -89,10 +86,10 @@
       onSnapshot(gameRef, (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          document.getElementById("players").innerText = Players: ${data.players.join(", ")};
-          document.getElementById("host").innerText = 👑 Host: ${data.host};
+          document.getElementById("players").innerText = `Players: ${data.players.join(", ")}`;
+          document.getElementById("host").innerText = `👑 Host: ${data.host}`;
           const joinedPlayers = data.players.filter(p => p !== data.host);
-          document.getElementById("joined").innerText = 🙋‍♂️ Joined: ${joinedPlayers.join(", ")};
+          document.getElementById("joined").innerText = `🙋‍♂️ Joined: ${joinedPlayers.join(", ")}`;
 
           if (data.host === username && data.status === "waiting") {
             isHost = true;
@@ -100,7 +97,7 @@
           }
 
           if (data.status === "playing") {
-            window.location.href = https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username};
+            window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
           }
         }
       });
@@ -120,7 +117,7 @@
       });
 
       setTimeout(() => {
-        window.location.href = https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username};
+        window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
       }, 500);
     }
 
