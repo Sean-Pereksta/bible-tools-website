@@ -9,11 +9,11 @@
     input, button { margin: 10px; padding: 10px; font-size: 1em; }
     #players { margin-top: 20px; }
     #host, #joined, #error { margin-top: 10px; }
-    #startBtn { display: none; margin-top: 20px; }
+    #startBtn, #exitBtn, #newLobbyBtn { display: none; margin-top: 20px; }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query, where, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, query, where, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -56,23 +56,16 @@
       }
     }
 
-    async function joinOrCreateGame() {
+    async function joinOrCreateGame(forceNew = false) {
       try {
+        if (forceNew) {
+          await createNewGame();
+          return;
+        }
         const waitingQuery = query(collection(db, "games"), where("status", "==", "waiting"));
         const snap = await getDocs(waitingQuery);
         if (snap.empty) {
-          const newGame = await addDoc(collection(db, "games"), {
-            host: username,
-            players: [username],
-            status: "waiting",
-            startTime: null,
-            scores: {},
-            currentRound: 0,
-            playerStatus: {}
-          });
-          gameId = newGame.id;
-          isHost = true;
-          document.getElementById("startBtn").style.display = "block";
+          await createNewGame();
         } else {
           snap.forEach(async g => {
             gameId = g.id;
@@ -92,10 +85,25 @@
       }
     }
 
+    async function createNewGame() {
+      const newGame = await addDoc(collection(db, "games"), {
+        host: username,
+        players: [username],
+        status: "waiting",
+        startTime: null,
+        scores: {},
+        currentRound: 0,
+        playerStatus: {}
+      });
+      gameId = newGame.id;
+      isHost = true;
+      document.getElementById("startBtn").style.display = "block";
+    }
+
     function listenForPlayers() {
       try {
         const gameRef = doc(db, "games", gameId);
-        onSnapshot(gameRef, (docSnap) => {
+        onSnapshot(gameRef, async (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
             document.getElementById("players").innerText = `Players: ${data.players.join(", ")}`;
@@ -107,6 +115,9 @@
               isHost = true;
               document.getElementById("startBtn").style.display = "block";
             }
+
+            document.getElementById("exitBtn").style.display = "block";
+            document.getElementById("newLobbyBtn").style.display = "block";
 
             if (data.status === "playing") {
               window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
@@ -142,6 +153,32 @@
       }
     }
 
+    async function exitLobby() {
+      try {
+        const gameRef = doc(db, "games", gameId);
+        const gameSnap = await getDoc(gameRef);
+        if (gameSnap.exists()) {
+          const data = gameSnap.data();
+          const newPlayers = data.players.filter(p => p !== username);
+          const updates = { players: newPlayers };
+
+          if (data.host === username && newPlayers.length > 0) {
+            updates.host = newPlayers[0]; // Assign new host
+          }
+
+          await updateDoc(gameRef, updates);
+        }
+        window.location.href = "https://sean-pereksta.github.io/bible-tools-website/index.html";
+      } catch (error) {
+        showError("⚠️ Failed to exit lobby.");
+        console.error("Exit Lobby Error:", error);
+      }
+    }
+
+    function createNewLobby() {
+      joinOrCreateGame(true);
+    }
+
     function showError(message) {
       const errorEl = document.getElementById("error");
       errorEl.innerText = message;
@@ -150,6 +187,8 @@
 
     window.login = login;
     window.startGame = startGame;
+    window.exitLobby = exitLobby;
+    window.createNewLobby = createNewLobby;
   </script>
 </head>
 <body>
@@ -163,6 +202,8 @@
     <p id="joined"></p>
     <p id="error"></p>
     <button id="startBtn" onclick="startGame()">🚀 Start Game (Host Only)</button>
+    <button id="exitBtn" onclick="exitLobby()">❌ Exit Lobby</button>
+    <button id="newLobbyBtn" onclick="createNewLobby()">➕ Create New Lobby</button>
   </div>
 </body>
 </html>
