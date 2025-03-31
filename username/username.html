@@ -22,7 +22,7 @@
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -52,20 +52,28 @@
       }
 
       try {
-        await addDoc(collection(db, "users"), {
+        const profileRef = doc(db, username, "profile");
+        const existing = await getDoc(profileRef);
+        if (existing.exists()) {
+          message.innerText = "❌ Username already exists.";
+          return;
+        }
+
+        await setDoc(profileRef, {
           username: username,
-          password: password, // ⚠️ For learning only — in real apps, never store raw passwords!
-          createdAt: new Date().toISOString()
+          password: password, // For learning purposes
+          createdAt: new Date().toISOString(),
+          wins: 0
         });
-        message.innerText = `✅ Account for "${username}" created!`;
+        message.innerText = `✅ Account "${username}" created!`;
         document.getElementById("username").value = "";
         document.getElementById("password").value = "";
         document.getElementById("confirm").value = "";
       } catch (e) {
-        console.error("Error creating user:", e);
+        console.error("Error creating account:", e);
         message.innerText = "❌ Error creating account.";
       }
-    }
+    };
   </script>
 </head>
 <body>
