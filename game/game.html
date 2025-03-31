@@ -185,13 +185,12 @@
       if (!data.playerStatus) return;
       const totalPlayers = Object.keys(data.scores || {}).length;
       const donePlayers = Object.values(data.playerStatus).filter(status => status === "done").length;
-      if (totalPlayers > 0) {
-        document.getElementById("players").innerText = `Players: ${totalPlayers}`;
-        document.getElementById("completed").innerText = `Players Done: ${donePlayers}`;
-      }
       if (totalPlayers > 0 && donePlayers === totalPlayers) {
         winnerDeclared = true;
-        declareWinner();
+        await declareWinner();
+        setTimeout(() => {
+          window.location.href = "https://sean-pereksta.github.io/bible-tools-website/";
+        }, 5000);
       }
     }
 
@@ -247,7 +246,9 @@
 
         const box = document.createElement("div");
         box.className = `score-box ${colorClass}`;
-        box.innerHTML = `<div class="player-name">${player}</div><div class="player-score">${score}</div><div class="player-wins">🏆 ${wins} wins</div>`;
+        box.innerHTML = `<div class="player-name">${player}</div>
+                         <div class="player-score">${score}</div>
+                         <div class="player-wins">🏆 ${wins} wins</div>`;
         scoreboard.appendChild(box);
       }
     }
