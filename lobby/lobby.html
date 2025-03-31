@@ -8,7 +8,7 @@
     .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
     input, button { margin: 10px; padding: 10px; font-size: 1em; }
     #players { margin-top: 20px; }
-    #host, #joined { margin-top: 10px; }
+    #host, #joined, #error { margin-top: 10px; }
     #startBtn { display: none; margin-top: 20px; }
   </style>
   <script type="module">
@@ -33,92 +33,119 @@
     let gameStarted = false;
 
     async function login() {
-      username = document.getElementById("username").value.trim();
-      const password = document.getElementById("password").value.trim();
+      try {
+        username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value.trim();
 
-      const userRef = doc(db, "users", username);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) {
-        alert("❌ Username not found.");
-        return;
+        const userRef = doc(db, "users", username);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+          showError("❌ Username not found.");
+          return;
+        }
+        const userData = userSnap.data();
+        if (userData.password !== password) {
+          showError("❌ Incorrect password.");
+          return;
+        }
+        joinOrCreateGame();
+      } catch (error) {
+        showError("⚠️ Login failed. Check your connection.");
+        console.error("Login Error:", error);
       }
-      const userData = userSnap.data();
-      if (userData.password !== password) {
-        alert("❌ Incorrect password.");
-        return;
-      }
-      joinOrCreateGame();
     }
 
     async function joinOrCreateGame() {
-      const waitingQuery = query(collection(db, "games"), where("status", "==", "waiting"));
-      const snap = await getDocs(waitingQuery);
-      if (snap.empty) {
-        const newGame = await addDoc(collection(db, "games"), {
-          host: username,
-          players: [username],
-          status: "waiting",
-          startTime: null,
-          scores: {},
-          currentRound: 0,
-          playerStatus: {}
-        });
-        gameId = newGame.id;
-        isHost = true;
-        document.getElementById("startBtn").style.display = "block";
-      } else {
-        snap.forEach(async g => {
-          gameId = g.id;
-          const gameRef = doc(db, "games", gameId);
-          const data = g.data();
-          if (!data.players.includes(username)) {
-            await updateDoc(gameRef, {
-              players: [...data.players, username]
-            });
-          }
-        });
+      try {
+        const waitingQuery = query(collection(db, "games"), where("status", "==", "waiting"));
+        const snap = await getDocs(waitingQuery);
+        if (snap.empty) {
+          const newGame = await addDoc(collection(db, "games"), {
+            host: username,
+            players: [username],
+            status: "waiting",
+            startTime: null,
+            scores: {},
+            currentRound: 0,
+            playerStatus: {}
+          });
+          gameId = newGame.id;
+          isHost = true;
+          document.getElementById("startBtn").style.display = "block";
+        } else {
+          snap.forEach(async g => {
+            gameId = g.id;
+            const gameRef = doc(db, "games", gameId);
+            const data = g.data();
+            if (!data.players.includes(username)) {
+              await updateDoc(gameRef, {
+                players: [...data.players, username]
+              });
+            }
+          });
+        }
+        listenForPlayers();
+      } catch (error) {
+        showError("⚠️ Failed to join game. Check your connection.");
+        console.error("Join Game Error:", error);
       }
-      listenForPlayers();
     }
 
     function listenForPlayers() {
-      const gameRef = doc(db, "games", gameId);
-      onSnapshot(gameRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          document.getElementById("players").innerText = `Players: ${data.players.join(", ")}`;
-          document.getElementById("host").innerText = `👑 Host: ${data.host}`;
-          const joinedPlayers = data.players.filter(p => p !== data.host);
-          document.getElementById("joined").innerText = `🙋‍♂️ Joined: ${joinedPlayers.join(", ")}`;
+      try {
+        const gameRef = doc(db, "games", gameId);
+        onSnapshot(gameRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            document.getElementById("players").innerText = `Players: ${data.players.join(", ")}`;
+            document.getElementById("host").innerText = `👑 Host: ${data.host}`;
+            const joinedPlayers = data.players.filter(p => p !== data.host);
+            document.getElementById("joined").innerText = `🙋‍♂️ Joined: ${joinedPlayers.join(", ")}`;
 
-          if (data.host === username && data.status === "waiting") {
-            isHost = true;
-            document.getElementById("startBtn").style.display = "block";
-          }
+            if (data.host === username && data.status === "waiting") {
+              isHost = true;
+              document.getElementById("startBtn").style.display = "block";
+            }
 
-          if (data.status === "playing") {
-            window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
+            if (data.status === "playing") {
+              window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
+            }
           }
-        }
-      });
+        });
+      } catch (error) {
+        showError("⚠️ Failed to listen for players.");
+        console.error("Listen Error:", error);
+      }
     }
 
     async function startGame() {
-      if (gameStarted) return;
-      gameStarted = true;
-      document.getElementById("startBtn").disabled = true;
-      document.getElementById("startBtn").innerText = "Starting Game...";
+      try {
+        if (gameStarted) return;
+        gameStarted = true;
+        document.getElementById("startBtn").disabled = true;
+        document.getElementById("startBtn").innerText = "Starting Game...";
 
-      const gameRef = doc(db, "games", gameId);
-      await updateDoc(gameRef, {
-        status: "playing",
-        startTime: new Date().toISOString(),
-        currentRound: 1
-      });
+        const gameRef = doc(db, "games", gameId);
+        await updateDoc(gameRef, {
+          status: "playing",
+          startTime: new Date().toISOString(),
+          currentRound: 1
+        });
 
-      setTimeout(() => {
-        window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
-      }, 500);
+        setTimeout(() => {
+          window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game.html?gameId=${gameId}&username=${username}`;
+        }, 500);
+      } catch (error) {
+        showError("⚠️ Failed to start game.");
+        console.error("Start Game Error:", error);
+      }
+    }
+
+    function showError(message) {
+      const errorEl = document.getElementById("error");
+      errorEl.innerText = message;
+      errorEl.style.color = "red";
     }
 
     window.login = login;
@@ -134,6 +161,7 @@
     <p id="players">Players: </p>
     <p id="host"></p>
     <p id="joined"></p>
+    <p id="error"></p>
     <button id="startBtn" onclick="startGame()">🚀 Start Game (Host Only)</button>
   </div>
 </body>
