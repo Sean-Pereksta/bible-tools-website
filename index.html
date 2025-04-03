@@ -24,10 +24,22 @@
     }
     .left-link {
       margin-left: 20px;
-      font-size: 0.9em;
+      font-size: 0.8em;
     }
     .left-link button {
       background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      font-size: 0.8em;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .right-link {
+      margin-right: 20px;
+    }
+    .right-link button {
+      background: #2196F3;
       color: white;
       border: none;
       padding: 8px 12px;
@@ -90,10 +102,12 @@
 <body>
   <h1>
     <span class="left-link">
-      <button id="createUserBtn">➕ Create New User</button>
+      <button id="createUserBtn">➕ Create User</button>
     </span>
     📖 My Bible Tools
-    <span></span>
+    <span class="right-link">
+      <button id="accountTab">🙋‍♂️ My Account</button>
+    </span>
   </h1>
   <div class="tabs">
     <button id="gameTab">🎮 Bible Game</button>
@@ -166,7 +180,9 @@
       document.getElementById("gameTab").addEventListener("click", () => loadTab("biblegame/biblegame"));
       document.getElementById("readerTab").addEventListener("click", () => loadTab("biblereader/biblereader"));
       document.getElementById("lobbyTab").addEventListener("click", () => loadTab("lobby/lobby"));
+      document.getElementById("accountTab").addEventListener("click", () => loadTab("myaccount/myaccount"));
     });
   </script>
 </body>
 </html>
+
