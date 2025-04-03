@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🙋‍♂️ My Account</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 0; padding: 20px; text-align: center; }
+    .container { max-width: 700px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+    input, button { margin: 10px; padding: 10px; font-size: 1em; }
+    .badge { font-size: 1.2em; margin-top: 10px; }
+    .prayer-box { border: 1px solid #ccc; margin: 5px; padding: 10px; border-radius: 5px; }
+  </style>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, addDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
+      authDomain: "bible-game-246c0.firebaseapp.com",
+      projectId: "bible-game-246c0",
+      storageBucket: "bible-game-246c0.appspot.com",
+      messagingSenderId: "959619818996",
+      appId: "1:959619818996:web:5a9fbf492e23c765e445a1"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let username = "";
+
+    window.login = async function() {
+      username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const userQuery = query(collection(db, "users"), where("username", "==", username));
+      const userSnap = await getDocs(userQuery);
+      if (userSnap.empty) return alert("❌ Username not found.");
+
+      let valid = false;
+      userSnap.forEach(doc => {
+        if (doc.data().password === password) valid = true;
+      });
+      if (!valid) return alert("❌ Incorrect password.");
+
+      loadAccountData();
+    }
+
+    async function loadAccountData() {
+      document.getElementById("account").style.display = "block";
+
+      // Load wins
+      const gameQuery = query(collection(db, "games"), where("status", "==", "completed"));
+      const gamesSnap = await getDocs(gameQuery);
+      let wins = 0;
+      gamesSnap.forEach(doc => {
+        const data = doc.data();
+        if (data.winner === username) wins++;
+      });
+      document.getElementById("wins").innerText = wins;
+
+      // Set league badge
+      let badge = "🥉 Bronze";
+      if (wins >= 5) badge = "🥈 Silver";
+      if (wins >= 10) badge = "🥇 Gold";
+      if (wins >= 20) badge = "💎 Blue Platinum";
+      if (wins >= 30) badge = "🔴 Ruby";
+      document.getElementById("league").innerText = badge;
+
+      // Load comments
+      const notesQuery = query(collection(db, "notes"), where("name", "==", username));
+      const notesSnap = await getDocs(notesQuery);
+      document.getElementById("comments").innerText = notesSnap.size;
+
+      loadPrayerLog();
+    }
+
+    async function savePrayer() {
+      const prayer = document.getElementById("prayerInput").value.trim();
+      if (!prayer) return;
+      const today = new Date().toISOString().split('T')[0];
+      await addDoc(collection(db, "prayers"), {
+        user: username,
+        text: prayer,
+        date: today
+      });
+      document.getElementById("prayerInput").value = "";
+      loadPrayerLog();
+    }
+
+    async function loadPrayerLog(offset = 0) {
+      const prayerQuery = query(collection(db, "prayers"), where("user", "==", username), orderBy("date", "desc"));
+      const snap = await getDocs(prayerQuery);
+      const prayers = [];
+      snap.forEach(doc => prayers.push(doc.data()));
+      const container = document.getElementById("prayerLog");
+      container.innerHTML = "";
+
+      const start = offset * 5;
+      const page = prayers.slice(start, start + 5);
+
+      page.forEach(p => {
+        const box = document.createElement("div");
+        box.className = "prayer-box";
+        box.innerText = `${p.date}: ${p.text}`;
+        container.appendChild(box);
+      });
+
+      document.getElementById("pageNav").innerHTML = `
+        <button onclick="loadPrayerLog(${offset - 1})" ${offset === 0 ? 'disabled' : ''}>⬅️ Back</button>
+        <button onclick="loadPrayerLog(${offset + 1})" ${(start + 5) >= prayers.length ? 'disabled' : ''}>Next ➡️</button>
+      `;
+    }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>🙋‍♂️ My Account</h1>
+    <input type="text" id="username" placeholder="Username"><br>
+    <input type="password" id="password" placeholder="Password"><br>
+    <button onclick="login()">Log In</button>
+
+    <div id="account" style="display:none;">
+      <h2>Welcome, <span id="displayUser"></span></h2>
+      <p>🏆 Wins: <span id="wins">0</span></p>
+      <p class="badge">League: <span id="league">🥉 Bronze</span></p>
+      <p>💬 Comments Posted: <span id="comments">0</span></p>
+
+      <h3>🙏 Prayer Journal</h3>
+      <input type="text" id="prayerInput" placeholder="Add prayer request...">
+      <button onclick="savePrayer()">Save Prayer</button>
+      <div id="prayerLog"></div>
+      <div id="pageNav"></div>
+    </div>
+  </div>
+</body>
+</html>
