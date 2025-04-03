@@ -9,10 +9,11 @@
     input, button { margin: 10px; padding: 10px; font-size: 1em; }
     .badge { font-size: 1.2em; margin-top: 10px; }
     .prayer-box { border: 1px solid #ccc; margin: 5px; padding: 10px; border-radius: 5px; }
+    .comments-box { border: 1px solid #ccc; margin-top: 10px; padding: 10px; border-radius: 5px; max-height: 150px; overflow-y: auto; text-align: left; }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs, addDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs, addDoc, doc, getDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -35,42 +36,45 @@
       const userSnap = await getDocs(userQuery);
       if (userSnap.empty) return alert("❌ Username not found.");
 
-      let valid = false;
+      let userData = null;
       userSnap.forEach(doc => {
-        if (doc.data().password === password) valid = true;
+        if (doc.data().password === password) userData = { id: doc.id, ...doc.data() };
       });
-      if (!valid) return alert("❌ Incorrect password.");
+      if (!userData) return alert("❌ Incorrect password.");
 
-      loadAccountData();
+      loadAccountData(userData);
     }
 
-    async function loadAccountData() {
+    async function loadAccountData(userData) {
       document.getElementById("account").style.display = "block";
+      document.getElementById("displayUser").innerText = username;
 
-      // Load wins
-      const gameQuery = query(collection(db, "games"), where("status", "==", "completed"));
-      const gamesSnap = await getDocs(gameQuery);
-      let wins = 0;
-      gamesSnap.forEach(doc => {
-        const data = doc.data();
-        if (data.winner === username) wins++;
-      });
-      document.getElementById("wins").innerText = wins;
-
-      // Set league badge
+      // Wins and League
+      document.getElementById("wins").innerText = userData.wins || 0;
       let badge = "🥉 Bronze";
-      if (wins >= 5) badge = "🥈 Silver";
-      if (wins >= 10) badge = "🥇 Gold";
-      if (wins >= 20) badge = "💎 Blue Platinum";
-      if (wins >= 30) badge = "🔴 Ruby";
+      if (userData.wins >= 5) badge = "🥈 Silver";
+      if (userData.wins >= 10) badge = "🥇 Gold";
+      if (userData.wins >= 20) badge = "💎 Blue Platinum";
+      if (userData.wins >= 30) badge = "🔴 Ruby";
       document.getElementById("league").innerText = badge;
 
-      // Load comments
+      loadComments();
+      loadPrayerLog();
+    }
+
+    async function loadComments() {
       const notesQuery = query(collection(db, "notes"), where("name", "==", username));
       const notesSnap = await getDocs(notesQuery);
       document.getElementById("comments").innerText = notesSnap.size;
 
-      loadPrayerLog();
+      const commentsBox = document.getElementById("commentsBox");
+      commentsBox.innerHTML = "";
+      notesSnap.forEach(doc => {
+        const note = doc.data();
+        const p = document.createElement("p");
+        p.innerText = `${note.book} ${note.chapter}: ${note.note}`;
+        commentsBox.appendChild(p);
+      });
     }
 
     async function savePrayer() {
@@ -123,6 +127,7 @@
       <p>🏆 Wins: <span id="wins">0</span></p>
       <p class="badge">League: <span id="league">🥉 Bronze</span></p>
       <p>💬 Comments Posted: <span id="comments">0</span></p>
+      <div class="comments-box" id="commentsBox"></div>
 
       <h3>🙏 Prayer Journal</h3>
       <input type="text" id="prayerInput" placeholder="Add prayer request...">
@@ -133,3 +138,4 @@
   </div>
 </body>
 </html>
+
