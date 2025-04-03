@@ -4,16 +4,52 @@
   <meta charset="UTF-8">
   <title>🙋‍♂️ My Account</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 0; padding: 20px; text-align: center; }
-    .container { max-width: 700px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
-    input, button { margin: 10px; padding: 10px; font-size: 1em; }
-    .badge { font-size: 1.2em; margin-top: 10px; }
-    .prayer-box { border: 1px solid #ccc; margin: 5px; padding: 10px; border-radius: 5px; }
-    .comments-box { border: 1px solid #ccc; margin-top: 10px; padding: 10px; border-radius: 5px; max-height: 150px; overflow-y: auto; text-align: left; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+    }
+    input, button {
+      margin: 10px;
+      padding: 10px;
+      font-size: 1em;
+    }
+    .badge {
+      font-size: 1.2em;
+      margin-top: 10px;
+    }
+    .prayer-box {
+      border: 1px solid #ccc;
+      margin: 5px;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .comments-box {
+      border: 1px solid #ccc;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      max-height: 150px;
+      overflow-y: auto;
+      text-align: left;
+    }
   </style>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs, addDoc, doc, getDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import {
+      getFirestore, collection, query, where, getDocs,
+      addDoc, orderBy
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -27,29 +63,40 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    let username = "";
+    // Grab stored username or set default
+    let username = localStorage.getItem("username") || "";
 
-    window.login = async function() {
-      username = document.getElementById("username").value.trim();
+    // Login function
+    window.login = async function () {
+      const inputUser = document.getElementById("username").value.trim();
       const password = document.getElementById("password").value.trim();
-      const userQuery = query(collection(db, "users"), where("username", "==", username));
+
+      const userQuery = query(collection(db, "users"), where("username", "==", inputUser));
       const userSnap = await getDocs(userQuery);
       if (userSnap.empty) return alert("❌ Username not found.");
 
       let userData = null;
       userSnap.forEach(doc => {
-        if (doc.data().password === password) userData = { id: doc.id, ...doc.data() };
+        if (doc.data().password === password) {
+          userData = { id: doc.id, ...doc.data() };
+        }
       });
+
       if (!userData) return alert("❌ Incorrect password.");
 
-      loadAccountData(userData);
-    }
+      // Set global + persistent username
+      username = inputUser;
+      localStorage.setItem("username", username);
 
+      loadAccountData(userData);
+    };
+
+    // Load account details
     async function loadAccountData(userData) {
       document.getElementById("account").style.display = "block";
       document.getElementById("displayUser").innerText = username;
 
-      // Wins and League
+      // Wins and League display
       document.getElementById("wins").innerText = userData.wins || 0;
       let badge = "🥉 Bronze";
       if (userData.wins >= 5) badge = "🥈 Silver";
@@ -62,6 +109,7 @@
       loadPrayerLog();
     }
 
+    // Load comments
     async function loadComments() {
       const notesQuery = query(collection(db, "notes"), where("name", "==", username));
       const notesSnap = await getDocs(notesQuery);
@@ -77,21 +125,34 @@
       });
     }
 
-    async function savePrayer() {
+    // Save a prayer request
+    window.savePrayer = async function () {
+      if (!username) {
+        alert("❌ You're not logged in. Please log in first.");
+        return;
+      }
+
       const prayer = document.getElementById("prayerInput").value.trim();
       if (!prayer) return;
+
       const today = new Date().toISOString().split('T')[0];
       await addDoc(collection(db, "prayers"), {
         user: username,
         text: prayer,
         date: today
       });
+
       document.getElementById("prayerInput").value = "";
       loadPrayerLog();
-    }
+    };
 
-    async function loadPrayerLog(offset = 0) {
-      const prayerQuery = query(collection(db, "prayers"), where("user", "==", username), orderBy("date", "desc"));
+    // Load prayer log
+    window.loadPrayerLog = async function (offset = 0) {
+      const prayerQuery = query(
+        collection(db, "prayers"),
+        where("user", "==", username),
+        orderBy("date", "desc")
+      );
       const snap = await getDocs(prayerQuery);
       const prayers = [];
       snap.forEach(doc => prayers.push(doc.data()));
@@ -112,7 +173,7 @@
         <button onclick="loadPrayerLog(${offset - 1})" ${offset === 0 ? 'disabled' : ''}>⬅️ Back</button>
         <button onclick="loadPrayerLog(${offset + 1})" ${(start + 5) >= prayers.length ? 'disabled' : ''}>Next ➡️</button>
       `;
-    }
+    };
   </script>
 </head>
 <body>
@@ -138,4 +199,5 @@
   </div>
 </body>
 </html>
+
 
