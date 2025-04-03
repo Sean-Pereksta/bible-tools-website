@@ -43,6 +43,28 @@
       text-align: left;
     }
   </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🙋‍♂️ My Account</h1>
+    <input type="text" id="username" placeholder="Username"><br>
+    <input type="password" id="password" placeholder="Password"><br>
+    <button id="loginBtn">Log In</button>
+
+    <div id="account" style="display:none;">
+      <h2>Welcome, <span id="displayUser"></span></h2>
+      <p>🏆 Wins: <span id="wins">0</span></p>
+      <p class="badge">League: <span id="league">🥉 Bronze</span></p>
+      <p>💬 Comments Posted: <span id="comments">0</span></p>
+      <div class="comments-box" id="commentsBox"></div>
+
+      <h3>🙏 Prayer Journal</h3>
+      <input type="text" id="prayerInput" placeholder="Add prayer request...">
+      <button id="savePrayerBtn">Save Prayer</button>
+      <div id="prayerLog"></div>
+      <div id="pageNav"></div>
+    </div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -63,11 +85,16 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Grab stored username or set default
     let username = localStorage.getItem("username") || "";
 
-    // Login function
-    window.login = async function () {
+    // DOM Elements
+    const loginBtn = document.getElementById("loginBtn");
+    const savePrayerBtn = document.getElementById("savePrayerBtn");
+
+    loginBtn.addEventListener("click", login);
+    savePrayerBtn.addEventListener("click", savePrayer);
+
+    async function login() {
       const inputUser = document.getElementById("username").value.trim();
       const password = document.getElementById("password").value.trim();
 
@@ -84,19 +111,17 @@
 
       if (!userData) return alert("❌ Incorrect password.");
 
-      // Set global + persistent username
       username = inputUser;
       localStorage.setItem("username", username);
 
       loadAccountData(userData);
-    };
+    }
 
-    // Load account details
     async function loadAccountData(userData) {
       document.getElementById("account").style.display = "block";
       document.getElementById("displayUser").innerText = username;
 
-      // Wins and League display
+      // Wins + League Badge
       document.getElementById("wins").innerText = userData.wins || 0;
       let badge = "🥉 Bronze";
       if (userData.wins >= 5) badge = "🥈 Silver";
@@ -109,7 +134,6 @@
       loadPrayerLog();
     }
 
-    // Load comments
     async function loadComments() {
       const notesQuery = query(collection(db, "notes"), where("name", "==", username));
       const notesSnap = await getDocs(notesQuery);
@@ -125,8 +149,7 @@
       });
     }
 
-    // Save a prayer request
-    window.savePrayer = async function () {
+    async function savePrayer() {
       if (!username) {
         alert("❌ You're not logged in. Please log in first.");
         return;
@@ -144,10 +167,9 @@
 
       document.getElementById("prayerInput").value = "";
       loadPrayerLog();
-    };
+    }
 
-    // Load prayer log
-    window.loadPrayerLog = async function (offset = 0) {
+    async function loadPrayerLog(offset = 0) {
       const prayerQuery = query(
         collection(db, "prayers"),
         where("user", "==", username),
@@ -173,31 +195,7 @@
         <button onclick="loadPrayerLog(${offset - 1})" ${offset === 0 ? 'disabled' : ''}>⬅️ Back</button>
         <button onclick="loadPrayerLog(${offset + 1})" ${(start + 5) >= prayers.length ? 'disabled' : ''}>Next ➡️</button>
       `;
-    };
+    }
   </script>
-</head>
-<body>
-  <div class="container">
-    <h1>🙋‍♂️ My Account</h1>
-    <input type="text" id="username" placeholder="Username"><br>
-    <input type="password" id="password" placeholder="Password"><br>
-    <button onclick="login()">Log In</button>
-
-    <div id="account" style="display:none;">
-      <h2>Welcome, <span id="displayUser"></span></h2>
-      <p>🏆 Wins: <span id="wins">0</span></p>
-      <p class="badge">League: <span id="league">🥉 Bronze</span></p>
-      <p>💬 Comments Posted: <span id="comments">0</span></p>
-      <div class="comments-box" id="commentsBox"></div>
-
-      <h3>🙏 Prayer Journal</h3>
-      <input type="text" id="prayerInput" placeholder="Add prayer request...">
-      <button onclick="savePrayer()">Save Prayer</button>
-      <div id="prayerLog"></div>
-      <div id="pageNav"></div>
-    </div>
-  </div>
 </body>
 </html>
-
-
