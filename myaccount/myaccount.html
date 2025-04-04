@@ -32,6 +32,7 @@
       margin: 5px;
       padding: 10px;
       border-radius: 5px;
+      text-align: left;
     }
     .comments-box {
       border: 1px solid #ccc;
@@ -59,6 +60,7 @@
       <div class="comments-box" id="commentsBox"></div>
 
       <h3>🙏 Prayer Journal</h3>
+      <p>Requests: <span id="prayerCount">0</span></p>
       <input type="text" id="prayerInput" placeholder="Add prayer request...">
       <button id="savePrayerBtn">Save Prayer</button>
       <div id="prayerLog"></div>
@@ -87,7 +89,6 @@
 
     let username = localStorage.getItem("username") || "";
 
-    // DOM Elements
     const loginBtn = document.getElementById("loginBtn");
     const savePrayerBtn = document.getElementById("savePrayerBtn");
 
@@ -121,7 +122,7 @@
       document.getElementById("account").style.display = "block";
       document.getElementById("displayUser").innerText = username;
 
-      // Wins + League Badge
+      // Wins and badge
       document.getElementById("wins").innerText = userData.wins || 0;
       let badge = "🥉 Bronze";
       if (userData.wins >= 5) badge = "🥈 Silver";
@@ -178,8 +179,16 @@
       const snap = await getDocs(prayerQuery);
       const prayers = [];
       snap.forEach(doc => prayers.push(doc.data()));
+
       const container = document.getElementById("prayerLog");
       container.innerHTML = "";
+      document.getElementById("prayerCount").innerText = prayers.length;
+
+      if (prayers.length === 0) {
+        container.innerHTML = `<p>No prayer requests found.</p>`;
+        document.getElementById("pageNav").innerHTML = "";
+        return;
+      }
 
       const start = offset * 5;
       const page = prayers.slice(start, start + 5);
