@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>📖 Draft Mode Bible Game</title>
   <style>
     body { font-family: Arial, sans-serif; background: #f0f0f0; text-align: center; padding: 20px; }
@@ -131,6 +131,7 @@
       const remainingBooks = uniqueBooks.filter(b => !allPickedBooks.includes(b));
       while ((draftedBooks[username] || []).length < 3 && remainingBooks.length) {
         const randomBook = remainingBooks.splice(Math.floor(Math.random() * remainingBooks.length), 1)[0];
+        draftedBooks[username] = draftedBooks[username] || [];
         draftedBooks[username].push(randomBook);
         allPickedBooks.push(randomBook);
       }
@@ -144,7 +145,6 @@
       const books = draftedBooks[username] || [];
       box.innerText = `📚 Your Books: ${books.join(", ")}`;
 
-      // Populate book dropdown
       const select = document.getElementById("book");
       select.innerHTML = "";
       books.forEach(b => {
@@ -200,24 +200,19 @@
     }
 
     async function saveScore(total) {
-      const ref = doc(db, "users", username);
-      await setDoc(ref, { score: total }, { merge: true });
+      const ref = doc(db, "lobbies", gameId);
+      const snap = await getDoc(ref);
+      const scores = snap.exists() && snap.data().scores ? snap.data().scores : {};
+      scores[username] = total;
+      await updateDoc(ref, { scores });
     }
 
     function listenToScores() {
       const ref = doc(db, "lobbies", gameId);
-      onSnapshot(ref, async (snap) => {
+      onSnapshot(ref, (snap) => {
         const data = snap.data();
-        const users = data.players || [];
-        const leaderboard = [];
-
-        for (const name of users) {
-          const userRef = doc(db, "users", name);
-          const userSnap = await getDoc(userRef);
-          const score = userSnap.exists() ? (userSnap.data().score || 0) : 0;
-          leaderboard.push({ name, score });
-        }
-
+        const scores = data.scores || {};
+        const leaderboard = Object.entries(scores).map(([name, score]) => ({ name, score }));
         leaderboard.sort((a, b) => b.score - a.score);
         const div = document.getElementById("leaderboard");
         div.innerHTML = `<h3>📊 Leaderboard</h3>` + leaderboard.map((p, i) =>
