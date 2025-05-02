@@ -151,7 +151,7 @@
 
     if (data.status === "started") {
       let gameFile = "game-7rounds.html";
-      if (data.gameType === "rapid") gameFile = "game-rapid.html";
+      if (data.gameType === "rapid") gameFile = "rapid.html";
       else if (data.gameType === "teamplay") gameFile = "game-team.html";
       else if (data.gameType === "10rounds") gameFile = "game-10rounds.html"; // fallback
       window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/${gameFile}?gameId=${currentLobbyId}&username=${username}`;
