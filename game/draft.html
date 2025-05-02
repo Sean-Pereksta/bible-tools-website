@@ -112,7 +112,7 @@
 
     function startDraftCountdown() {
       let timeLeft = 60;
-      const timer = document.getElementById("timer");
+      const timer = document.getElementById("gametimer");
       timer.innerText = `⏱️ 60s left to draft`;
 
       draftInterval = setInterval(() => {
@@ -241,7 +241,7 @@
     <div id="draftedDisplay"></div>
     <div id="verseSection" style="display:none">
       <div id="leaderboard"></div>
-      <p id="timer"></p>
+      <p id="gametimer"></p>
       <p id="verseText"></p>
       <select id="book"></select>
       <input type="text" id="chapter" placeholder="Chapter" />
