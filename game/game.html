@@ -18,9 +18,11 @@
     .player-name { font-weight: bold; }
     .player-score { font-size: 1.5em; margin-top: 5px; }
     .player-wins { font-size: 0.9em; margin-top: 2px; }
-    #result { margin-top: 10px; font-weight: bold; }
-    #winner { margin-top: 20px; font-size: 1.3em; color: green; }
+    #result, #winner { margin-top: 10px; font-weight: bold; }
+    #winner { font-size: 1.3em; color: green; }
+    #homeBtn { display: none; margin-top: 20px; padding: 10px 20px; font-size: 1.1em; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, updateDoc, onSnapshot, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -44,7 +46,7 @@
     let bibleData = [];
     let uniqueBooks = [];
     let timer;
-    let winnerDeclared = false;
+    let allScores = {};
 
     window.addEventListener('DOMContentLoaded', async () => {
       await preloadScores();
@@ -58,7 +60,6 @@
       if (gameSnap.exists()) {
         const data = gameSnap.data();
         updateScoreboard(data.scores || {});
-        updatePlayerCount(data);
       }
     }
 
@@ -93,9 +94,8 @@
       onSnapshot(gameRef, (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          updateScoreboard(data.scores || {});
-          updatePlayerCount(data);
-          if (data.playerStatus && Object.keys(data.playerStatus).length > 0) checkEndCondition(data.playerStatus);
+          allScores = data.scores || {};
+          updateScoreboard(allScores);
         }
       });
     }
@@ -138,13 +138,17 @@
       const verseNum = document.getElementById("verse").value.trim();
 
       let points = 0;
-      let message = "";
+      if (book === currentVerse.BookName) {
+        points += 1;
+        if (chapter === currentVerse.Chapter) {
+          points += 3;
+          if (verseNum === currentVerse.Verse) {
+            points += 5;
+          }
+        }
+      }
 
-      if (book === currentVerse.BookName) points += 1;
-      if (chapter === currentVerse.Chapter) points += 3;
-      if (verseNum === currentVerse.Verse) points += 5;
-
-      message = points > 0 ? `✅ +${points} pts` : `❌ ${currentVerse.BookName} ${currentVerse.Chapter}:${currentVerse.Verse}`;
+      const message = points > 0 ? `✅ +${points} pts` : `❌ ${currentVerse.BookName} ${currentVerse.Chapter}:${currentVerse.Verse}`;
       document.getElementById("result").innerText = message;
 
       const gameRef = doc(db, "games", gameId);
@@ -156,7 +160,7 @@
         [`scores.${username}`]: currentScore + points
       });
 
-      if (currentRound >= 6) {
+      if (currentRound >= 7) {
         finishGame();
       } else {
         setTimeout(nextRound, 1000);
@@ -164,64 +168,46 @@
     }
 
     async function finishGame() {
-      const gameRef = doc(db, "games", gameId);
-      await updateDoc(gameRef, {
-        [`playerStatus.${username}`]: "done"
-      });
-      document.getElementById("verseText").innerText = "Waiting for others to finish...";
+      document.getElementById("verseText").innerText = "⌛ Game Complete!";
+      clearInterval(timer);
 
-      const gameSnap = await getDoc(gameRef);
-      const data = gameSnap.data();
-      checkWinnerCondition(data);
-    }
-
-    function checkEndCondition(playerStatus) {
-      const doneCount = Object.values(playerStatus).filter(status => status === "done").length;
-      document.getElementById("completed").innerText = `Players Done: ${doneCount}`;
-    }
-
-    async function checkWinnerCondition(data) {
-      if (winnerDeclared) return;
-      if (!data.playerStatus) return;
-      const totalPlayers = Object.keys(data.scores || {}).length;
-      const donePlayers = Object.values(data.playerStatus).filter(status => status === "done").length;
-      if (totalPlayers > 0 && donePlayers === totalPlayers) {
-        winnerDeclared = true;
-        await declareWinner();
-        setTimeout(() => {
-          window.location.href = "https://sean-pereksta.github.io/bible-tools-website/";
-        }, 5000);
-      }
-    }
-
-    async function declareWinner() {
       const gameRef = doc(db, "games", gameId);
       const gameSnap = await getDoc(gameRef);
       const data = gameSnap.data();
+      const scores = data.scores || {};
+
+      let highest = -1;
       let winner = "";
-      let highScore = 0;
-      for (const [player, score] of Object.entries(data.scores || {})) {
-        if (score > highScore) {
-          highScore = score;
-          winner = player;
+      for (const [name, score] of Object.entries(scores)) {
+        if (score > highest) {
+          highest = score;
+          winner = name;
         }
       }
-      document.getElementById("verseText").innerText = `🎉 Winner: ${winner} (${highScore} pts)`;
-      document.getElementById("winner").innerText = `🏆 ${winner} wins the game!`;
 
-      const userRef = doc(db, "users", winner);
+      let countdown = 10;
+      document.getElementById("winner").innerText = winner === username ? "🎉 You won!" : `🏆 Winner: ${winner}`;
+      const countdownInterval = setInterval(() => {
+        document.getElementById("timer").innerText = `Returning in ${countdown--}s...`;
+        if (countdown < 0) {
+          clearInterval(countdownInterval);
+          document.getElementById("homeBtn").style.display = "inline-block";
+        }
+      }, 1000);
+
+      if (winner === username) updateWinCount(username);
+    }
+
+    async function updateWinCount(winnerName) {
+      const userRef = doc(db, "users", winnerName);
       const userSnap = await getDoc(userRef);
       let currentWins = 0;
       if (userSnap.exists()) {
-        const userData = userSnap.data();
-        currentWins = userData.wins || 0;
+        currentWins = userSnap.data().wins || 0;
       } else {
         await setDoc(userRef, { wins: 0 });
       }
-
-      await updateDoc(userRef, {
-        wins: currentWins + 1
-      });
+      await updateDoc(userRef, { wins: currentWins + 1 });
     }
 
     async function updateScoreboard(scores) {
@@ -232,8 +218,7 @@
         const userSnap = await getDoc(userRef);
         let wins = 0;
         if (userSnap.exists()) {
-          const userData = userSnap.data();
-          wins = userData.wins || 0;
+          wins = userSnap.data().wins || 0;
         } else {
           await setDoc(userRef, { wins: 0 });
         }
@@ -253,12 +238,10 @@
       }
     }
 
-    function updatePlayerCount(data) {
-      const totalPlayers = Object.keys(data.scores || {}).length;
-      document.getElementById("players").innerText = `Players: ${totalPlayers}`;
-    }
+    window.returnHome = () => {
+      window.location.href = "https://sean-pereksta.github.io/bible-tools-website/";
+    };
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
 <body>
   <div class="container">
@@ -274,6 +257,7 @@
     <input type="text" id="verse" placeholder="Verse" />
     <p id="result"></p>
     <p id="winner"></p>
+    <button id="homeBtn" onclick="returnHome()">🏠 Return to Home</button>
   </div>
 </body>
 </html>
