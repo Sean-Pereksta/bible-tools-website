@@ -97,7 +97,14 @@
     snap.forEach(docSnap => {
       const data = docSnap.data();
       const div = document.createElement("div");
-      div.innerHTML = `${data.name} (${data.players.length} players) <button onclick="joinLobby('${docSnap.id}')">Join</button>`;
+     let modeLabel = {
+        "7rounds": "7 Rounds",
+        "rapid": "Rapid",
+        "teamplay": "Team Play"
+      }[data.gameType] || data.gameType;
+      
+      div.innerHTML = `<strong>${data.name}</strong> — <em>${modeLabel}</em> (${data.players.length} players)
+        <button onclick="joinLobby('${docSnap.id}')">Join</button>`;
       list.appendChild(div);
     });
   }
