@@ -27,10 +27,10 @@
         <h2>Start Lobby</h2>
         <input type="text" id="lobbyName" placeholder="Lobby Name" />
         <select id="gameType">
-          <option value="7rounds">7 Rounds</option>
-          <option value="10rounds">10 Rounds</option>
-          <option value="teamplay">Team Play</option>
-        </select>
+        <option value="7rounds">7 Rounds</option>
+        <option value="rapid">Rapid</option>
+        <option value="teamplay">Team Play</option>
+      </select>
         <button onclick="startLobby()">Start Lobby</button>
       </div>
       <div id="lobbyList"></div>
@@ -114,25 +114,43 @@
     listenToLobby();
   }
 
-  function listenToLobby() {
-    const ref = doc(db, "lobbies", currentLobbyId);
-    onSnapshot(ref, (docSnap) => {
-      const data = docSnap.data();
-      document.getElementById("lobbyPlayers").innerHTML = `<h3>Lobby: ${data.name}</h3>Players: ${data.players.join(", ")}`;
-      if (data.host === username) {
-        document.getElementById("startBtn").style.display = "inline-block";
-      }
-      if (data.status === "started") {
-        if (data.gameType === "7rounds") {
-          window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-7rounds.html?gameId=${currentLobbyId}&username=${username}`;
-        } else if (data.gameType === "10rounds") {
-          window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-10rounds.html?gameId=${currentLobbyId}&username=${username}`;
-        } else if (data.gameType === "teamplay") {
-          window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-team.html?gameId=${currentLobbyId}&username=${username}`;
-        }
-      }
-    });
-  }
+ function listenToLobby() {
+  const ref = doc(db, "lobbies", currentLobbyId);
+  onSnapshot(ref, async (docSnap) => {
+    const data = docSnap.data();
+    document.getElementById("lobbyPlayers").innerHTML = `<h3>Lobby: ${data.name}</h3>`;
+
+    // Show each player with their rank color
+    for (const player of data.players) {
+      const userRef = doc(db, "users", player);
+      const userSnap = await getDoc(userRef);
+      let wins = 0;
+      if (userSnap.exists()) wins = userSnap.data().wins || 0;
+
+      let color = "#cd7f32"; // bronze default
+      if (wins >= 5 && wins < 10) color = "#c0c0c0";     // silver
+      else if (wins >= 10 && wins < 15) color = "#ffd700"; // gold
+      else if (wins >= 15 && wins < 25) color = "#007bff"; // blue
+      else if (wins >= 25) color = "#dc3545";             // red
+
+      const div = document.createElement("div");
+      div.innerHTML = `<span style="display:inline-block;width:12px;height:12px;background:${color};border-radius:50%;margin-right:8px;"></span>${player}`;
+      document.getElementById("lobbyPlayers").appendChild(div);
+    }
+
+    if (data.host === username) {
+      document.getElementById("startBtn").style.display = "inline-block";
+    }
+
+    if (data.status === "started") {
+      let gameFile = "game-7rounds.html";
+      if (data.gameType === "rapid") gameFile = "game-rapid.html";
+      else if (data.gameType === "teamplay") gameFile = "game-team.html";
+      else if (data.gameType === "10rounds") gameFile = "game-10rounds.html"; // fallback
+      window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/${gameFile}?gameId=${currentLobbyId}&username=${username}`;
+    }
+  });
+}
 
   async function startGame() {
     const ref = doc(db, "lobbies", currentLobbyId);
