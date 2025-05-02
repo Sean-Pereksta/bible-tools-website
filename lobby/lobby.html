@@ -87,10 +87,36 @@
     }
 
     function listenToLobby() {
-      const ref = doc(db, "lobbies", currentLobbyId);
-      onSnapshot(ref, (docSnap) => {
-        const data = docSnap.data();
-        document.getElementById("lobbyPlayers").innerHTML = `<h3>Lobby: ${data.name}</h3>Players: ${data.players.join(", ")}`;
+  const ref = doc(db, "lobbies", currentLobbyId);
+  onSnapshot(ref, (docSnap) => {
+    const data = docSnap.data();
+    document.getElementById("lobbyPlayers").innerHTML = `<h3>Lobby: ${data.name}</h3>Players: ${data.players.join(", ")}`;
+    if (data.host === username) {
+      document.getElementById("startBtn").style.display = "inline-block";
+    }
+    if (data.status === "started") {
+      // Manually set file paths
+      if (data.gameType === "7rounds") {
+        window.location.href = "https://sean-pereksta.github.io/bible-tools-website/game/game-7rounds.html?gameId=" + currentLobbyId + "&username=" + username;
+      } else if (data.gameType === "10rounds") {
+        window.location.href = "https://sean-pereksta.github.io/bible-tools-website/game/game-10rounds.html?gameId=" + currentLobbyId + "&username=" + username;
+      } else if (data.gameType === "teamplay") {
+        window.location.href = "https://sean-pereksta.github.io/bible-tools-website/game/game-team.html?gameId=" + currentLobbyId + "&username=" + username;
+      }
+    }
+  });
+}</h3>Players: ${data.players.join(", ")}`;
+    if (data.host === username) {
+      document.getElementById("startBtn").style.display = "inline-block";
+    }
+    if (data.status === "started") {
+      let gameFile = "game-7rounds.html";
+      if (data.gameType === "10rounds") gameFile = "game-10rounds.html";
+      else if (data.gameType === "teamplay") gameFile = "game-team.html";
+      window.location.href = `game/${gameFile}?gameId=${currentLobbyId}&username=${username}`;
+    }
+  });
+}</h3>Players: ${data.players.join(", ")}`;
         if (data.host === username) {
           document.getElementById("startBtn").style.display = "inline-block";
         }
@@ -98,7 +124,7 @@
           let gameFile = "game-7rounds.html";
           if (data.gameType === "10rounds") gameFile = "game-10rounds.html";
           else if (data.gameType === "teamplay") gameFile = "game-team.html";
-          window.location.href = `game/${gameFile}?gameId=${currentLobbyId}&username=${username}`;
+          window.location.href = `${gameFile}?gameId=${currentLobbyId}&username=${username}`;
         }
       });
     }
