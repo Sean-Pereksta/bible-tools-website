@@ -13,7 +13,7 @@
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query, where, getDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query, where, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -87,28 +87,53 @@
     }
 
     function listenToLobby() {
-  const ref = doc(db, "lobbies", currentLobbyId);
-  onSnapshot(ref, (docSnap) => {
-    const data = docSnap.data();
-    document.getElementById("lobbyPlayers").innerHTML = `<h3>Lobby: ${data.name}</h3>Players: ${data.players.join(", ")}`;
-    if (data.host === username) {
-      document.getElementById("startBtn").style.display = "inline-block";
+      const ref = doc(db, "lobbies", currentLobbyId);
+      onSnapshot(ref, (docSnap) => {
+        const data = docSnap.data();
+        document.getElementById("lobbyPlayers").innerHTML = `<h3>Lobby: ${data.name}</h3>Players: ${data.players.join(", ")}`;
+        if (data.host === username) {
+          document.getElementById("startBtn").style.display = "inline-block";
+        }
+        if (data.status === "started") {
+          if (data.gameType === "7rounds") {
+            window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-7rounds.html?gameId=${currentLobbyId}&username=${username}`;
+          } else if (data.gameType === "10rounds") {
+            window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-10rounds.html?gameId=${currentLobbyId}&username=${username}`;
+          } else if (data.gameType === "teamplay") {
+            window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-team.html?gameId=${currentLobbyId}&username=${username}`;
+          }
+        }
+      });
     }
-    if (data.status === "started") {
-      // Finalized path for gameType redirection
-      if (data.gameType === "7rounds") {
-        window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-7rounds.html?gameId=${currentLobbyId}&username=${username}`;
-      } else if (data.gameType === "10rounds") {
-        window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-10rounds.html?gameId=${currentLobbyId}&username=${username}`;
-      } else if (data.gameType === "teamplay") {
-        window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-team.html?gameId=${currentLobbyId}&username=${username}`;
-      }
-    }
-  });
-}
 
-window.listenToLobby = listenToLobby;
-</script>
+    async function startGame() {
+      const ref = doc(db, "lobbies", currentLobbyId);
+      await updateDoc(ref, { status: "started" });
+    }
+
+    async function leaveLobby() {
+      const ref = doc(db, "lobbies", currentLobbyId);
+      const snap = await getDoc(ref);
+      const players = snap.data().players.filter(p => p !== username);
+      await updateDoc(ref, { players });
+      currentLobbyId = null;
+      isHost = false;
+      document.getElementById("lobbyPlayers").innerHTML = "";
+    }
+
+    function showError(msg) {
+      const e = document.getElementById("error");
+      e.innerText = msg;
+      e.style.color = "red";
+    }
+
+    // Expose to global scope for HTML onclick
+    window.login = login;
+    window.startLobby = startLobby;
+    window.joinLobby = joinLobby;
+    window.startGame = startGame;
+    window.leaveLobby = leaveLobby;
+  </script>
 </head>
 <body>
   <div class="container">
