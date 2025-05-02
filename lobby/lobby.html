@@ -98,7 +98,7 @@
           let gameFile = "game-7rounds.html";
           if (data.gameType === "10rounds") gameFile = "game-10rounds.html";
           else if (data.gameType === "teamplay") gameFile = "game-team.html";
-          window.location.href = `${gameFile}?gameId=${currentLobbyId}&username=${username}`;
+          window.location.href = `game/${gameFile}?gameId=${currentLobbyId}&username=${username}`;
         }
       });
     }
