@@ -79,7 +79,6 @@
         [`drafted.${username}`]: draftedBooks[username]
       });
 
-      // Start cooldown
       canPick = false;
       let cooldown = 15;
       const cooldownDisplay = document.getElementById("cooldownTimer");
@@ -132,7 +131,6 @@
       const remainingBooks = uniqueBooks.filter(b => !allPickedBooks.includes(b));
       while ((draftedBooks[username] || []).length < 3 && remainingBooks.length) {
         const randomBook = remainingBooks.splice(Math.floor(Math.random() * remainingBooks.length), 1)[0];
-        draftedBooks[username] = draftedBooks[username] || [];
         draftedBooks[username].push(randomBook);
         allPickedBooks.push(randomBook);
       }
@@ -145,6 +143,16 @@
       const box = document.getElementById("draftedDisplay");
       const books = draftedBooks[username] || [];
       box.innerText = `📚 Your Books: ${books.join(", ")}`;
+
+      // Populate book dropdown
+      const select = document.getElementById("book");
+      select.innerHTML = "";
+      books.forEach(b => {
+        const option = document.createElement("option");
+        option.value = b;
+        option.textContent = b;
+        select.appendChild(option);
+      });
     }
 
     function startGame() {
@@ -154,6 +162,7 @@
       listenToScores();
 
       const timer = document.getElementById("timer");
+      timer.innerText = `⏳ 300s left`;
       gameTimer = setInterval(() => {
         secondsLeft--;
         timer.innerText = `⏳ ${secondsLeft}s left`;
@@ -179,11 +188,12 @@
       if (book === currentVerse.BookName) points += 1;
       if (chapter === currentVerse.Chapter) points += 3;
       if (verse === currentVerse.Verse) points += 5;
+      else if (book !== currentVerse.BookName) points = -1;
       score += points;
 
       document.getElementById("result").innerText = points > 0
         ? `✅ +${points} pts`
-        : `❌ 0 pts (Answer: ${currentVerse.BookName} ${currentVerse.Chapter}:${currentVerse.Verse})`;
+        : `❌ -1 (Answer: ${currentVerse.BookName} ${currentVerse.Chapter}:${currentVerse.Verse})`;
 
       await saveScore(score);
       setTimeout(nextVerse, 1000);
@@ -236,6 +246,7 @@
     <div id="draftedDisplay"></div>
     <div id="verseSection" style="display:none">
       <div id="leaderboard"></div>
+      <p id="timer"></p>
       <p id="verseText"></p>
       <select id="book"></select>
       <input type="text" id="chapter" placeholder="Chapter" />
