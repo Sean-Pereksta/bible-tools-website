@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>📖 Draft Mode Bible Game</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f0f0; text-align: center; padding: 20px; }
+    .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+    .book-grid { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
+    .book-box { background: #eee; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }
+    .book-box.disabled { background: #ccc; pointer-events: none; }
+    #verseSection, #result, #winner, #submitBtn, #timer, #draftedDisplay, #leaderboard, #homeBtn { margin-top: 20px; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, updateDoc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
+      authDomain: "bible-game-246c0.firebaseapp.com",
+      projectId: "bible-game-246c0",
+      storageBucket: "bible-game-246c0.appspot.com",
+      messagingSenderId: "959619818996",
+      appId: "1:959619818996:web:5a9fbf492e23c765e445a1"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const username = new URLSearchParams(window.location.search).get("username");
+    const gameId = new URLSearchParams(window.location.search).get("gameId");
+
+    let bibleData = [], uniqueBooks = [], draftedBooks = {}, allPickedBooks = [], canPick = true, draftInterval;
+    let gameTimer, secondsLeft = 300;
+    let score = 0;
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      const response = await fetch("https://raw.githubusercontent.com/Sean-Pereksta/Bible-Data/main/web.csv");
+      const csvText = await response.text();
+      const parsed = Papa.parse(csvText, { header: true }).data;
+      bibleData = parsed.filter(v => v.Text && v.BookName && v.Chapter && v.Verse);
+      uniqueBooks = [...new Set(bibleData.map(v => v.BookName))];
+
+      const gameRef = doc(db, "lobbies", gameId);
+      const gameSnap = await getDoc(gameRef);
+      if (gameSnap.exists()) {
+        const data = gameSnap.data();
+        draftedBooks = data.drafted || {};
+        allPickedBooks = Object.values(draftedBooks).flat();
+        renderBookGrid();
+        listenToDraft();
+        startDraftCountdown();
+      }
+    });
+
+    function renderBookGrid() {
+      const grid = document.getElementById("bookGrid");
+      grid.innerHTML = "";
+      uniqueBooks.forEach(book => {
+        const div = document.createElement("div");
+        div.className = "book-box";
+        div.innerText = book;
+        if (allPickedBooks.includes(book)) div.classList.add("disabled");
+        div.onclick = () => handlePick(book, div);
+        grid.appendChild(div);
+      });
+    }
+
+    function handlePick(book, element) {
+      if (!canPick || allPickedBooks.includes(book)) return;
+      draftedBooks[username] = draftedBooks[username] || [];
+      if (draftedBooks[username].length >= 3) return;
+
+      draftedBooks[username].push(book);
+      allPickedBooks.push(book);
+      updateDoc(doc(db, "lobbies", gameId), {
+        [`drafted.${username}`]: draftedBooks[username]
+      });
+
+      canPick = false;
+      setTimeout(() => { canPick = true; }, 15000);
+
+      renderBookGrid();
+      displayDraftedBooks();
+    }
+
+    function listenToDraft() {
+      const ref = doc(db, "lobbies", gameId);
+      onSnapshot(ref, (snap) => {
+        const data = snap.data();
+        draftedBooks = data.drafted || {};
+        allPickedBooks = Object.values(draftedBooks).flat();
+        renderBookGrid();
+        displayDraftedBooks();
+      });
+    }
+
+    function startDraftCountdown() {
+      let timeLeft = 60;
+      const timer = document.getElementById("timer");
+      timer.innerText = `⏱️ 60s left to draft`;
+
+      draftInterval = setInterval(() => {
+        timeLeft--;
+        timer.innerText = `⏱️ ${timeLeft}s left to draft`;
+        if (timeLeft <= 0) {
+          clearInterval(draftInterval);
+          autoAssignBooks();
+          document.getElementById("draftSection").style.display = "none";
+          startGame();
+        }
+      }, 1000);
+    }
+
+    function autoAssignBooks() {
+      const remainingBooks = uniqueBooks.filter(b => !allPickedBooks.includes(b));
+      while ((draftedBooks[username] || []).length < 3 && remainingBooks.length) {
+        const randomBook = remainingBooks.splice(Math.floor(Math.random() * remainingBooks.length), 1)[0];
+        draftedBooks[username] = draftedBooks[username] || [];
+        draftedBooks[username].push(randomBook);
+        allPickedBooks.push(randomBook);
+      }
+      updateDoc(doc(db, "lobbies", gameId), {
+        [`drafted.${username}`]: draftedBooks[username]
+      });
+    }
+
+    function displayDraftedBooks() {
+      const box = document.getElementById("draftedDisplay");
+      const books = draftedBooks[username] || [];
+      box.innerText = `📚 Your Books: ${books.join(", ")}`;
+    }
+
+    function startGame() {
+      document.getElementById("verseSection").style.display = "block";
+      displayDraftedBooks();
+      nextVerse();
+      listenToScores();
+
+      const timer = document.getElementById("timer");
+      gameTimer = setInterval(() => {
+        secondsLeft--;
+        timer.innerText = `⏳ ${secondsLeft}s left`;
+        if (secondsLeft <= 0) {
+          clearInterval(gameTimer);
+          endGame();
+        }
+      }, 1000);
+    }
+
+    function nextVerse() {
+      const pool = bibleData.filter(v => (draftedBooks[username] || []).includes(v.BookName));
+      const verse = pool[Math.floor(Math.random() * pool.length)];
+      document.getElementById("verseText").innerText = verse.Text;
+      currentVerse = verse;
+    }
+
+    window.submitAnswer = async function () {
+      const book = document.getElementById("book").value.trim();
+      const chapter = document.getElementById("chapter").value.trim();
+      const verse = document.getElementById("verse").value.trim();
+      let points = 0;
+      if (book === currentVerse.BookName) points += 1;
+      if (chapter === currentVerse.Chapter) points += 3;
+      if (verse === currentVerse.Verse) points += 5;
+      score += points;
+
+      document.getElementById("result").innerText = points > 0
+        ? `✅ +${points} pts`
+        : `❌ 0 pts (Answer: ${currentVerse.BookName} ${currentVerse.Chapter}:${currentVerse.Verse})`;
+
+      await saveScore(score);
+      setTimeout(nextVerse, 1000);
+    }
+
+    async function saveScore(total) {
+      const ref = doc(db, "users", username);
+      await setDoc(ref, { score: total }, { merge: true });
+    }
+
+    function listenToScores() {
+      const ref = doc(db, "lobbies", gameId);
+      onSnapshot(ref, async (snap) => {
+        const data = snap.data();
+        const users = data.players || [];
+        const leaderboard = [];
+
+        for (const name of users) {
+          const userRef = doc(db, "users", name);
+          const userSnap = await getDoc(userRef);
+          const score = userSnap.exists() ? (userSnap.data().score || 0) : 0;
+          leaderboard.push({ name, score });
+        }
+
+        leaderboard.sort((a, b) => b.score - a.score);
+        const div = document.getElementById("leaderboard");
+        div.innerHTML = `<h3>📊 Leaderboard</h3>` + leaderboard.map((p, i) =>
+          `<div>${i + 1}. <strong>${p.name}</strong>: ${p.score} pts</div>`
+        ).join('');
+      });
+    }
+
+    function endGame() {
+      document.getElementById("verseSection").innerHTML = `
+        <h3>🎉 Time's up!</h3>
+        <p>Your Final Score: ${score}</p>
+        <button id="homeBtn" onclick="window.location.href='/bible-tools-website/lobby/lobby.html'">🏠 Return to Lobby</button>`;
+    }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>📖 Draft Mode</h1>
+    <div id="draftSection">
+      <h3>Select 3 Books</h3>
+      <p id="timer">⏱️</p>
+      <div id="bookGrid" class="book-grid"></div>
+    </div>
+    <div id="draftedDisplay"></div>
+    <div id="verseSection" style="display:none">
+      <div id="leaderboard"></div>
+      <p id="verseText"></p>
+      <select id="book"></select>
+      <input type="text" id="chapter" placeholder="Chapter" />
+      <input type="text" id="verse" placeholder="Verse" />
+      <p id="result"></p>
+      <button id="submitBtn" onclick="submitAnswer()">✅ Submit</button>
+    </div>
+  </div>
+</body>
+</html>
