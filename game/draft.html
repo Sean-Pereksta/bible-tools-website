@@ -1,3 +1,4 @@
+<!-- Full HTML Script With Winner Display and Win Award -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -223,11 +224,38 @@
       });
     }
 
-    function endGame() {
+    async function endGame() {
+      const ref = doc(db, "lobbies", gameId);
+      const snap = await getDoc(ref);
+      const scores = snap.exists() && snap.data().scores ? snap.data().scores : {};
+      let highest = -Infinity;
+      let winner = "";
+      for (const [name, val] of Object.entries(scores)) {
+        if (val > highest) {
+          highest = val;
+          winner = name;
+        }
+      }
+
+      if (winner === username) await awardWin(username);
+
+      const msg = winner === username
+        ? "🎉 You are the winner!"
+        : `🏆 Winner: ${winner}`;
+
       document.getElementById("verseSection").innerHTML = `
         <h3>🎉 Time's up!</h3>
         <p>Your Final Score: ${score}</p>
+        <p id="winner">${msg}</p>
         <button id="homeBtn" onclick="window.location.href='/bible-tools-website/lobby/lobby.html'">🏠 Return to Lobby</button>`;
+    }
+
+    async function awardWin(name) {
+      const ref = doc(db, "users", name);
+      const snap = await getDoc(ref);
+      let wins = 0;
+      if (snap.exists()) wins = snap.data().wins || 0;
+      await setDoc(ref, { wins: wins + 1 }, { merge: true });
     }
   </script>
 </head>
@@ -254,3 +282,4 @@
   </div>
 </body>
 </html>
+
