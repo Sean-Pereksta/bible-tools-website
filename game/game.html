@@ -55,7 +55,7 @@
     });
 
     async function preloadScores() {
-      const gameRef = doc(db, "games", gameId);
+      const gameRef = doc(db, "lobbies", gameId)
       const gameSnap = await getDoc(gameRef);
       if (gameSnap.exists()) {
         const data = gameSnap.data();
@@ -90,7 +90,7 @@
     }
 
     function listenForScores() {
-      const gameRef = doc(db, "games", gameId);
+      const gameRef = doc(db, "lobbies", gameId)
       onSnapshot(gameRef, (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -151,7 +151,7 @@
       const message = points > 0 ? `✅ +${points} pts` : `❌ ${currentVerse.BookName} ${currentVerse.Chapter}:${currentVerse.Verse}`;
       document.getElementById("result").innerText = message;
 
-      const gameRef = doc(db, "games", gameId);
+      const gameRef = doc(db, "lobbies", gameId)
       const gameSnap = await getDoc(gameRef);
       const data = gameSnap.data();
       const currentScore = data.scores?.[username] || 0;
@@ -171,7 +171,7 @@
       document.getElementById("verseText").innerText = "⌛ Game Complete!";
       clearInterval(timer);
 
-      const gameRef = doc(db, "games", gameId);
+      const gameRef = doc(db, "lobbies", gameId)
       const gameSnap = await getDoc(gameRef);
       const data = gameSnap.data();
       const scores = data.scores || {};
