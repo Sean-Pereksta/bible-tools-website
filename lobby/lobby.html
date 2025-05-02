@@ -11,129 +11,7 @@
     #lobbyPlayers { margin-top: 20px; }
     #startBtn { margin-top: 10px; display: none; }
   </style>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query, where, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
-      authDomain: "bible-game-246c0.firebaseapp.com",
-      projectId: "bible-game-246c0",
-      storageBucket: "bible-game-246c0.appspot.com",
-      messagingSenderId: "959619818996",
-      appId: "1:959619818996:web:5a9fbf492e23c765e445a1"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    let username = "";
-    let currentLobbyId = null;
-    let isHost = false;
-
-    async function login() {
-      username = document.getElementById("username").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const userRef = doc(db, "users", username);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists() || userSnap.data().password !== password) {
-        showError("❌ Invalid login.");
-        return;
-      }
-      document.getElementById("loginForm").style.display = "none";
-      document.getElementById("lobbyInterface").style.display = "block";
-      loadLobbies();
-      setInterval(loadLobbies, 5000);
-    }
-
-    async function startLobby() {
-      const name = document.getElementById("lobbyName").value.trim();
-      const gameType = document.getElementById("gameType").value;
-      if (!name || !gameType) {
-        showError("Please fill out all lobby fields.");
-        return;
-      }
-      const lobby = await addDoc(collection(db, "lobbies"), {
-        name, gameType, status: "waiting", players: [username], host: username
-      });
-      currentLobbyId = lobby.id;
-      isHost = true;
-      listenToLobby();
-    }
-
-    async function loadLobbies() {
-      const q = query(collection(db, "lobbies"), where("status", "==", "waiting"));
-      const snap = await getDocs(q);
-      const list = document.getElementById("lobbyList");
-      list.innerHTML = "<h3>Available Lobbies</h3>";
-      snap.forEach(docSnap => {
-        const data = docSnap.data();
-        const div = document.createElement("div");
-        div.innerHTML = `${data.name} (${data.players.length} players) <button onclick="joinLobby('${docSnap.id}')">Join</button>`;
-        list.appendChild(div);
-      });
-    }
-
-    async function joinLobby(id) {
-      const ref = doc(db, "lobbies", id);
-      const snap = await getDoc(ref);
-      const data = snap.data();
-      if (!data.players.includes(username)) {
-        await updateDoc(ref, { players: [...data.players, username] });
-      }
-      currentLobbyId = id;
-      isHost = false;
-      listenToLobby();
-    }
-
-    function listenToLobby() {
-      const ref = doc(db, "lobbies", currentLobbyId);
-      onSnapshot(ref, (docSnap) => {
-        const data = docSnap.data();
-        document.getElementById("lobbyPlayers").innerHTML = `<h3>Lobby: ${data.name}</h3>Players: ${data.players.join(", ")}`;
-        if (data.host === username) {
-          document.getElementById("startBtn").style.display = "inline-block";
-        }
-        if (data.status === "started") {
-          if (data.gameType === "7rounds") {
-            window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-7rounds.html?gameId=${currentLobbyId}&username=${username}`;
-          } else if (data.gameType === "10rounds") {
-            window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-10rounds.html?gameId=${currentLobbyId}&username=${username}`;
-          } else if (data.gameType === "teamplay") {
-            window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-team.html?gameId=${currentLobbyId}&username=${username}`;
-          }
-        }
-      });
-    }
-
-    async function startGame() {
-      const ref = doc(db, "lobbies", currentLobbyId);
-      await updateDoc(ref, { status: "started" });
-    }
-
-    async function leaveLobby() {
-      const ref = doc(db, "lobbies", currentLobbyId);
-      const snap = await getDoc(ref);
-      const players = snap.data().players.filter(p => p !== username);
-      await updateDoc(ref, { players });
-      currentLobbyId = null;
-      isHost = false;
-      document.getElementById("lobbyPlayers").innerHTML = "";
-    }
-
-    function showError(msg) {
-      const e = document.getElementById("error");
-      e.innerText = msg;
-      e.style.color = "red";
-    }
-
-    // Expose to global scope for HTML onclick
-    window.login = login;
-    window.startLobby = startLobby;
-    window.joinLobby = joinLobby;
-    window.startGame = startGame;
-    window.leaveLobby = leaveLobby;
-  </script>
+  
 </head>
 <body>
   <div class="container">
@@ -161,5 +39,127 @@
       <button onclick="leaveLobby()">❌ Leave Lobby</button>
     </div>
   </div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query, where, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
+    authDomain: "bible-game-246c0.firebaseapp.com",
+    projectId: "bible-game-246c0",
+    storageBucket: "bible-game-246c0.appspot.com",
+    messagingSenderId: "959619818996",
+    appId: "1:959619818996:web:5a9fbf492e23c765e445a1"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  let username = "";
+  let currentLobbyId = null;
+  let isHost = false;
+
+  async function login() {
+    username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const userRef = doc(db, "users", username);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists() || userSnap.data().password !== password) {
+      showError("❌ Invalid login.");
+      return;
+    }
+    document.getElementById("loginForm").style.display = "none";
+    document.getElementById("lobbyInterface").style.display = "block";
+    loadLobbies();
+    setInterval(loadLobbies, 5000);
+  }
+
+  async function startLobby() {
+    const name = document.getElementById("lobbyName").value.trim();
+    const gameType = document.getElementById("gameType").value;
+    if (!name || !gameType) {
+      showError("Please fill out all lobby fields.");
+      return;
+    }
+    const lobby = await addDoc(collection(db, "lobbies"), {
+      name, gameType, status: "waiting", players: [username], host: username
+    });
+    currentLobbyId = lobby.id;
+    isHost = true;
+    listenToLobby();
+  }
+
+  async function loadLobbies() {
+    const q = query(collection(db, "lobbies"), where("status", "==", "waiting"));
+    const snap = await getDocs(q);
+    const list = document.getElementById("lobbyList");
+    list.innerHTML = "<h3>Available Lobbies</h3>";
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      const div = document.createElement("div");
+      div.innerHTML = `${data.name} (${data.players.length} players) <button onclick="joinLobby('${docSnap.id}')">Join</button>`;
+      list.appendChild(div);
+    });
+  }
+
+  async function joinLobby(id) {
+    const ref = doc(db, "lobbies", id);
+    const snap = await getDoc(ref);
+    const data = snap.data();
+    if (!data.players.includes(username)) {
+      await updateDoc(ref, { players: [...data.players, username] });
+    }
+    currentLobbyId = id;
+    isHost = false;
+    listenToLobby();
+  }
+
+  function listenToLobby() {
+    const ref = doc(db, "lobbies", currentLobbyId);
+    onSnapshot(ref, (docSnap) => {
+      const data = docSnap.data();
+      document.getElementById("lobbyPlayers").innerHTML = `<h3>Lobby: ${data.name}</h3>Players: ${data.players.join(", ")}`;
+      if (data.host === username) {
+        document.getElementById("startBtn").style.display = "inline-block";
+      }
+      if (data.status === "started") {
+        if (data.gameType === "7rounds") {
+          window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-7rounds.html?gameId=${currentLobbyId}&username=${username}`;
+        } else if (data.gameType === "10rounds") {
+          window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-10rounds.html?gameId=${currentLobbyId}&username=${username}`;
+        } else if (data.gameType === "teamplay") {
+          window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/game-team.html?gameId=${currentLobbyId}&username=${username}`;
+        }
+      }
+    });
+  }
+
+  async function startGame() {
+    const ref = doc(db, "lobbies", currentLobbyId);
+    await updateDoc(ref, { status: "started" });
+  }
+
+  async function leaveLobby() {
+    const ref = doc(db, "lobbies", currentLobbyId);
+    const snap = await getDoc(ref);
+    const players = snap.data().players.filter(p => p !== username);
+    await updateDoc(ref, { players });
+    currentLobbyId = null;
+    isHost = false;
+    document.getElementById("lobbyPlayers").innerHTML = "";
+  }
+
+  function showError(msg) {
+    const e = document.getElementById("error");
+    e.innerText = msg;
+    e.style.color = "red";
+  }
+
+  window.login = login;
+  window.startLobby = startLobby;
+  window.joinLobby = joinLobby;
+  window.startGame = startGame;
+  window.leaveLobby = leaveLobby;
+</script>
 </body>
 </html>
