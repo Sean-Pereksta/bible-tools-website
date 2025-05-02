@@ -29,7 +29,7 @@
         <select id="gameType">
         <option value="7rounds">7 Rounds</option>
         <option value="rapid">Rapid</option>
-        <option value="teamplay">Team Play</option>
+        <option value="draft">Draft</option>
       </select>
         <button onclick="startLobby()">Start Lobby</button>
       </div>
@@ -100,7 +100,7 @@
      let modeLabel = {
         "7rounds": "7 Rounds",
         "rapid": "Rapid",
-        "teamplay": "Team Play"
+        "draft": "Draft"
       }[data.gameType] || data.gameType;
       
       div.innerHTML = `<strong>${data.name}</strong> — <em>${modeLabel}</em> (${data.players.length} players)
@@ -152,7 +152,7 @@
     if (data.status === "started") {
       let gameFile = "game-7rounds.html";
       if (data.gameType === "rapid") gameFile = "rapid.html";
-      else if (data.gameType === "teamplay") gameFile = "game-team.html";
+      else if (data.gameType === "draft") gameFile = "draft.html";
       else if (data.gameType === "10rounds") gameFile = "game-10rounds.html"; // fallback
       window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/${gameFile}?gameId=${currentLobbyId}&username=${username}`;
     }
