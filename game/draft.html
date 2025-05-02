@@ -9,7 +9,9 @@
     .book-grid { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
     .book-box { background: #eee; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }
     .book-box.disabled { background: #ccc; pointer-events: none; }
-    #verseSection, #result, #winner, #submitBtn, #timer, #draftedDisplay, #leaderboard, #homeBtn, #cooldownTimer { margin-top: 20px; }
+    #verseSection, #result, #winner, #submitBtn, #draftedDisplay, #leaderboard, #homeBtn, #cooldownTimer, #draftTimer, #gameTimer {
+      margin-top: 20px;
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <script type="module">
@@ -112,7 +114,7 @@
 
     function startDraftCountdown() {
       let timeLeft = 60;
-      const timer = document.getElementById("gametimer");
+      const timer = document.getElementById("draftTimer");
       timer.innerText = `⏱️ 60s left to draft`;
 
       draftInterval = setInterval(() => {
@@ -161,7 +163,7 @@
       nextVerse();
       listenToScores();
 
-      const timer = document.getElementById("gametimer");
+      const timer = document.getElementById("gameTimer");
       timer.innerText = `⏳ 300s left`;
       gameTimer = setInterval(() => {
         secondsLeft--;
@@ -234,14 +236,14 @@
     <h1>📖 Draft Mode</h1>
     <div id="draftSection">
       <h3>Select 3 Books</h3>
-      <p id="timer">⏱️</p>
+      <p id="draftTimer">⏱️</p>
       <div id="bookGrid" class="book-grid"></div>
       <p id="cooldownTimer" style="display: none;"></p>
     </div>
     <div id="draftedDisplay"></div>
     <div id="verseSection" style="display:none">
       <div id="leaderboard"></div>
-      <p id="gametimer"></p>
+      <p id="gameTimer">⏳</p>
       <p id="verseText"></p>
       <select id="book"></select>
       <input type="text" id="chapter" placeholder="Chapter" />
