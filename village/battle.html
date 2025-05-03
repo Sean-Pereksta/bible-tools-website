@@ -219,12 +219,22 @@
           const key = `${target.x},${target.y}`;
           const targetHealth = healthMap[key];
           if (targetHealth && targetHealth.current > 0) {
-            targetHealth.current -= troop.damage;
-            if (targetHealth.current < 0) targetHealth.current = 0;
+          targetHealth.current -= troop.damage;
+          if (targetHealth.current <= 0) {
+            targetHealth.current = 0;
+            delete healthMap[key];
+            const targetCell = document.querySelector(`.cell[data-x="${target.x}"][data-y="${target.y}"]`);
+            if (targetCell) {
+              targetCell.className = "cell";
+              targetCell.innerHTML = "";
+            }
+            checkVictoryCondition();
+          } else {
             const targetCell = document.querySelector(`.cell[data-x="${target.x}"][data-y="${target.y}"]`);
             renderHealth(targetCell, key, targetHealth.current);
-            checkVictoryCondition();
           }
+        }
+
         } else {
           troop.x += Math.sign(dx);
           troop.y += Math.sign(dy);
