@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -113,6 +113,7 @@
     <button id="gameTab">🎮 Bible Game</button>
     <button id="readerTab">📚 Bible Reader</button>
     <button id="lobbyTab">🟢 Multiplayer Lobby</button>
+    <button id="villageTab">🏙️ Village Lobby</button>
   </div>
   <iframe id="contentFrame" src="biblegame/biblegame.html"></iframe>
 
@@ -180,9 +181,9 @@
       document.getElementById("gameTab").addEventListener("click", () => loadTab("biblegame/biblegame"));
       document.getElementById("readerTab").addEventListener("click", () => loadTab("biblereader/biblereader"));
       document.getElementById("lobbyTab").addEventListener("click", () => loadTab("lobby/lobby"));
+      document.getElementById("villageTab").addEventListener("click", () => loadTab("village/villagelobby"));
       document.getElementById("accountTab").addEventListener("click", () => loadTab("myaccount/myaccount"));
     });
   </script>
 </body>
 </html>
-
