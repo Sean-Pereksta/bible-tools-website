@@ -1,59 +1,19 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>🏰 Tribes Page</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      text-align: center;
-      padding: 20px;
-    }
-    .container {
-      max-width: 800px;
-      margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-    }
-    .village-box {
-      background: #eee;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 6px;
-    }
-    .tribe-power {
-      margin-top: 30px;
-      background: #fafafa;
-      padding: 10px;
-      border-radius: 6px;
-    }
-    button {
-      margin: 5px;
-      padding: 10px 15px;
-      border: none;
-      background: #3498db;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    input {
-      padding: 10px;
-      margin: 5px;
-      width: 200px;
-    }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; text-align: center; padding: 20px; }
+    .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+    .village-box { background: #eee; padding: 10px; margin: 10px 0; border-radius: 6px; }
+    .tribe-power { margin-top: 30px; background: #fafafa; padding: 10px; border-radius: 6px; }
+    button { margin: 5px; padding: 10px 15px; border: none; background: #3498db; color: white; border-radius: 5px; cursor: pointer; }
+    input { padding: 10px; margin: 5px; width: 200px; }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import {
-      getFirestore,
-      collection,
-      doc,
-      getDocs,
-      getDoc,
-      onSnapshot
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, doc, getDocs, getDoc, updateDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -119,18 +79,7 @@
 
       const actionBtn = document.createElement("button");
       actionBtn.textContent = hasVillage ? "🏰 Work on Village" : "🛠️ Create Village";
-      actionBtn.onclick = () => {
-        const iframe = document.createElement("iframe");
-        iframe.src = "/bible-tools-website/village/createvillage.html";
-        iframe.style.width = "100%";
-        iframe.style.height = "800px";
-        iframe.id = "villageEditorFrame";
-        document.body.appendChild(iframe);
-
-        iframe.onload = () => {
-          iframe.contentWindow.postMessage({ username: currentUsername }, "*");
-        };
-      };
+      actionBtn.onclick = () => window.location.href = "/bible-tools-website/village/createvillage.html";
       container.appendChild(actionBtn);
 
       loadTribePower();
@@ -160,4 +109,3 @@
   </div>
 </body>
 </html>
-
