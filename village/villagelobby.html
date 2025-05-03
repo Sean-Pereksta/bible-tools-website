@@ -14,7 +14,6 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, doc, getDocs, getDoc, updateDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -27,20 +26,27 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const auth = getAuth();
 
-    let currentUser = null;
+    let currentUsername = null;
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("loginBtn").onclick = async () => {
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        try {
-          const userCred = await signInWithEmailAndPassword(auth, email, password);
-          currentUser = userCred.user;
-          loadVillagePage();
-        } catch (error) {
-          alert("Login failed: " + error.message);
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value.trim();
+
+        const userRef = doc(db, "users", username);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          if (data.password === password) {
+            currentUsername = username;
+            loadVillagePage();
+          } else {
+            alert("Incorrect password.");
+          }
+        } else {
+          alert("Username not found.");
         }
       };
     });
@@ -59,7 +65,7 @@
         div.className = "village-box";
         div.innerHTML = `<strong>${docSnap.id}</strong><br>Owner: ${data.owner}<br>Power: ${data.power}`;
 
-        if (data.owner === currentUser.email) {
+        if (data.owner === currentUsername) {
           hasVillage = true;
         } else {
           const attackBtn = document.createElement("button");
@@ -94,7 +100,7 @@
   <div class="container">
     <h1>🛡️ Tribes of Israel</h1>
     <div id="loginSection">
-      <input id="email" type="email" placeholder="Email" />
+      <input id="username" type="text" placeholder="Username" />
       <input id="password" type="password" placeholder="Password" />
       <button id="loginBtn">🔐 Login</button>
     </div>
