@@ -177,84 +177,83 @@
       return closest;
     }
 
-    function spawnTroop(x, y) {
-      if (troopsLeft <= 0 || battleOver) return;
+   function spawnTroop(x, y) {
+  if (troopsLeft <= 0 || battleOver) return;
 
-        const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-        if (!cell || cell.classList.length > 1) return; // Prevent placing on structures
+  const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+  if (!cell || cell.classList.length > 1) return; // Prevent placing on structures
 
-      const troop = {
-        x, y,
-        hp: troopStats.base.hp,
-        damage: troopStats.base.damage,
-        range: troopStats.base.range,
-        speed: troopStats.base.speed,
-        interval: null,
-        div: null
-      };
+  const troop = {
+    x, y,
+    hp: troopStats.base.hp,
+    damage: troopStats.base.damage,
+    range: troopStats.base.range,
+    speed: troopStats.base.speed,
+    interval: null,
+    div: null
+  };
 
-      const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-      const tDiv = document.createElement("div");
-      tDiv.className = "troop";
-      cell.appendChild(tDiv);
-      troop.div = tDiv;
-      troopUnits.push(troop);
+  const tDiv = document.createElement("div");
+  tDiv.className = "troop";
+  cell.appendChild(tDiv);
+  troop.div = tDiv;
+  troopUnits.push(troop);
 
-      troopsLeft--;
-      document.getElementById("troopCount").textContent = troopsLeft;
+  troopsLeft--;
+  document.getElementById("troopCount").textContent = troopsLeft;
 
-      troop.interval = setInterval(() => {
-        if (battleOver) return;
+  troop.interval = setInterval(() => {
+    if (battleOver) return;
 
-        const target = getClosestTarget(troop.x, troop.y);
-        if (!target) {
-          clearInterval(troop.interval);
-          endBattle(true);
-          return;
-        }
-
-        const dx = target.x - troop.x;
-        const dy = target.y - troop.y;
-        const distance = Math.abs(dx) + Math.abs(dy);
-        const inRange = distance <= troop.range;
-
-        const currentCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
-        if (currentCell) currentCell.innerHTML = "";
-
-        if (inRange) {
-          const key = `${target.x},${target.y}`;
-          const targetHealth = healthMap[key];
-          if (targetHealth && targetHealth.current > 0) {
-          targetHealth.current -= troop.damage;
-          if (targetHealth.current <= 0) {
-            targetHealth.current = 0;
-            delete healthMap[key];
-            const targetCell = document.querySelector(`.cell[data-x="${target.x}"][data-y="${target.y}"]`);
-            if (targetCell) {
-              targetCell.className = "cell";
-              targetCell.innerHTML = "";
-            }
-            checkVictoryCondition();
-          } else {
-            const targetCell = document.querySelector(`.cell[data-x="${target.x}"][data-y="${target.y}"]`);
-            renderHealth(targetCell, key, targetHealth.current);
-          }
-        }
-
-        } else {
-          troop.x += Math.sign(dx);
-          troop.y += Math.sign(dy);
-        }
-
-        const newCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
-        if (newCell) {
-          const newDiv = document.createElement("div");
-          newDiv.className = "troop";
-          newCell.appendChild(newDiv);
-          troop.div = newDiv;
-        }
-      }, 1000);
+    const target = getClosestTarget(troop.x, troop.y);
+    if (!target) {
+      clearInterval(troop.interval);
+      endBattle(true);
+      return;
     }
+
+    const dx = target.x - troop.x;
+    const dy = target.y - troop.y;
+    const distance = Math.abs(dx) + Math.abs(dy);
+    const inRange = distance <= troop.range;
+
+    const currentCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
+    if (currentCell) currentCell.innerHTML = "";
+
+    if (inRange) {
+      const key = `${target.x},${target.y}`;
+      const targetHealth = healthMap[key];
+      if (targetHealth && targetHealth.current > 0) {
+        targetHealth.current -= troop.damage;
+        if (targetHealth.current <= 0) {
+          targetHealth.current = 0;
+          delete healthMap[key];
+          const targetCell = document.querySelector(`.cell[data-x="${target.x}"][data-y="${target.y}"]`);
+          if (targetCell) {
+            targetCell.className = "cell";
+            targetCell.innerHTML = "";
+          }
+          checkVictoryCondition();
+        } else {
+          const targetCell = document.querySelector(`.cell[data-x="${target.x}"][data-y="${target.y}"]`);
+          renderHealth(targetCell, key, targetHealth.current);
+        }
+      }
+    } else {
+      troop.x += Math.sign(dx);
+      troop.y += Math.sign(dy);
+    }
+
+    const newCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
+    if (newCell) {
+      const newDiv = document.createElement("div");
+      newDiv.className = "troop";
+      newCell.appendChild(newDiv);
+      troop.div = newDiv;
+    }
+  }, 1000);
+}
+
 
     function createGrid() {
       gridElement.innerHTML = "";
