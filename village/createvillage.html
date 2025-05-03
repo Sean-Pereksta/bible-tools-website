@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>🏗️ Create Village</title>
+  <title>🎗️ Create Village</title>
   <style>
     body { font-family: Arial, sans-serif; background: #eef2f5; text-align: center; padding: 20px; }
     .grid { display: grid; grid-template-columns: repeat(16, 30px); gap: 2px; margin: auto; margin-top: 20px; }
@@ -31,11 +31,11 @@
   </style>
 </head>
 <body>
-  <h1>🏗️ Build Your Village</h1>
+  <h1>🎗️ Build Your Village</h1>
 
   <div class="panel" id="buildingOptions"></div>
   <div class="grid" id="villageGrid"></div>
-  <button id="saveBtn">💾 Save Village</button>
+  <button id="saveBtn">📂 Save Village</button>
   <button id="loadBtn">🔄 Load Village</button>
 
   <script type="module">
@@ -75,7 +75,7 @@
 
     let selectedType = null;
     const gridSize = 16;
-    const gridData = Array(gridSize).fill().map(() => Array(gridSize).fill(""));
+    const gridData = [];
 
     const buildingOptions = document.getElementById("buildingOptions");
     const gridContainer = document.getElementById("villageGrid");
@@ -120,12 +120,18 @@
 
     function placeBuilding(cell, x, y) {
       if (!selectedType) return;
+      const index = gridData.findIndex(t => t.x === x && t.y === y);
+
       if (selectedType === "eraser") {
-        gridData[y][x] = "";
+        if (index !== -1) gridData.splice(index, 1);
         cell.className = "cell";
         return;
       }
-      gridData[y][x] = selectedType;
+
+      const newTile = { x, y, type: selectedType };
+      if (index !== -1) gridData[index] = newTile;
+      else gridData.push(newTile);
+
       cell.className = `cell ${selectedType}`;
     }
 
@@ -168,11 +174,8 @@
 
       const data = villageSnap.data();
       if (data.grid) {
-        for (let y = 0; y < gridSize; y++) {
-          for (let x = 0; x < gridSize; x++) {
-            gridData[y][x] = data.grid[y][x] || "";
-          }
-        }
+        gridData.length = 0;
+        gridData.push(...data.grid);
         updateGridVisual();
       }
     }
@@ -180,22 +183,21 @@
     function updateGridVisual() {
       const cells = gridContainer.querySelectorAll(".cell");
       cells.forEach(cell => {
-        const x = cell.dataset.x;
-        const y = cell.dataset.y;
-        const type = gridData[y][x];
+        const x = Number(cell.dataset.x);
+        const y = Number(cell.dataset.y);
+        const match = gridData.find(d => d.x === x && d.y === y);
         cell.className = "cell";
-        if (type) cell.classList.add(type);
+        if (match) cell.classList.add(match.type);
       });
     }
 
     function calculatePower() {
       let attack = 0, defense = 0;
-      for (let row of gridData) {
-        for (let type of row) {
-          if (type && buildingStats[type]) {
-            attack += buildingStats[type].attack;
-            defense += buildingStats[type].defense;
-          }
+      for (let tile of gridData) {
+        const stats = buildingStats[tile.type];
+        if (stats) {
+          attack += stats.attack;
+          defense += stats.defense;
         }
       }
       return { attack, defense };
