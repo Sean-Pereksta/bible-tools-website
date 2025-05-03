@@ -137,6 +137,7 @@
     const enemyStructures = [];
     const archerTowers = [];
     const lightningTowers = [];
+    const trapTowers = [];
 
 
     function selectTroopType(type) {
@@ -178,6 +179,9 @@
 
     function spawnTroop(x, y) {
       if (troopsLeft <= 0 || battleOver) return;
+
+        const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+        if (!cell || cell.classList.length > 1) return; // Prevent placing on structures
 
       const troop = {
         x, y,
@@ -364,6 +368,45 @@
     }
   }, 400);
 }
+function startTrapAttacks(trapTowers) {
+  setInterval(() => {
+    if (battleOver) return;
+
+    for (const trap of trapTowers) {
+      const { x: tx, y: ty } = trap;
+      const key = `${tx},${ty}`;
+      const trapHealth = healthMap[key];
+
+      if (!trapHealth || trapHealth.current <= 0) continue; // Skip dead traps
+
+      for (const troop of troopUnits) {
+        if (troop.hp <= 0) continue;
+
+        const dx = troop.x - tx;
+        const dy = troop.y - ty;
+        const distance = Math.sqrt(dx * dx + dy * dy); // Use Euclidean distance for 1.5 radius
+
+        if (distance <= 1.5) {
+          troop.hp -= 10;
+
+          const cell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
+          if (cell) {
+            cell.style.backgroundColor = 'orange';
+            setTimeout(() => {
+              cell.style.backgroundColor = '';
+            }, 100);
+          }
+
+          if (troop.hp <= 0) {
+            if (cell) cell.innerHTML = "";
+            clearInterval(troop.interval);
+          }
+        }
+      }
+    }
+  }, 1000); // Adjust tick speed if needed
+}
+
 
 
     async function init() {
@@ -398,10 +441,14 @@
         enemyStructures.push({ ...b });
         if (b.type === "archerTower") archerTowers.push({ x: b.x, y: b.y });
         if (b.type === "lightningStriker") lightningTowers.push({ x: b.x, y: b.y });
+        if (b.type === "trap") trapTowers.push({ x: b.x, y: b.y });
+
       }
 
       startArcherAttacks();
       startLightningAttacks(lightningTowers);
+      startTrapAttacks(trapTowers);
+
     }
 
     init();
