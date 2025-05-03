@@ -191,7 +191,7 @@
       if (book === currentVerse.BookName) points += 1;
       if (chapter === currentVerse.Chapter) points += 3;
       if (verse === currentVerse.Verse) points += 5;
-      else if (book !== currentVerse.BookName) points = -1;
+      else if (book !== currentVerse.BookName) points = -5;
       score += points;
 
       document.getElementById("result").innerText = points > 0
