@@ -136,6 +136,8 @@
 
     const enemyStructures = [];
     const archerTowers = [];
+    const lightningTowers = [];
+
 
     function selectTroopType(type) {
       selectedTroopType = type;
@@ -319,14 +321,21 @@
         const distance = Math.abs(dx) + Math.abs(dy);
 
         if (distance <= 3) {
-          troop.hp -= 1;
-
-          const troopCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
-          if (troop.hp <= 0) {
-            if (troopCell) troopCell.innerHTML = "";
-            clearInterval(troop.interval);
+            troop.hp -= 1;
+          
+            const troopCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
+            if (troopCell) {
+              troopCell.style.backgroundColor = 'yellow';
+              setTimeout(() => {
+                troopCell.style.backgroundColor = '';
+              }, 100); // short flash
+            }
+          
+            if (troop.hp <= 0) {
+              if (troopCell) troopCell.innerHTML = "";
+              clearInterval(troop.interval);
+            }
           }
-        }
       }
     }
   }, 400); // Fast tick for lightning effect
