@@ -4,12 +4,56 @@
   <meta charset="UTF-8">
   <title>🏗️ Create Village</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #eef2f5; text-align: center; padding: 20px; }
-    .grid { display: grid; grid-template-columns: repeat(16, 30px); gap: 2px; margin: auto; margin-top: 20px; }
-    .cell { width: 30px; height: 30px; background: #fff; border: 1px solid #ccc; }
-    .panel { margin-top: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
-    .building { width: 30px; height: 30px; border: 2px solid black; cursor: pointer; }
-    #saveBtn { margin-top: 20px; padding: 10px 20px; font-size: 1em; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #eef2f5;
+      text-align: center;
+      padding: 20px;
+    }
+    .grid-wrapper {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(16, 30px);
+      gap: 2px;
+    }
+    .cell {
+      width: 30px;
+      height: 30px;
+      background: #fff;
+      border: 1px solid #ccc;
+    }
+    .panel {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .building {
+      width: 30px;
+      height: 30px;
+      border: 2px solid black;
+      cursor: pointer;
+    }
+    .label {
+      font-size: 0.8em;
+      margin-top: 4px;
+    }
+    .option-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 60px;
+    }
+    #saveBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1em;
+    }
     .wall { background: black; }
     .strongWall { background: orange; }
     .archerTower { background: red; }
@@ -32,14 +76,15 @@
 
   <div class="panel" id="buildingOptions"></div>
 
-  <div class="grid" id="villageGrid"></div>
+  <div class="grid-wrapper">
+    <div class="grid" id="villageGrid"></div>
+  </div>
 
   <button id="saveBtn">💾 Save Village</button>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -52,9 +97,14 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const auth = getAuth();
 
-    // Temporary building stats (will move to Firebase later)
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentUsername = urlParams.get("username");
+
+    if (!currentUsername) {
+      alert("No username provided in URL.");
+    }
+
     const buildingStats = {
       wall: { attack: 0, defense: 2 },
       strongWall: { attack: 0, defense: 5 },
@@ -65,17 +115,16 @@
     };
 
     const buildingTypes = [
-      { type: "wall", label: "⬛" },
-      { type: "strongWall", label: "🟧" },
-      { type: "archerTower", label: "🟥" },
-      { type: "trap", label: "🟩" },
-      { type: "lightningStriker", label: "🟦" },
-      { type: "troopStructure", label: "🟪" },
-      { type: "eraser", label: "❌" }
+      { type: "wall", label: "Wall" },
+      { type: "strongWall", label: "Strong Wall" },
+      { type: "archerTower", label: "Archer Tower" },
+      { type: "trap", label: "Trap" },
+      { type: "lightningStriker", label: "Lightning" },
+      { type: "troopStructure", label: "Troop House" },
+      { type: "eraser", label: "Erase" }
     ];
 
     let selectedType = null;
-    let currentUser = null;
     const gridSize = 16;
     const gridData = Array(gridSize).fill().map(() => Array(gridSize).fill(""));
 
@@ -84,11 +133,21 @@
 
     function createBuildingButtons() {
       buildingTypes.forEach(b => {
+        const group = document.createElement("div");
+        group.className = "option-group";
+
         const div = document.createElement("div");
         div.className = `building ${b.type}`;
-        div.title = b.type;
+        div.title = b.label;
         div.onclick = () => selectedType = b.type;
-        buildingOptions.appendChild(div);
+
+        const label = document.createElement("div");
+        label.className = "label";
+        label.textContent = b.label;
+
+        group.appendChild(div);
+        group.appendChild(label);
+        buildingOptions.appendChild(group);
       });
     }
 
@@ -141,10 +200,10 @@
     }
 
     async function saveVillage() {
-      if (!currentUser) return alert("Not logged in.");
-      const ref = doc(db, "villages", currentUser.displayName);
+      if (!currentUsername) return alert("No username set.");
+      const ref = doc(db, "villages", currentUsername);
       await setDoc(ref, {
-        owner: currentUser.displayName,
+        owner: currentUsername,
         grid: gridData,
         power: calculatePower()
       });
@@ -164,22 +223,19 @@
       return { attack, defense };
     }
 
-    onAuthStateChanged(auth, async user => {
-      if (user) {
-        currentUser = user;
-        const ref = doc(db, "villages", currentUser.displayName);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          loadVillage(snap.data().grid);
-        }
-      } else {
-        alert("You must be logged in to edit your village.");
+    async function loadIfExists() {
+      if (!currentUsername) return;
+      const ref = doc(db, "villages", currentUsername);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        loadVillage(snap.data().grid);
       }
-    });
+    }
 
     document.getElementById("saveBtn").onclick = saveVillage;
     createBuildingButtons();
     createGrid();
+    loadIfExists();
   </script>
 </body>
 </html>
