@@ -15,7 +15,7 @@
     .lightningStriker { background: blue; }
     .troopStructure { background: purple; }
 
-    .health-bar, .troop-health {
+    .health-bar {
       position: absolute;
       top: 1px;
       left: 1px;
@@ -32,7 +32,6 @@
       height: 26px;
       margin: auto;
       border-radius: 50%;
-      position: relative;
     }
 
     .troop-tray button,
@@ -77,173 +76,263 @@
   </style>
 </head>
 <body>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  <div id="sidebar">
+    <h4>🛡️ Troops</h4>
+    <div class="troop-tray">
+      <button onclick="selectTroopType('base')">Base Troop</button>
+    </div>
+    <div><strong>Troops Left:</strong> <span id="troopCount">0</span></div>
+    <button id="surrenderBtn" onclick="endBattle(false)">🏳️ Surrender</button>
+  </div>
 
-const firebaseConfig = { /* your config */ };
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+  <div id="grid"></div>
 
-const params = new URLSearchParams(window.location.search);
-const attacker = params.get("attacker");
-const defender = params.get("defender");
+  <div id="resultPopup">
+    <h2 id="resultText">Result</h2>
+    <button onclick="window.location.href='/bible-tools-website/village/villagelobby.html'">Return to Village Lobby</button>
+  </div>
 
-const gridSize = 16;
-const gridElement = document.getElementById("grid");
-const troopStats = { base: { hp: 20, damage: 3, range: 1, speed: 1 } };
-const buildingHealth = { wall: 50, strongWall: 150, archerTower: 20, trap: 10, lightningStriker: 10, troopStructure: 10 };
-const healthMap = {};
-const troopUnits = [];
-const archerTowers = [], traps = [], lightTowers = [];
-let selectedTroopType = "base", troopsLeft = 0, battleOver = false;
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-function createGrid() {
-  for (let y = 0; y < gridSize; y++) {
-    for (let x = 0; x < gridSize; x++) {
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      cell.dataset.x = x;
-      cell.dataset.y = y;
-      cell.onclick = () => spawnTroop(x, y);
-      gridElement.appendChild(cell);
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
+      authDomain: "bible-game-246c0.firebaseapp.com",
+      projectId: "bible-game-246c0",
+      storageBucket: "bible-game-246c0.appspot.com",
+      messagingSenderId: "959619818996",
+      appId: "1:959619818996:web:5a9fbf492e23c765e445a1"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const attacker = params.get("attacker");
+    const defender = params.get("defender");
+
+    const gridSize = 16;
+    const gridElement = document.getElementById("grid");
+    const healthMap = {};
+    const troopUnits = [];
+    let selectedTroopType = "base";
+    let troopsLeft = 0;
+    let archerInterval;
+    let battleOver = false;
+
+    const buildingHealth = {
+      wall: 50,
+      strongWall: 100,
+      archerTower: 20,
+      trap: 10,
+      lightningStriker: 10,
+      troopStructure: 10
+    };
+
+    const troopStats = {
+      base: { hp: 20, damage: 3, range: 1, speed: 1 }
+    };
+
+    const enemyStructures = [];
+    const archerTowers = [];
+
+    function selectTroopType(type) {
+      selectedTroopType = type;
     }
-  }
-}
 
-function renderHealth(cell, key, value) {
-  if (value <= 0 && cell) return cell.className = "cell";
-  let bar = cell.querySelector(".health-bar") || cell.querySelector(".troop-health");
-  if (!bar) {
-    bar = document.createElement("div");
-    bar.className = cell.classList.contains("troop") ? "troop-health" : "health-bar";
-    const fill = document.createElement("div");
-    fill.className = "health-fill";
-    bar.appendChild(fill);
-    cell.appendChild(bar);
-  }
-  const fill = bar.querySelector(".health-fill");
-  const full = healthMap[key]?.max || 20;
-  fill.style.width = `${(value / full) * 100}%`;
-}
+    function renderHealth(cell, key, value) {
+      let healthBar = cell.querySelector(".health-bar");
+      if (!healthBar) {
+        healthBar = document.createElement("div");
+        healthBar.className = "health-bar";
+        const fill = document.createElement("div");
+        fill.className = "health-fill";
+        healthBar.appendChild(fill);
+        cell.appendChild(healthBar);
+      }
+      const fill = healthBar.querySelector(".health-fill");
+      const full = healthMap[key].max;
+      fill.style.width = `${(value / full) * 100}%`;
+    }
 
-function spawnTroop(x, y) {
-  if (troopsLeft <= 0 || battleOver) return;
-  const troop = { x, y, hp: 20, ...troopStats.base };
-  const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-  const div = document.createElement("div");
-  div.className = "troop";
-  cell.appendChild(div);
-  renderHealth(div, `${x},${y}`, troop.hp);
-  troop.div = div;
-  troopsLeft--;
-  troopUnits.push(troop);
-  troop.interval = setInterval(() => moveTroop(troop), 1000);
-}
+    function getClosestTarget(x, y) {
+      let minDist = Infinity;
+      let closest = null;
+      for (const s of enemyStructures) {
+        const key = `${s.x},${s.y}`;
+        if (healthMap[key]?.current > 0) {
+          const dx = s.x - x;
+          const dy = s.y - y;
+          const dist = Math.abs(dx) + Math.abs(dy);
+          if (dist < minDist) {
+            minDist = dist;
+            closest = s;
+          }
+        }
+      }
+      return closest;
+    }
 
-function moveTroop(troop) {
-  const target = findTarget(troop.x, troop.y);
-  if (!target) return endBattle(true);
-  const dx = Math.sign(target.x - troop.x), dy = Math.sign(target.y - troop.y);
-  if (Math.abs(dx) + Math.abs(dy) <= troop.range) {
-    const key = `${target.x},${target.y}`;
-    if (healthMap[key]) {
-      healthMap[key].current -= troop.damage;
-      if (healthMap[key].current <= 0) {
-        delete healthMap[key];
-        document.querySelector(`.cell[data-x="${target.x}"][data-y="${target.y}"]`).className = "cell";
-      } else {
-        renderHealth(document.querySelector(`.cell[data-x="${target.x}"][data-y="${target.y}"]`), key, healthMap[key].current);
+    function spawnTroop(x, y) {
+      if (troopsLeft <= 0 || battleOver) return;
+
+      const troop = {
+        x, y,
+        hp: troopStats.base.hp,
+        damage: troopStats.base.damage,
+        range: troopStats.base.range,
+        speed: troopStats.base.speed,
+        interval: null,
+        div: null
+      };
+
+      const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+      const tDiv = document.createElement("div");
+      tDiv.className = "troop";
+      cell.appendChild(tDiv);
+      troop.div = tDiv;
+      troopUnits.push(troop);
+
+      troopsLeft--;
+      document.getElementById("troopCount").textContent = troopsLeft;
+
+      troop.interval = setInterval(() => {
+        if (battleOver) return;
+
+        const target = getClosestTarget(troop.x, troop.y);
+        if (!target) {
+          clearInterval(troop.interval);
+          endBattle(true);
+          return;
+        }
+
+        const dx = target.x - troop.x;
+        const dy = target.y - troop.y;
+        const distance = Math.abs(dx) + Math.abs(dy);
+        const inRange = distance <= troop.range;
+
+        const currentCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
+        if (currentCell) currentCell.innerHTML = "";
+
+        if (inRange) {
+          const key = `${target.x},${target.y}`;
+          const targetHealth = healthMap[key];
+          if (targetHealth && targetHealth.current > 0) {
+            targetHealth.current -= troop.damage;
+            if (targetHealth.current < 0) targetHealth.current = 0;
+            const targetCell = document.querySelector(`.cell[data-x="${target.x}"][data-y="${target.y}"]`);
+            renderHealth(targetCell, key, targetHealth.current);
+            checkVictoryCondition();
+          }
+        } else {
+          troop.x += Math.sign(dx);
+          troop.y += Math.sign(dy);
+        }
+
+        const newCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
+        if (newCell) {
+          const newDiv = document.createElement("div");
+          newDiv.className = "troop";
+          newCell.appendChild(newDiv);
+          troop.div = newDiv;
+        }
+      }, 1000);
+    }
+
+    function createGrid() {
+      gridElement.innerHTML = "";
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.x = x;
+          cell.dataset.y = y;
+          cell.onclick = () => spawnTroop(x, y);
+          gridElement.appendChild(cell);
+        }
       }
     }
-  } else {
-    troop.x += dx;
-    troop.y += dy;
-    updateTroopPosition(troop);
-  }
-  renderHealth(troop.div, `${troop.x},${troop.y}`, troop.hp);
-  checkVictoryCondition();
-}
 
-function updateTroopPosition(troop) {
-  const cell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
-  if (cell) {
-    cell.innerHTML = "";
-    cell.appendChild(troop.div);
-  }
-}
-
-function findTarget(x, y) {
-  let best = null, dist = Infinity;
-  for (const key in healthMap) {
-    const [tx, ty] = key.split(",").map(Number);
-    const d = Math.abs(tx - x) + Math.abs(ty - y);
-    if (healthMap[key].current > 0 && d < dist) {
-      best = { x: tx, y: ty };
-      dist = d;
+    function checkVictoryCondition() {
+      const remaining = Object.values(healthMap).filter(h => h.current > 0);
+      if (remaining.length === 0) {
+        endBattle(true);
+      }
     }
-  }
-  return best;
-}
 
-function checkVictoryCondition() {
-  if (Object.keys(healthMap).length === 0) endBattle(true);
-}
-
-function endBattle(victory) {
-  battleOver = true;
-  troopUnits.forEach(t => clearInterval(t.interval));
-  document.body.insertAdjacentHTML('beforeend', `<div id="resultPopup"><h2>${victory ? '🏆 Victory!' : '❌ Defeat!'}</h2><button onclick="location.href='/bible-tools-website/village/villagelobby.html'">Return</button></div>`);
-}
-
-function aoeAttacks() {
-  setInterval(() => {
-    for (const { x, y } of lightTowers) {
-      troopUnits.forEach(t => {
-        if (!t.hp || battleOver) return;
-        const dist = Math.abs(t.x - x) + Math.abs(t.y - y);
-        if (dist <= 3) t.hp--;
-      });
+    function endBattle(victory) {
+      battleOver = true;
+      clearInterval(archerInterval);
+      troopUnits.forEach(t => clearInterval(t.interval));
+      document.getElementById("resultText").textContent = victory ? "🏆 Victory!" : "❌ Defeat!";
+      document.getElementById("resultPopup").style.display = "block";
     }
-  }, 400);
-  setInterval(() => {
-    for (const { x, y } of traps) {
-      troopUnits.forEach(t => {
-        if (!t.hp || battleOver) return;
-        const dist = Math.abs(t.x - x) + Math.abs(t.y - y);
-        if (dist === 1) t.hp -= 10;
-      });
-    }
-  }, 1500);
-}
 
-async function init() {
-  const attackerRef = doc(db, "villages", attacker);
-  const defenderRef = doc(db, "villages", defender);
-  const [attackerSnap, defenderSnap] = await Promise.all([getDoc(attackerRef), getDoc(defenderRef)]);
-  const troopStructures = attackerSnap.data().grid.filter(b => b.type === "troopStructure").length;
-  troopsLeft = troopStructures * 5;
-  createGrid();
-  for (const b of defenderSnap.data().grid) {
-    const key = `${b.x},${b.y}`;
-    const cell = document.querySelector(`.cell[data-x="${b.x}"][data-y="${b.y}"]`);
-    cell.classList.add(b.type);
-    healthMap[key] = { current: buildingHealth[b.type] || 10, max: buildingHealth[b.type] || 10 };
-    if (b.type === "archerTower") archerTowers.push(b);
-    if (b.type === "trap") traps.push(b);
-    if (b.type === "lightningStriker") lightTowers.push(b);
-    renderHealth(cell, key, healthMap[key].current);
-  }
-  aoeAttacks();
-}
-init();
-</script>
-<div id="sidebar">
-  <h4>🛡️ Troops</h4>
-  <div class="troop-tray"><button onclick="selectTroopType('base')">Base Troop</button></div>
-  <div><strong>Troops Left:</strong> <span id="troopCount">0</span></div>
-  <button id="surrenderBtn" onclick="endBattle(false)">🏳️ Surrender</button>
-</div>
-<div id="grid"></div>
+    function startArcherAttacks() {
+      archerInterval = setInterval(() => {
+        for (const tower of archerTowers) {
+          const { x, y } = tower;
+          let closest = null;
+          let minDist = Infinity;
+          for (const t of troopUnits) {
+            const dx = t.x - x;
+            const dy = t.y - y;
+            const dist = Math.abs(dx) + Math.abs(dy);
+            if (dist <= 5 && t.hp > 0 && dist < minDist) {
+              minDist = dist;
+              closest = t;
+            }
+          }
+          if (closest) {
+            closest.hp -= 5;
+            if (closest.hp <= 0) {
+              const cell = document.querySelector(`.cell[data-x="${closest.x}"][data-y="${closest.y}"]`);
+              if (cell) cell.innerHTML = "";
+              clearInterval(closest.interval);
+            }
+          }
+        }
+      }, 1500);
+    }
+
+    async function init() {
+      if (!attacker || !defender) return alert("Invalid URL");
+
+      const attackerRef = doc(db, "villages", attacker);
+      const defenderRef = doc(db, "villages", defender);
+      const [attackerSnap, defenderSnap] = await Promise.all([
+        getDoc(attackerRef),
+        getDoc(defenderRef)
+      ]);
+
+      const attackerData = attackerSnap.data();
+      const defenderData = defenderSnap.data();
+
+      const troopBuildings = attackerData.grid?.filter(t => t.type === "troopStructure").length || 0;
+      troopsLeft = troopBuildings * 5;
+      document.getElementById("troopCount").textContent = troopsLeft;
+
+      createGrid();
+
+      for (const b of defenderData.grid || []) {
+        const key = `${b.x},${b.y}`;
+        const cell = document.querySelector(`.cell[data-x="${b.x}"][data-y="${b.y}"]`);
+        if (!cell) continue;
+
+        cell.classList.add(b.type);
+        const baseHP = buildingHealth[b.type] || 10;
+        healthMap[key] = { current: baseHP, max: baseHP };
+        renderHealth(cell, key, baseHP);
+
+        enemyStructures.push({ ...b });
+        if (b.type === "archerTower") archerTowers.push({ x: b.x, y: b.y });
+      }
+
+      startArcherAttacks();
+    }
+
+    init();
+  </script>
 </body>
 </html>
