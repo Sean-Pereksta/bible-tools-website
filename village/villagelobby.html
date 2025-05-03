@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🏰 Tribes Page</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; text-align: center; padding: 20px; }
+    .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+    .village-box { background: #eee; padding: 10px; margin: 10px 0; border-radius: 6px; }
+    .tribe-power { margin-top: 30px; background: #fafafa; padding: 10px; border-radius: 6px; }
+    button { margin: 5px; padding: 10px 15px; border: none; background: #3498db; color: white; border-radius: 5px; cursor: pointer; }
+    input { padding: 10px; margin: 5px; width: 200px; }
+  </style>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, doc, getDocs, getDoc, updateDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
+      authDomain: "bible-game-246c0.firebaseapp.com",
+      projectId: "bible-game-246c0",
+      storageBucket: "bible-game-246c0.appspot.com",
+      messagingSenderId: "959619818996",
+      appId: "1:959619818996:web:5a9fbf492e23c765e445a1"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth();
+
+    let currentUser = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("loginBtn").onclick = async () => {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        try {
+          const userCred = await signInWithEmailAndPassword(auth, email, password);
+          currentUser = userCred.user;
+          loadVillagePage();
+        } catch (error) {
+          alert("Login failed: " + error.message);
+        }
+      };
+    });
+
+    async function loadVillagePage() {
+      document.getElementById("loginSection").style.display = "none";
+      const villagesCol = collection(db, "villages");
+      const snapshot = await getDocs(villagesCol);
+      const container = document.getElementById("villageList");
+      container.innerHTML = "<h2>🏘️ Active Villages</h2>";
+      let hasVillage = false;
+
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const div = document.createElement("div");
+        div.className = "village-box";
+        div.innerHTML = `<strong>${docSnap.id}</strong><br>Owner: ${data.owner}<br>Power: ${data.power}`;
+
+        if (data.owner === currentUser.email) {
+          hasVillage = true;
+        } else {
+          const attackBtn = document.createElement("button");
+          attackBtn.textContent = "⚔️ Attack";
+          attackBtn.onclick = () => window.location.href = "#attack-placeholder";
+          div.appendChild(attackBtn);
+        }
+
+        container.appendChild(div);
+      });
+
+      const actionBtn = document.createElement("button");
+      actionBtn.textContent = hasVillage ? "🏰 Work on Village" : "🛠️ Create Village";
+      actionBtn.onclick = () => window.location.href = "#castle-placeholder";
+      container.appendChild(actionBtn);
+
+      loadTribePower();
+    }
+
+    function loadTribePower() {
+      const ref = doc(db, "global", "tribePower");
+      onSnapshot(ref, (snap) => {
+        const data = snap.data();
+        const container = document.getElementById("tribePower");
+        container.innerHTML = `<h2>🔱 Tribe Power Rankings</h2>` +
+          Object.entries(data || {}).map(([tribe, power]) => `<div>${tribe}: ${power} pts</div>`).join("");
+      });
+    }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>🛡️ Tribes of Israel</h1>
+    <div id="loginSection">
+      <input id="email" type="email" placeholder="Email" />
+      <input id="password" type="password" placeholder="Password" />
+      <button id="loginBtn">🔐 Login</button>
+    </div>
+    <div id="villageList"></div>
+    <div id="tribePower" class="tribe-power"></div>
+  </div>
+</body>
+</html>
