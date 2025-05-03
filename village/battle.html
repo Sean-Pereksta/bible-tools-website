@@ -33,6 +33,9 @@
       margin: auto;
       border-radius: 50%;
     }
+    .troop.archer {
+      background: darkgreen; /* or any color you prefer */
+    }
 
     .troop-tray button,
     #surrenderBtn {
@@ -179,7 +182,7 @@
       return closest;
     }
 
-   function spawnTroop(x, y) {
+function spawnTroop(x, y) {
   if (troopsLeft <= 0 || battleOver) return;
 
   const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
@@ -198,11 +201,12 @@ const troop = {
 };
 
 
-  const tDiv = document.createElement("div");
-  tDiv.className = "troop";
-  cell.appendChild(tDiv);
-  troop.div = tDiv;
-  troopUnits.push(troop);
+ const tDiv = document.createElement("div");
+tDiv.className = "troop " + selectedTroopType;
+tDiv.textContent = selectedTroopType === "archer" ? "🏹" : "🗡️";
+cell.appendChild(tDiv);
+troop.div = tDiv;
+troopUnits.push(troop);
 
   troopsLeft--;
   document.getElementById("troopCount").textContent = troopsLeft;
@@ -244,10 +248,14 @@ const troop = {
           renderHealth(targetCell, key, targetHealth.current);
         }
       }
-    } else {
-      troop.x += Math.sign(dx);
-      troop.y += Math.sign(dy);
-    }
+   } else {
+  // Only move if not already in range
+  if (troop.range === 1 || selectedTroopType !== 'archer') {
+    troop.x += Math.sign(dx);
+    troop.y += Math.sign(dy);
+  }
+  // Archers stay put and shoot if in range
+}
 
     const newCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
     if (newCell) {
