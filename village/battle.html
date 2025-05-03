@@ -260,7 +260,8 @@ troopUnits.push(troop);
     const newCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
     if (newCell) {
       const newDiv = document.createElement("div");
-      newDiv.className = "troop";
+      newDiv.className = "troop " + troop.type;
+    newDiv.textContent = troop.type === "archer" ? "🏹" : "🗡️";
       newCell.appendChild(newDiv);
       troop.div = newDiv;
     }
