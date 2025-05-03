@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -63,7 +63,7 @@
         const data = docSnap.data();
         const div = document.createElement("div");
         div.className = "village-box";
-        div.innerHTML = `<strong>${docSnap.id}</strong><br>Owner: ${data.owner}<br>Power: ${data.power}`;
+        div.innerHTML = `<strong>${docSnap.id}</strong><br>Owner: ${data.owner}<br>Power: ${JSON.stringify(data.power)}`;
 
         if (data.owner === currentUsername) {
           hasVillage = true;
@@ -79,7 +79,7 @@
 
       const actionBtn = document.createElement("button");
       actionBtn.textContent = hasVillage ? "🏰 Work on Village" : "🛠️ Create Village";
-      actionBtn.onclick = () => window.location.href = "#castle-placeholder";
+      actionBtn.onclick = () => window.location.href = "/bible-tools-website/village/createvillage.html";
       container.appendChild(actionBtn);
 
       loadTribePower();
