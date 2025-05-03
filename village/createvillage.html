@@ -8,8 +8,11 @@
     .grid { display: grid; grid-template-columns: repeat(16, 30px); gap: 2px; margin: auto; margin-top: 20px; }
     .cell { width: 30px; height: 30px; background: #fff; border: 1px solid #ccc; }
     .panel { margin-top: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+    .building-label { font-size: 0.75em; margin-top: 2px; text-align: center; max-width: 60px; }
+    .building-option { display: flex; flex-direction: column; align-items: center; width: 60px; }
     .building { width: 30px; height: 30px; border: 2px solid black; cursor: pointer; }
-    #saveBtn { margin-top: 20px; padding: 10px 20px; font-size: 1em; }
+    #saveBtn, #loadBtn { margin: 10px; padding: 10px 20px; font-size: 1em; }
+
     .wall { background: black; }
     .strongWall { background: orange; }
     .archerTower { background: red; }
@@ -33,6 +36,7 @@
   <div class="panel" id="buildingOptions"></div>
   <div class="grid" id="villageGrid"></div>
   <button id="saveBtn">💾 Save Village</button>
+  <button id="loadBtn">🔄 Load Village</button>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -51,26 +55,25 @@
     const db = getFirestore(app);
 
     const buildingStats = {
-      wall: { attack: 0, defense: 2 },
-      strongWall: { attack: 0, defense: 5 },
-      archerTower: { attack: 4, defense: 1 },
-      trap: { attack: 3, defense: 3 },
-      lightningStriker: { attack: 6, defense: 1 },
-      troopStructure: { attack: 5, defense: 2 }
+      wall: { attack: 0, defense: 2, cost: 0 },
+      strongWall: { attack: 0, defense: 5, cost: 0 },
+      archerTower: { attack: 4, defense: 1, cost: 0 },
+      trap: { attack: 3, defense: 3, cost: 0 },
+      lightningStriker: { attack: 6, defense: 1, cost: 0 },
+      troopStructure: { attack: 5, defense: 2, cost: 0 }
     };
 
     const buildingTypes = [
-      { type: "wall" },
-      { type: "strongWall" },
-      { type: "archerTower" },
-      { type: "trap" },
-      { type: "lightningStriker" },
-      { type: "troopStructure" },
-      { type: "eraser" }
+      { type: "wall", name: "Wall" },
+      { type: "strongWall", name: "Strong Wall" },
+      { type: "archerTower", name: "Archer" },
+      { type: "trap", name: "Trap" },
+      { type: "lightningStriker", name: "Lightning" },
+      { type: "troopStructure", name: "Troops" },
+      { type: "eraser", name: "Erase" }
     ];
 
     let selectedType = null;
-    let currentUser = null;
     const gridSize = 16;
     const gridData = Array(gridSize).fill().map(() => Array(gridSize).fill(""));
 
@@ -79,11 +82,25 @@
 
     function createBuildingButtons() {
       buildingTypes.forEach(b => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "building-option";
+
         const div = document.createElement("div");
         div.className = `building ${b.type}`;
-        div.title = b.type;
+        div.title = b.name;
         div.onclick = () => selectedType = b.type;
-        buildingOptions.appendChild(div);
+
+        const label = document.createElement("div");
+        label.className = "building-label";
+        if (b.type !== "eraser" && buildingStats[b.type]) {
+          label.innerHTML = `${b.name}<br>Ⓜ $${buildingStats[b.type].cost}`;
+        } else {
+          label.textContent = b.name;
+        }
+
+        wrapper.appendChild(div);
+        wrapper.appendChild(label);
+        buildingOptions.appendChild(wrapper);
       });
     }
 
@@ -112,6 +129,54 @@
       cell.className = `cell ${selectedType}`;
     }
 
+    async function saveVillage() {
+      const username = prompt("Enter your username:");
+      const password = prompt("Enter your password:");
+      if (!username || !password) return alert("Username and password required.");
+
+      const userRef = doc(db, "users", username);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) return alert("User not found.");
+
+      const userData = userSnap.data();
+      if (userData.password !== password) return alert("Incorrect password.");
+
+      const villageRef = doc(db, "villages", username);
+      await setDoc(villageRef, {
+        owner: username,
+        grid: gridData,
+        power: calculatePower()
+      });
+      alert("Village saved!");
+    }
+
+    async function loadVillage() {
+      const username = prompt("Enter your username:");
+      const password = prompt("Enter your password:");
+      if (!username || !password) return alert("Username and password required.");
+
+      const userRef = doc(db, "users", username);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) return alert("User not found.");
+
+      const userData = userSnap.data();
+      if (userData.password !== password) return alert("Incorrect password.");
+
+      const villageRef = doc(db, "villages", username);
+      const villageSnap = await getDoc(villageRef);
+      if (!villageSnap.exists()) return alert("No saved village found.");
+
+      const data = villageSnap.data();
+      if (data.grid) {
+        for (let y = 0; y < gridSize; y++) {
+          for (let x = 0; x < gridSize; x++) {
+            gridData[y][x] = data.grid[y][x] || "";
+          }
+        }
+        updateGridVisual();
+      }
+    }
+
     function updateGridVisual() {
       const cells = gridContainer.querySelectorAll(".cell");
       cells.forEach(cell => {
@@ -121,34 +186,6 @@
         cell.className = "cell";
         if (type) cell.classList.add(type);
       });
-    }
-
-    async function saveVillage() {
-      const username = prompt("Enter your username:");
-      const password = prompt("Enter your password:");
-      if (!username || !password) return alert("Username and password required.");
-
-      const userRef = doc(db, "users", username);
-      const userSnap = await getDoc(userRef);
-
-      if (!userSnap.exists()) {
-        alert("User not found.");
-        return;
-      }
-
-      const userData = userSnap.data();
-      if (userData.password !== password) {
-        alert("Incorrect password.");
-        return;
-      }
-
-      const villageRef = doc(db, "villages", username);
-      await setDoc(villageRef, {
-        owner: username,
-        grid: gridData,
-        power: calculatePower()
-      });
-      alert("Village saved!");
     }
 
     function calculatePower() {
@@ -166,6 +203,8 @@
 
     createBuildingButtons();
     createGrid();
+    document.getElementById("saveBtn").onclick = saveVillage;
+    document.getElementById("loadBtn").onclick = loadVillage;
   </script>
 </body>
 </html>
