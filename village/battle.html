@@ -305,6 +305,33 @@
         }
       }, 1500);
     }
+    function startLightningAttacks(lightningTowers) {
+  setInterval(() => {
+    if (battleOver) return;
+    for (const tower of lightningTowers) {
+      const { x: lx, y: ly } = tower;
+
+      for (const troop of troopUnits) {
+        if (troop.hp <= 0) continue;
+
+        const dx = troop.x - lx;
+        const dy = troop.y - ly;
+        const distance = Math.abs(dx) + Math.abs(dy);
+
+        if (distance <= 3) {
+          troop.hp -= 1;
+
+          const troopCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
+          if (troop.hp <= 0) {
+            if (troopCell) troopCell.innerHTML = "";
+            clearInterval(troop.interval);
+          }
+        }
+      }
+    }
+  }, 400); // Fast tick for lightning effect
+}
+
 
     async function init() {
       if (!attacker || !defender) return alert("Invalid URL");
@@ -337,9 +364,11 @@
 
         enemyStructures.push({ ...b });
         if (b.type === "archerTower") archerTowers.push({ x: b.x, y: b.y });
+        if (b.type === "lightningStriker") lightningTowers.push({ x: b.x, y: b.y });
       }
 
       startArcherAttacks();
+      startLightningAttacks(lightningTowers);
     }
 
     init();
