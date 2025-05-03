@@ -281,37 +281,61 @@
       document.getElementById("resultPopup").style.display = "block";
     }
 
-    function startArcherAttacks() {
-      archerInterval = setInterval(() => {
-        for (const tower of archerTowers) {
-          const { x, y } = tower;
-          let closest = null;
-          let minDist = Infinity;
-          for (const t of troopUnits) {
-            const dx = t.x - x;
-            const dy = t.y - y;
-            const dist = Math.abs(dx) + Math.abs(dy);
-            if (dist <= 5 && t.hp > 0 && dist < minDist) {
-              minDist = dist;
-              closest = t;
-            }
-          }
-          if (closest) {
-            closest.hp -= 5;
-            if (closest.hp <= 0) {
-              const cell = document.querySelector(`.cell[data-x="${closest.x}"][data-y="${closest.y}"]`);
-              if (cell) cell.innerHTML = "";
-              clearInterval(closest.interval);
-            }
-          }
+   function startArcherAttacks() {
+  archerInterval = setInterval(() => {
+    for (const tower of archerTowers) {
+      const { x, y } = tower;
+      const key = `${x},${y}`;
+      const towerHealth = healthMap[key];
+
+      if (!towerHealth || towerHealth.current <= 0) continue; // Skip dead towers
+
+      let closest = null;
+      let minDist = Infinity;
+
+      for (const t of troopUnits) {
+        if (t.hp <= 0) continue;
+
+        const dx = t.x - x;
+        const dy = t.y - y;
+        const dist = Math.abs(dx) + Math.abs(dy);
+
+        if (dist <= 5 && dist < minDist) {
+          minDist = dist;
+          closest = t;
         }
-      }, 1500);
+      }
+
+      if (closest) {
+        closest.hp -= 5;
+
+        const cell = document.querySelector(`.cell[data-x="${closest.x}"][data-y="${closest.y}"]`);
+        if (cell) {
+          // Flash red when hit
+          cell.style.backgroundColor = 'red';
+          setTimeout(() => {
+            cell.style.backgroundColor = '';
+          }, 100);
+        }
+
+        if (closest.hp <= 0) {
+          if (cell) cell.innerHTML = "";
+          clearInterval(closest.interval);
+        }
+      }
     }
-    function startLightningAttacks(lightningTowers) {
+  }, 1500);
+}
+  function startLightningAttacks(lightningTowers) {
   setInterval(() => {
     if (battleOver) return;
+
     for (const tower of lightningTowers) {
       const { x: lx, y: ly } = tower;
+      const key = `${lx},${ly}`;
+      const towerHealth = healthMap[key];
+
+      if (!towerHealth || towerHealth.current <= 0) continue; // ✅ Skip dead towers
 
       for (const troop of troopUnits) {
         if (troop.hp <= 0) continue;
@@ -321,24 +345,24 @@
         const distance = Math.abs(dx) + Math.abs(dy);
 
         if (distance <= 3) {
-            troop.hp -= 1;
-          
-            const troopCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
-            if (troopCell) {
-              troopCell.style.backgroundColor = 'yellow';
-              setTimeout(() => {
-                troopCell.style.backgroundColor = '';
-              }, 100); // short flash
-            }
-          
-            if (troop.hp <= 0) {
-              if (troopCell) troopCell.innerHTML = "";
-              clearInterval(troop.interval);
-            }
+          troop.hp -= 1;
+
+          const troopCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
+          if (troopCell) {
+            troopCell.style.backgroundColor = 'yellow';
+            setTimeout(() => {
+              troopCell.style.backgroundColor = '';
+            }, 100);
           }
+
+          if (troop.hp <= 0) {
+            if (troopCell) troopCell.innerHTML = "";
+            clearInterval(troop.interval);
+          }
+        }
       }
     }
-  }, 400); // Fast tick for lightning effect
+  }, 400);
 }
 
 
