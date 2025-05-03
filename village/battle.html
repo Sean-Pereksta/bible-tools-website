@@ -80,6 +80,7 @@
     <h4>🛡️ Troops</h4>
     <div class="troop-tray">
       <button onclick="selectTroopType('base')">Base Troop</button>
+      <button onclick="selectTroopType('archer')">Archer</button>
     </div>
     <div><strong>Troops Left:</strong> <span id="troopCount">0</span></div>
     <button id="surrenderBtn" onclick="endBattle(false)">🏳️ Surrender</button>
@@ -132,6 +133,7 @@
 
     const troopStats = {
       base: { hp: 20, damage: 3, range: 1, speed: 1 }
+      archer: { hp: 15, damage: 2, range: 3, speed: 1 }
     };
 
     const enemyStructures = [];
@@ -183,15 +185,18 @@
   const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
   if (!cell || cell.classList.length > 1) return; // Prevent placing on structures
 
-  const troop = {
-    x, y,
-    hp: troopStats.base.hp,
-    damage: troopStats.base.damage,
-    range: troopStats.base.range,
-    speed: troopStats.base.speed,
-    interval: null,
-    div: null
-  };
+const stats = troopStats[selectedTroopType];
+const troop = {
+  x, y,
+  hp: stats.hp,
+  damage: stats.damage,
+  range: stats.range,
+  speed: stats.speed,
+  interval: null,
+  div: null,
+  type: selectedTroopType
+};
+
 
   const tDiv = document.createElement("div");
   tDiv.className = "troop";
