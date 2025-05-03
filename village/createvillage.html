@@ -31,15 +31,12 @@
   <h1>🏗️ Build Your Village</h1>
 
   <div class="panel" id="buildingOptions"></div>
-
   <div class="grid" id="villageGrid"></div>
-
   <button id="saveBtn">💾 Save Village</button>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -52,9 +49,7 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const auth = getAuth();
 
-    // Temporary building stats (will move to Firebase later)
     const buildingStats = {
       wall: { attack: 0, defense: 2 },
       strongWall: { attack: 0, defense: 5 },
@@ -65,13 +60,13 @@
     };
 
     const buildingTypes = [
-      { type: "wall", label: "⬛" },
-      { type: "strongWall", label: "🟧" },
-      { type: "archerTower", label: "🟥" },
-      { type: "trap", label: "🟩" },
-      { type: "lightningStriker", label: "🟦" },
-      { type: "troopStructure", label: "🟪" },
-      { type: "eraser", label: "❌" }
+      { type: "wall" },
+      { type: "strongWall" },
+      { type: "archerTower" },
+      { type: "trap" },
+      { type: "lightningStriker" },
+      { type: "troopStructure" },
+      { type: "eraser" }
     ];
 
     let selectedType = null;
@@ -85,7 +80,7 @@
     function createBuildingButtons() {
       buildingTypes.forEach(b => {
         const div = document.createElement("div");
-        div.className = building ${b.type};
+        div.className = `building ${b.type}`;
         div.title = b.type;
         div.onclick = () => selectedType = b.type;
         buildingOptions.appendChild(div);
@@ -108,25 +103,13 @@
 
     function placeBuilding(cell, x, y) {
       if (!selectedType) return;
-
       if (selectedType === "eraser") {
         gridData[y][x] = "";
         cell.className = "cell";
         return;
       }
-
       gridData[y][x] = selectedType;
-      cell.className = cell ${selectedType};
-    }
-
-    function loadVillage(data) {
-      for (let y = 0; y < gridSize; y++) {
-        for (let x = 0; x < gridSize; x++) {
-          const type = data?.[y]?.[x] || "";
-          gridData[y][x] = type;
-        }
-      }
-      updateGridVisual();
+      cell.className = `cell ${selectedType}`;
     }
 
     function updateGridVisual() {
@@ -141,10 +124,27 @@
     }
 
     async function saveVillage() {
-      if (!currentUser) return alert("Not logged in.");
-      const ref = doc(db, "villages", currentUser.displayName);
-      await setDoc(ref, {
-        owner: currentUser.displayName,
+      const username = prompt("Enter your username:");
+      const password = prompt("Enter your password:");
+      if (!username || !password) return alert("Username and password required.");
+
+      const userRef = doc(db, "users", username);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        alert("User not found.");
+        return;
+      }
+
+      const userData = userSnap.data();
+      if (userData.password !== password) {
+        alert("Incorrect password.");
+        return;
+      }
+
+      const villageRef = doc(db, "villages", username);
+      await setDoc(villageRef, {
+        owner: username,
         grid: gridData,
         power: calculatePower()
       });
@@ -164,20 +164,6 @@
       return { attack, defense };
     }
 
-    onAuthStateChanged(auth, async user => {
-      if (user) {
-        currentUser = user;
-        const ref = doc(db, "villages", currentUser.displayName);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          loadVillage(snap.data().grid);
-        }
-      } else {
-        alert("You must be logged in to edit your village.");
-      }
-    });
-
-    document.getElementById("saveBtn").onclick = saveVillage;
     createBuildingButtons();
     createGrid();
   </script>
