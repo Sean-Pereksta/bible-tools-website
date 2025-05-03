@@ -4,56 +4,12 @@
   <meta charset="UTF-8">
   <title>🏗️ Create Village</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #eef2f5;
-      text-align: center;
-      padding: 20px;
-    }
-    .grid-wrapper {
-      display: flex;
-      justify-content: center;
-      margin-top: 20px;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(16, 30px);
-      gap: 2px;
-    }
-    .cell {
-      width: 30px;
-      height: 30px;
-      background: #fff;
-      border: 1px solid #ccc;
-    }
-    .panel {
-      margin-top: 20px;
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .building {
-      width: 30px;
-      height: 30px;
-      border: 2px solid black;
-      cursor: pointer;
-    }
-    .label {
-      font-size: 0.8em;
-      margin-top: 4px;
-    }
-    .option-group {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 60px;
-    }
-    #saveBtn {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 1em;
-    }
+    body { font-family: Arial, sans-serif; background: #eef2f5; text-align: center; padding: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(16, 30px); gap: 2px; margin: 20px auto; }
+    .cell { width: 30px; height: 30px; background: #fff; border: 1px solid #ccc; }
+    .panel { margin-top: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+    .building { width: 30px; height: 30px; border: 2px solid black; cursor: pointer; }
+    #saveBtn { margin-top: 20px; padding: 10px 20px; font-size: 1em; }
     .wall { background: black; }
     .strongWall { background: orange; }
     .archerTower { background: red; }
@@ -69,17 +25,14 @@
       top: 2px;
       left: 7px;
     }
+    .label { font-size: 12px; margin-top: 2px; text-align: center; width: 30px; }
   </style>
 </head>
 <body>
   <h1>🏗️ Build Your Village</h1>
 
   <div class="panel" id="buildingOptions"></div>
-
-  <div class="grid-wrapper">
-    <div class="grid" id="villageGrid"></div>
-  </div>
-
+  <div class="grid" id="villageGrid"></div>
   <button id="saveBtn">💾 Save Village</button>
 
   <script type="module">
@@ -98,13 +51,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentUsername = urlParams.get("username");
-
-    if (!currentUsername) {
-      alert("No username provided in URL.");
-    }
-
     const buildingStats = {
       wall: { attack: 0, defense: 2 },
       strongWall: { attack: 0, defense: 5 },
@@ -115,16 +61,17 @@
     };
 
     const buildingTypes = [
-      { type: "wall", label: "Wall" },
-      { type: "strongWall", label: "Strong Wall" },
-      { type: "archerTower", label: "Archer Tower" },
-      { type: "trap", label: "Trap" },
-      { type: "lightningStriker", label: "Lightning" },
-      { type: "troopStructure", label: "Troop House" },
-      { type: "eraser", label: "Erase" }
+      { type: "wall", label: "⬛", name: "Wall" },
+      { type: "strongWall", label: "🟧", name: "Strong Wall" },
+      { type: "archerTower", label: "🟥", name: "Archer Tower" },
+      { type: "trap", label: "🟩", name: "Trap" },
+      { type: "lightningStriker", label: "🟦", name: "Lightning Striker" },
+      { type: "troopStructure", label: "🟪", name: "Troop Structure" },
+      { type: "eraser", label: "❌", name: "Eraser" }
     ];
 
     let selectedType = null;
+    let currentUsername = null;
     const gridSize = 16;
     const gridData = Array(gridSize).fill().map(() => Array(gridSize).fill(""));
 
@@ -133,21 +80,23 @@
 
     function createBuildingButtons() {
       buildingTypes.forEach(b => {
-        const group = document.createElement("div");
-        group.className = "option-group";
+        const wrapper = document.createElement("div");
+        wrapper.style.display = "flex";
+        wrapper.style.flexDirection = "column";
+        wrapper.style.alignItems = "center";
 
         const div = document.createElement("div");
         div.className = `building ${b.type}`;
-        div.title = b.label;
+        div.title = b.name;
         div.onclick = () => selectedType = b.type;
 
         const label = document.createElement("div");
         label.className = "label";
-        label.textContent = b.label;
+        label.textContent = b.name;
 
-        group.appendChild(div);
-        group.appendChild(label);
-        buildingOptions.appendChild(group);
+        wrapper.appendChild(div);
+        wrapper.appendChild(label);
+        buildingOptions.appendChild(wrapper);
       });
     }
 
@@ -167,13 +116,11 @@
 
     function placeBuilding(cell, x, y) {
       if (!selectedType) return;
-
       if (selectedType === "eraser") {
         gridData[y][x] = "";
         cell.className = "cell";
         return;
       }
-
       gridData[y][x] = selectedType;
       cell.className = `cell ${selectedType}`;
     }
@@ -200,7 +147,7 @@
     }
 
     async function saveVillage() {
-      if (!currentUsername) return alert("No username set.");
+      if (!currentUsername) return alert("No username found.");
       const ref = doc(db, "villages", currentUsername);
       await setDoc(ref, {
         owner: currentUsername,
@@ -223,19 +170,22 @@
       return { attack, defense };
     }
 
-    async function loadIfExists() {
-      if (!currentUsername) return;
-      const ref = doc(db, "villages", currentUsername);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        loadVillage(snap.data().grid);
+    window.addEventListener("message", async (event) => {
+      if (event.data?.username) {
+        currentUsername = event.data.username;
+        const ref = doc(db, "villages", currentUsername);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          loadVillage(snap.data().grid);
+        }
       }
-    }
+    });
 
     document.getElementById("saveBtn").onclick = saveVillage;
+
     createBuildingButtons();
     createGrid();
-    loadIfExists();
   </script>
 </body>
 </html>
+
