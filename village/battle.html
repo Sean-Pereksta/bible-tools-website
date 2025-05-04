@@ -36,6 +36,10 @@
     .troop.archer {
       background: darkgreen; /* or any color you prefer */
     }
+    .troop.guardian {
+      background: darkblue;
+    }
+  
     .troop-hp {
   position: absolute;
   top: -12px;
@@ -97,6 +101,10 @@
     <div class="troop-tray">
       <button onclick="selectTroopType('base')">Swordsman (1)</button>
       <button onclick="selectTroopType('archer')">Archer (1)</button>
+      <button onclick="selectTroopType('guardian')">Guardian (3)</button>
+      <button onclick="selectTroopType('raider')">Raider (2) </button>
+
+
     </div>
     <div><strong>Troops Left:</strong> <span id="troopCount">0</span></div>
     <button id="surrenderBtn" onclick="endBattle(false)">🏳️ Surrender</button>
@@ -147,10 +155,14 @@
       troopStructure: 10
     };
 
-    const troopStats = {
-        base: { hp: 20, damage: 5, range: 1, speed: 1, cost: 1 },
-        archer: { hp: 15, damage: 3, range: 4, speed: 1, cost: 1 }
-    };
+  const troopStats = {
+  base: { hp: 20, damage: 5, range: 1, speed: 1, cost: 1 },
+  archer: { hp: 15, damage: 3, range: 4, speed: 1, cost: 1 },
+  guardian: { hp: 50, damage: 4, range: 1, speed: 1, cost: 3 },
+  raider: { hp: 18, damage: 5, range: 1, speed: 2, cost: 2 }
+};
+
+
 
 
     const enemyStructures = [];
@@ -197,15 +209,16 @@
     }
 
 function spawnTroop(x, y) {
+  /* -------- cost / placement guard ------------- */
   const cost = troopStats[selectedTroopType].cost;
   if (troopsLeft < cost || battleOver) return;
 
   const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-  if (!cell || cell.classList.length > 1) return; // Prevent placing on structures
+  if (!cell || cell.classList.length > 1) return;   // can’t spawn on a building
 
+  /* ---------- build the DOM for the troop ---------- */
   const stats = troopStats[selectedTroopType];
 
-  // Create wrapper div to hold both troop icon and health
   const wrapper = document.createElement("div");
   wrapper.style.position = "relative";
 
@@ -213,82 +226,109 @@ function spawnTroop(x, y) {
   hpBar.className = "troop-hp";
   hpBar.textContent = stats.hp;
 
-  const tDiv = document.createElement("div");
-  tDiv.className = "troop " + selectedTroopType;
-  tDiv.textContent = selectedTroopType === "archer" ? "🏹" : "🗡️";
+  const icon = document.createElement("div");
+  icon.className = "troop " + selectedTroopType;
+  icon.textContent =
+    selectedTroopType === "archer"   ? "🏹" :
+    selectedTroopType === "guardian" ? "🛡️" :
+    selectedTroopType === "raider"   ? "🐎" : "🗡️";
 
   wrapper.appendChild(hpBar);
-  wrapper.appendChild(tDiv);
+  wrapper.appendChild(icon);
   cell.appendChild(wrapper);
 
+  /* ------------- register troop object -------------- */
   const troop = {
     x, y,
     hp: stats.hp,
     damage: stats.damage,
     range: stats.range,
     speed: stats.speed,
+    type: selectedTroopType,
     interval: null,
     div: wrapper,
-    type: selectedTroopType,
     hpDisplay: hpBar
   };
-
   troopUnits.push(troop);
 
   troopsLeft -= cost;
   document.getElementById("troopCount").textContent = troopsLeft;
 
+  /* -------- helper for prioritising towers (raider) -------- */
+  const getClosestSpecialTarget = (ox, oy) => {
+    const prio = ["archerTower", "lightningStriker", "trap"];
+    let best = null, bestDist = Infinity;
+    for (const s of enemyStructures) {
+      if (!prio.includes(s.type)) continue;
+      const key = `${s.x},${s.y}`;
+      if (!healthMap[key] || healthMap[key].current <= 0) continue;
+      const d = Math.abs(s.x - ox) + Math.abs(s.y - oy);
+      if (d < bestDist) { bestDist = d; best = s; }
+    }
+    return best;
+  };
+
+  /* ---------------- main behaviour loop ---------------- */
   troop.interval = setInterval(() => {
     if (battleOver) return;
 
-    const target = getClosestTarget(troop.x, troop.y);
-    if (!target) {
-      clearInterval(troop.interval);
-      endBattle(true);
-      return;
-    }
+    /* choose target */
+    const target =
+      troop.type === "raider"
+        ? (getClosestSpecialTarget(troop.x, troop.y) || getClosestTarget(troop.x, troop.y))
+        :  getClosestTarget(troop.x, troop.y);
 
+    if (!target) { clearInterval(troop.interval); endBattle(true); return; }
+
+    /* compute distance / range */
     const dx = target.x - troop.x;
     const dy = target.y - troop.y;
-    const distance = Math.abs(dx) + Math.abs(dy);
-    const inRange = distance <= troop.range;
+    const dist = Math.abs(dx) + Math.abs(dy);
+    const inRange = dist <= troop.range;
 
-    // Clear old position
-    const currentCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
-    if (currentCell && troop.div) currentCell.removeChild(troop.div);
+    /* remove old DOM position */
+    const oldCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
+    if (oldCell && troop.div) oldCell.removeChild(troop.div);
 
+    /* attack or move */
     if (inRange) {
       const key = `${target.x},${target.y}`;
-      const targetHealth = healthMap[key];
-      if (targetHealth && targetHealth.current > 0) {
-        targetHealth.current -= troop.damage;
-        if (targetHealth.current <= 0) {
-          targetHealth.current = 0;
+      const th = healthMap[key];
+      if (th && th.current > 0) {
+        th.current -= troop.damage;
+        th.current = Math.max(0, th.current);
+        const tCell = document.querySelector(`.cell[data-x="${target.x}"][data-y="${target.y}"]`);
+        if (th.current === 0) {
           delete healthMap[key];
-          const targetCell = document.querySelector(`.cell[data-x="${target.x}"][data-y="${target.y}"]`);
-          if (targetCell) {
-            targetCell.className = "cell";
-            targetCell.innerHTML = "";
-          }
+          if (tCell) { tCell.className = "cell"; tCell.innerHTML = ""; }
           checkVictoryCondition();
-        } else {
-          const targetCell = document.querySelector(`.cell[data-x="${target.x}"][data-y="${target.y}"]`);
-          renderHealth(targetCell, key, targetHealth.current);
+        } else if (tCell) {
+          renderHealth(tCell, key, th.current);
         }
       }
     } else {
-      if (troop.range === 1 || troop.type !== "archer") {
-        troop.x += Math.sign(dx);
-        troop.y += Math.sign(dy);
+      if (troop.type !== "archer") {
+        /* movement — raider moves 2 steps & ignores walls */
+        const steps = troop.type === "raider" ? 2 : 1;
+        for (let s = 0; s < steps; s++) {
+          const nextX = troop.x + Math.sign(dx);
+          const nextY = troop.y + Math.sign(dy);
+          const nextCell = document.querySelector(`.cell[data-x="${nextX}"][data-y="${nextY}"]`);
+          if (!nextCell) break;
+          if (nextCell.classList.length > 1 && troop.type !== "raider") break; // wall stop for non‑raiders
+          troop.x = nextX;
+          troop.y = nextY;
+        }
       }
     }
 
+    /* re‑draw at new location */
     const newCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
-    if (newCell) {
-      newCell.appendChild(troop.div);
-    }
+    if (newCell) newCell.appendChild(troop.div);
+
   }, 1000);
 }
+
 
 
     function createGrid() {
