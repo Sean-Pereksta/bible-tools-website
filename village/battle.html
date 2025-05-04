@@ -197,45 +197,43 @@
     }
 
 function spawnTroop(x, y) {
- const cost = troopStats[selectedTroopType].cost;
+  const cost = troopStats[selectedTroopType].cost;
   if (troopsLeft < cost || battleOver) return;
-
 
   const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
   if (!cell || cell.classList.length > 1) return; // Prevent placing on structures
 
-const stats = troopStats[selectedTroopType];
-const troop = {
-  x, y,
-  hp: stats.hp,
-  damage: stats.damage,
-  range: stats.range,
-  speed: stats.speed,
-  interval: null,
-  div: null,
-  type: selectedTroopType,
-  hpDisplay: hpBar
-};
+  const stats = troopStats[selectedTroopType];
 
+  // Create wrapper div to hold both troop icon and health
+  const wrapper = document.createElement("div");
+  wrapper.style.position = "relative";
 
-const wrapper = document.createElement("div");
-wrapper.style.position = "relative";
+  const hpBar = document.createElement("div");
+  hpBar.className = "troop-hp";
+  hpBar.textContent = stats.hp;
 
-const hpBar = document.createElement("div");
-hpBar.className = "troop-hp";
-hpBar.textContent = stats.hp;
+  const tDiv = document.createElement("div");
+  tDiv.className = "troop " + selectedTroopType;
+  tDiv.textContent = selectedTroopType === "archer" ? "🏹" : "🗡️";
 
-const tDiv = document.createElement("div");
-tDiv.className = "troop " + selectedTroopType;
-tDiv.textContent = selectedTroopType === "archer" ? "🏹" : "🗡️";
+  wrapper.appendChild(hpBar);
+  wrapper.appendChild(tDiv);
+  cell.appendChild(wrapper);
 
-wrapper.appendChild(hpBar);
-wrapper.appendChild(tDiv);
-cell.appendChild(wrapper);
+  const troop = {
+    x, y,
+    hp: stats.hp,
+    damage: stats.damage,
+    range: stats.range,
+    speed: stats.speed,
+    interval: null,
+    div: wrapper,
+    type: selectedTroopType,
+    hpDisplay: hpBar
+  };
 
-troop.div = wrapper;
-troop.hpDisplay = hpBar;
-
+  troopUnits.push(troop);
 
   troopsLeft -= cost;
   document.getElementById("troopCount").textContent = troopsLeft;
@@ -255,8 +253,9 @@ troop.hpDisplay = hpBar;
     const distance = Math.abs(dx) + Math.abs(dy);
     const inRange = distance <= troop.range;
 
+    // Clear old position
     const currentCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
-    if (currentCell) currentCell.innerHTML = "";
+    if (currentCell && troop.div) currentCell.removeChild(troop.div);
 
     if (inRange) {
       const key = `${target.x},${target.y}`;
@@ -277,22 +276,16 @@ troop.hpDisplay = hpBar;
           renderHealth(targetCell, key, targetHealth.current);
         }
       }
-   } else {
-  // Only move if not already in range
-  if (troop.range === 1 || selectedTroopType !== 'archer') {
-    troop.x += Math.sign(dx);
-    troop.y += Math.sign(dy);
-  }
-  // Archers stay put and shoot if in range
-}
+    } else {
+      if (troop.range === 1 || troop.type !== "archer") {
+        troop.x += Math.sign(dx);
+        troop.y += Math.sign(dy);
+      }
+    }
 
     const newCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
     if (newCell) {
-      const newDiv = document.createElement("div");
-      newDiv.className = "troop " + troop.type;
-    newDiv.textContent = troop.type === "archer" ? "🏹" : "🗡️";
-      newCell.appendChild(newDiv);
-      troop.div = newDiv;
+      newCell.appendChild(troop.div);
     }
   }, 1000);
 }
