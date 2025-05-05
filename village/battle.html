@@ -131,8 +131,13 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+   import {
+  getFirestore,
+  doc,
+  getDoc,
+  updateDoc,
+  increment
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 
     const firebaseConfig = {
@@ -150,6 +155,13 @@
     const params = new URLSearchParams(window.location.search);
     const attacker = params.get("attacker");
     const defender = params.get("defender");
+
+    // which villages are “goblins” (lowercase/uppercase must match your doc IDs)
+const goblinVillages = [ "Goblin1", "Goblin2", "Goblin3" ];
+
+// true if the defender is one of our goblins
+const isGoblinBattle = goblinVillages.includes(defender);
+
 
     const gridSize = 16;
     const gridElement = document.getElementById("grid");
@@ -441,10 +453,19 @@ function spawnTroop(x, y) {
   troopUnits.forEach(t => clearInterval(t.interval));
 
   if (victory) {
-    const reward = 5;  // flat 2 bucks per victory
-    await updateDoc(attackerRef, {
-      bucks: increment(reward)
-    });
+    const reward = isGoblinBattle ? 50 : 5;
+
+    // village doc: add bucks
+    const villageRef = doc(db, "villages", attacker);
+    // user doc: bump campaign count
+    const userRef    = doc(db, "users", attacker);
+
+    // perform both updates
+    await Promise.all([
+      updateDoc(villageRef, { bucks: increment(reward) }),
+      updateDoc(userRef,    { campaign: increment(1)      })
+    ]);
+
     document.getElementById("resultText").textContent =
       `🏆 Victory! You earned ${reward} bucks.`;
   } else {
@@ -453,6 +474,7 @@ function spawnTroop(x, y) {
 
   document.getElementById("resultPopup").style.display = "block";
 }
+
 
 function startArcherAttacks() {
   archerInterval = setInterval(() => {
