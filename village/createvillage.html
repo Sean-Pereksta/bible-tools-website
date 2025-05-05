@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>🎗️ Create Village</title>
+  <title>🎗️ Build Your Village</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -126,7 +126,7 @@
       projectId: "bible-game-246c0",
       storageBucket: "bible-game-246c0.appspot.com",
       messagingSenderId: "959619818996",
-      appId: "1:959619818996:web:5a9fbf492e23c765e445a1"
+      appId: "1:959619818996:web:9fbf492e23c765e445a1"
     };
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
@@ -263,22 +263,36 @@
     async function loadInitial() {
       if (!currentUsername) return;
 
-      // load user balance
+      // load user doc
       const uRef  = doc(db, "users", currentUsername);
       const uSnap = await getDoc(uRef);
-      if (uSnap.exists()) {
-        userLabel.textContent = `Logged in as: ${currentUsername}`;
-        currentBucks = uSnap.data().bucks || 0;
-        balanceBox.textContent = `💰 ${currentBucks} bucks`;
+      if (!uSnap.exists()) {
+        alert("User record missing!");
+        return;
       }
 
-      // load village if exists
+      // get stored bucks (default 0)
+      let stored = uSnap.data().bucks || 0;
+
+      // check if village exists
       const vRef  = doc(db, "villages", currentUsername);
       const vSnap = await getDoc(vRef);
-      if (vSnap.exists() && vSnap.data().grid) {
+      if (!vSnap.exists()) {
+        // first-time: if they have 0, seed with 200
+        if (stored === 0) {
+          stored = 200;
+          await setDoc(uRef, { bucks: stored }, { merge: true });
+        }
+      } else {
+        // load existing grid
         gridData.push(...vSnap.data().grid);
         updateGridVisual();
       }
+
+      // update UI
+      currentBucks = stored;
+      userLabel.textContent   = `Logged in as: ${currentUsername}`;
+      balanceBox.textContent  = `💰 ${currentBucks} bucks`;
     }
 
     function updateGridVisual() {
