@@ -103,7 +103,7 @@
       <button onclick="selectTroopType('archer')">Archer (1)</button>
       <button onclick="selectTroopType('guardian')">Guardian (3)</button>
       <button onclick="selectTroopType('raider')">Raider (2) </button>
-
+      <button onclick="selectTroopType('bomber')">💣 Bomber (5)</button>
 
     </div>
     <div><strong>Troops Left:</strong> <span id="troopCount">0</span></div>
@@ -164,7 +164,8 @@
   base: { hp: 18, damage: 5, range: 1, speed: 1, cost: 1 },
   archer: { hp: 12, damage: 3, range: 4, speed: 1, cost: 1 },
   guardian: { hp: 100, damage: 4, range: 1, speed: 1, cost: 3 },
-  raider: { hp: 24, damage: 5, range: 2, speed: 2, cost: 2 }
+  raider: { hp: 24, damage: 5, range: 2, speed: 2, cost: 2 },
+    bomber: { hp: 20, damage: 20, range: 1, speed: 0, cost: 5 }
 };
 
 
@@ -259,6 +260,9 @@ function spawnTroop(x, y) {
   troopsLeft -= cost;
   document.getElementById("troopCount").textContent = troopsLeft;
 
+  // inside spawnTroop, right after creating the `troop` object:
+  troop.taunt = (troop.type === "guardian");
+
   /* -------- helper for prioritising towers (raider) -------- */
   const getClosestSpecialTarget = (ox, oy) => {
     const prio = ["archerTower", "lightningStriker", "trap"];
@@ -277,6 +281,38 @@ function spawnTroop(x, y) {
   troop.interval = setInterval(() => {
     if (battleOver) return;
 
+
+    if (troop.type === "bomber") {
+    // damage every adjacent tile
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue;
+        const tx = troop.x + dx, ty = troop.y + dy;
+        const key = `${tx},${ty}`;
+        const th = healthMap[key];
+        if (th && th.current > 0) {
+          th.current = Math.max(0, th.current - troop.damage);
+          const cell = document.querySelector(`.cell[data-x="${tx}"][data-y="${ty}"]`);
+          if (th.current === 0) {
+            delete healthMap[key];
+            if (cell) { cell.className = "cell"; cell.innerHTML = ""; }
+            checkVictory();
+          } else if (cell) {
+            renderHealth(cell, key, th.current);
+          }
+        }
+      }
+    }
+    // self-damage
+    troop.hp = Math.max(0, troop.hp - troop.damage);
+    troop.hpDisplay.textContent = troop.hp;
+    if (troop.hp <= 0) {
+      clearInterval(troop.interval);
+      const c = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
+      if (c) c.innerHTML = "";
+    }
+    return;
+  }
     /* choose target */
     const target =
       troop.type === "raider"
@@ -385,49 +421,44 @@ function spawnTroop(x, y) {
   document.getElementById("resultPopup").style.display = "block";
 }
 
-   function startArcherAttacks() {
+function startArcherAttacks() {
   archerInterval = setInterval(() => {
-    for (const tower of archerTowers) {
-      const { x, y } = tower;
+    if (battleOver) return;
+    for (const { x, y } of archerTowers) {
       const key = `${x},${y}`;
-      const towerHealth = healthMap[key];
+      if (!healthMap[key]?.current) continue;
 
-      if (!towerHealth || towerHealth.current <= 0) continue; // Skip dead towers
+      // gather all alive troops within range 5
+      const inRange = troopUnits.filter(t =>
+        t.hp > 0 &&
+        Math.abs(t.x - x) + Math.abs(t.y - y) <= 5
+      );
+      if (inRange.length === 0) continue;
 
-      let closest = null;
-      let minDist = Infinity;
+      // prefer guardians with taunt
+      const taunters = inRange.filter(t => t.taunt);
+      const candidates = taunters.length ? taunters : inRange;
 
-      for (const t of troopUnits) {
-        if (t.hp <= 0) continue;
+      // pick the closest candidate
+      let target = candidates.reduce((best, t) => {
+        const d = Math.abs(t.x - x) + Math.abs(t.y - y);
+        const bd = Math.abs(best.x - x) + Math.abs(best.y - y);
+        return d < bd ? t : best;
+      }, candidates[0]);
 
-        const dx = t.x - x;
-        const dy = t.y - y;
-        const dist = Math.abs(dx) + Math.abs(dy);
-
-        if (dist <= 5 && dist < minDist) {
-          minDist = dist;
-          closest = t;
-        }
+      // apply damage
+      target.hp -= 5;
+      if (target.hpDisplay) target.hpDisplay.textContent = target.hp;
+      const cell = document.querySelector(
+        `.cell[data-x="${target.x}"][data-y="${target.y}"]`
+      );
+      if (cell) {
+        cell.style.backgroundColor = 'red';
+        setTimeout(() => cell.style.backgroundColor = '', 100);
       }
-
-      if (closest) {
-        closest.hp -= 5;
-        if (closest.hpDisplay) closest.hpDisplay.textContent = closest.hp;
-
-
-        const cell = document.querySelector(`.cell[data-x="${closest.x}"][data-y="${closest.y}"]`);
-        if (cell) {
-          // Flash red when hit
-          cell.style.backgroundColor = 'red';
-          setTimeout(() => {
-            cell.style.backgroundColor = '';
-          }, 100);
-        }
-
-        if (closest.hp <= 0) {
-          if (cell) cell.innerHTML = "";
-          clearInterval(closest.interval);
-        }
+      if (target.hp <= 0) {
+        clearInterval(target.interval);
+        if (cell) cell.innerHTML = "";
       }
     }
   }, 1500);
