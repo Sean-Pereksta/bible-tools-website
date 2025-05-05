@@ -102,12 +102,11 @@
   <div id="sidebar">
     <h4>🛡️ Troops</h4>
     <div class="troop-tray">
-      <button onclick="selectTroopType('base')">Swordsman (1)</button>
-      <button onclick="selectTroopType('archer')">Archer (1)</button>
-      <button onclick="selectTroopType('guardian')">Guardian (3)</button>
-      <button onclick="selectTroopType('raider')">Raider (2) </button>
+      <button onclick="selectTroopType('base')">🗡️ Swordsman (1)</button>
+      <button onclick="selectTroopType('archer')">🏹 Archer (1)</button>
+      <button onclick="selectTroopType('guardian')">🛡️ Guardian (3)</button>
+      <button onclick="selectTroopType('raider')">🐎 Raider (2) </button>
       <button onclick="selectTroopType('bomber')">💣 Bomber (5)</button>
-
     </div>
     <div><strong>Troops Left:</strong> <span id="troopCount">0</span></div>
     <button id="surrenderBtn" onclick="endBattle(false)">🏳️ Surrender</button>
@@ -286,36 +285,42 @@ function spawnTroop(x, y) {
     if (battleOver) return;
 
 
-    if (troop.type === "bomber") {
-    // damage every adjacent tile
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
+   if (troop.type === "bomber") {
+    // 1) try to explode adjacent tiles
+    let didExplode = false;
+    const R = troop.range;
+    for (let dx = -R; dx <= R; dx++) {
+      for (let dy = -R; dy <= R; dy++) {
         if (dx === 0 && dy === 0) continue;
         const tx = troop.x + dx, ty = troop.y + dy;
-        const key = `${tx},${ty}`;
-        const th = healthMap[key];
-        if (th && th.current > 0) {
+        const key = `${tx},${ty}`, th = healthMap[key];
+        if (th?.current > 0) {
+          didExplode = true;
           th.current = Math.max(0, th.current - troop.damage);
           const cell = document.querySelector(`.cell[data-x="${tx}"][data-y="${ty}"]`);
           if (th.current === 0) {
             delete healthMap[key];
             if (cell) { cell.className = "cell"; cell.innerHTML = ""; }
-            checkVictory();
+            checkVictoryCondition();
           } else if (cell) {
             renderHealth(cell, key, th.current);
           }
         }
       }
     }
-    // self-damage
-    troop.hp = Math.max(0, troop.hp - troop.damage);
-    troop.hpDisplay.textContent = troop.hp;
-    if (troop.hp <= 0) {
-      clearInterval(troop.interval);
-      const c = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
-      if (c) c.innerHTML = "";
+
+    // 2) if we actually exploded, apply self-damage and stop here
+    if (didExplode) {
+      troop.hp = Math.max(0, troop.hp - troop.damage);
+      troop.hpDisplay.textContent = troop.hp;
+      if (troop.hp <= 0) {
+        clearInterval(troop.interval);
+        const c = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
+        if (c) c.innerHTML = "";
+      }
+      return;  // **only** short-circuit when explosion happened
     }
-    return;
+    // otherwise fall through to move/attack like a normal unit
   }
     /* choose target */
     const target =
