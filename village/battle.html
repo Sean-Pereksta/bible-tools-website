@@ -8,12 +8,14 @@
     #sidebar { width: 160px; background: #ddd; padding: 10px; border-right: 2px solid #aaa; }
     #grid { display: grid; grid-template-columns: repeat(16, 30px); gap: 2px; margin: 20px; }
     .cell { width: 30px; height: 30px; background: #fff; border: 1px solid #ccc; position: relative; }
-    .wall { background: black; }
-    .strongWall { background: orange; }
-    .archerTower { background: red; }
-    .trap { background: green; }
-    .lightningStriker { background: blue; }
-    .troopStructure { background: purple; }
+   .wall              { background: black; }
+.strongWall        { background: orange; }
+.archerTower       { background: red; }
+.trap              { background: green; }
+.lightningStriker  { background: blue; }
+.troopStructure    { background: purple; }
+.sniperTower       { background: #555; } /* new sniper tower styling */
+
 
     .health-bar {
       position: absolute;
@@ -162,22 +164,25 @@
 
 
     const buildingHealth = {
-      wall: 40,
-      strongWall: 200,
-      archerTower: 25,
-      trap: 20,
-      lightningStriker: 30,
-      troopStructure: 10
-    };
-
-    const structureEmoji = {
-  wall:            "🧱",
-  strongWall:      "🧱",
-  archerTower:     "🏹",
-  trap:            "🪤",
-  lightningStriker:"⚡",
-  troopStructure:  "🏰"
+  wall:             40,
+  strongWall:      200,
+  archerTower:      25,
+  trap:             20,
+  lightningStriker: 30,
+  troopStructure:   10,
+  sniperTower:      20   // health for the new sniper tower
 };
+
+const structureEmoji = {
+  wall:             "🧱",
+  strongWall:       "🧱",
+  archerTower:      "🏹",
+  trap:             "🪤",
+  lightningStriker: "⚡",
+  troopStructure:   "🏰",
+  sniperTower:      "🎯"  // emoji for the sniper tower
+};
+
 
 
   const troopStats = {
@@ -191,10 +196,11 @@
 
 
 
-    const enemyStructures = [];
-    const archerTowers = [];
-    const lightningTowers = [];
-    const trapTowers = [];
+ const enemyStructures   = [];
+const archerTowers      = [];
+const lightningTowers   = [];
+const trapTowers        = [];
+const sniperTowers      = [];  // added array for sniper towers
 
 
     function selectTroopType(type) {
@@ -555,6 +561,51 @@ function startTrapAttacks() {
     }
   }, 1000);
 }
+    function startSniperAttacks() {
+  const RANGE     = 12;    // how far it can shoot
+  const DAMAGE    = 15;    // damage per shot
+  const FIRE_RATE = 5000;  // milliseconds between shots
+
+  setInterval(() => {
+    if (battleOver) return;
+
+    for (const { x, y } of sniperTowers) {
+      const key = `${x},${y}`;
+      if (!healthMap[key]?.current) continue;
+
+      // find closest troop within RANGE
+      let target = null, bestDist = Infinity;
+      for (const t of troopUnits) {
+        if (t.hp <= 0) continue;
+        const dist = Math.abs(t.x - x) + Math.abs(t.y - y);
+        if (dist <= RANGE && dist < bestDist) {
+          bestDist = dist;
+          target   = t;
+        }
+      }
+      if (!target) continue;
+
+      // apply damage
+      target.hp = Math.max(0, target.hp - DAMAGE);
+      if (target.hpDisplay) target.hpDisplay.textContent = target.hp;
+
+      // visual feedback
+      const cell = document.querySelector(
+        `.cell[data-x="${target.x}"][data-y="${target.y}"]`
+      );
+      if (cell) {
+        cell.style.backgroundColor = 'magenta';
+        setTimeout(() => cell.style.backgroundColor = '', 200);
+      }
+
+      // remove dead troop
+      if (target.hp <= 0) {
+        clearInterval(target.interval);
+        if (cell) cell.innerHTML = "";
+      }
+    }
+  }, FIRE_RATE);
+}
 
 
 
@@ -607,6 +658,7 @@ function startTrapAttacks() {
   if (b.type === "archerTower")      archerTowers.push({ x: b.x, y: b.y });
   if (b.type === "lightningStriker") lightningTowers.push({ x: b.x, y: b.y });
   if (b.type === "trap")             trapTowers.push({ x: b.x, y: b.y });
+  if (b.type === "sniperTower") sniperTowers.push({ x: b.x, y: b.y });
 }
 
 
@@ -614,6 +666,7 @@ function startTrapAttacks() {
   startArcherAttacks();
   startLightningAttacks();
   startTrapAttacks();
+  startSniperAttacks();
 }
 
 // wire it up and kick off initialization
