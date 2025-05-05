@@ -307,19 +307,28 @@ function spawnTroop(x, y) {
         }
       }
     } else {
-      if (troop.type !== "archer") {
-        /* movement — raider moves 2 steps & ignores walls */
-        const steps = troop.type === "raider" ? 2 : 1;
-        for (let s = 0; s < steps; s++) {
-          const nextX = troop.x + Math.sign(dx);
-          const nextY = troop.y + Math.sign(dy);
-          const nextCell = document.querySelector(`.cell[data-x="${nextX}"][data-y="${nextY}"]`);
-          if (!nextCell) break;
-          if (nextCell.classList.length > 1 && troop.type !== "raider") break; // wall stop for non‑raiders
-          troop.x = nextX;
-          troop.y = nextY;
-        }
-      }
+      if (troop.type === "archer") {
+  // Archers move exactly 1 tile until they’re in range
+  troop.x += Math.sign(dx);
+  troop.y += Math.sign(dy);
+
+} else {
+  // Base/Guardian = 1 step, Raider = 2 steps & ignores walls
+  const steps = troop.type === "raider" ? 2 : 1;
+  for (let s = 0; s < steps; s++) {
+    const nextX = troop.x + Math.sign(dx);
+    const nextY = troop.y + Math.sign(dy);
+    const nextCell = document.querySelector(
+      `.cell[data-x="${nextX}"][data-y="${nextY}"]`
+    );
+    if (!nextCell) break;
+    // Only raiders can leap over structures
+    if (nextCell.classList.length > 1 && troop.type !== "raider") break;
+
+    troop.x = nextX;
+    troop.y = nextY;
+    }
+    }
     }
 
     /* re‑draw at new location */
