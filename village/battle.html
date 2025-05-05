@@ -366,20 +366,16 @@ function spawnTroop(x, y) {
       }
     }
 
-   async function endBattle(victory) {
+  async function endBattle(victory) {
   battleOver = true;
   clearInterval(archerInterval);
   troopUnits.forEach(t => clearInterval(t.interval));
 
   if (victory) {
-    // calculate reward based on defender’s power+defense
-    const reward = Math.floor((defenderData.power + defenderData.defense) / 100);
-
-    // atomically add to attacker’s bucks field
+    const reward = 2;  // flat 2 bucks per victory
     await updateDoc(attackerRef, {
       bucks: increment(reward)
     });
-
     document.getElementById("resultText").textContent =
       `🏆 Victory! You earned ${reward} bucks.`;
   } else {
