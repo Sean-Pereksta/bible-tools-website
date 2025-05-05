@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>  
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -118,7 +118,7 @@
           attackBtn.textContent = "⚔️ Attack";
           attackBtn.onclick = (e) => {
             e.stopPropagation(); // Prevent preview popup on attack click
-            window.location.href = `/bible-tools-website/village/battle.html?attacker=${currentUsername}&defender=${data.owner}`;
+            window.location.href = `/bible-tools-website/village/battle.html?attacker=${encodeURIComponent(currentUsername)}&defender=${encodeURIComponent(data.owner)}`;
           };
           div.appendChild(attackBtn);
         } else {
@@ -128,9 +128,15 @@
         container.appendChild(div);
       });
 
+      // Create or Work on Village button with username passed in URL
       const actionBtn = document.createElement("button");
       actionBtn.textContent = hasVillage ? "🏰 Work on Village" : "🛠️ Create Village";
-      actionBtn.onclick = () => window.location.href = "/bible-tools-website/village/createvillage.html";
+      actionBtn.onclick = () => {
+        const target = hasVillage
+          ? `/bible-tools-website/village/createvillage.html?username=${encodeURIComponent(currentUsername)}`
+          : `/bible-tools-website/village/createvillage.html?username=${encodeURIComponent(currentUsername)}`;
+        window.location.href = target;
+      };
       container.appendChild(actionBtn);
 
       loadTribePower();
