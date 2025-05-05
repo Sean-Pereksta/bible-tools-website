@@ -122,9 +122,12 @@
       "Reuben","Simeon","Levi","Judah","Dan","Naphtali",
       "Gad","Asher","Issachar","Zebulun","Joseph","Benjamin"
     ];
+    let campaign = 0;
+  let targetGoblinId = null;
+
     const buildingClassMap = {
       wall: 'black', strongWall: 'orange', archerTower: 'red',
-      trap: 'green', lightningStriker: 'blue', troopStructure: 'purple'
+      trap: 'green', lightningStriker: 'blue', sniperTower: 'gray', troopStructure: 'purple'
     };
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -142,43 +145,71 @@
       };
     });
 
-    async function loadVillagePage() {
-      // hide login
-      document.getElementById("loginSection").style.display = "none";
+   async function loadVillagePage() {
+  // hide the login form
+  document.getElementById("loginSection").style.display = "none";
 
-      // fetch villages
-      const snap = await getDocs(collection(db, "villages"));
-      villages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  // 0) get the user's campaign progress
+  const userRef  = doc(db, "users", currentUsername);
+  const userSnap = await getDoc(userRef);
+  campaign       = userSnap.exists() ? (userSnap.data().campaign || 0) : 0;
+  targetGoblinId = `Goblin${campaign + 1}`;   // ← backticks!
 
-      // render villages sorted
-      renderVillages();
+  // 1) now fetch all villages
+  const snap = await getDocs(collection(db, "villages"));
+  villages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // render tribe UI
-      await loadTribeUI();
-    }
+  // 2) render just your own + the target goblin
+  renderVillages();
+
+  // 3) finally render the tribe sidebar UI
+  await loadTribeUI();
+}
+
 
     function renderVillages() {
-      const ownV = villages.find(v => v.owner === currentUsername);
-      const others = villages
-        .filter(v => v.owner !== currentUsername)
-        .sort((a,b) => {
-          const pa = (a.power.attack||0)+(a.power.defense||0);
-          const pb = (b.power.attack||0)+(b.power.defense||0);
-          return pb - pa;
-        });
-      const container = document.getElementById("villageList");
-      container.innerHTML = "<h2>🏘️ Active Villages</h2>";
-      if (ownV) renderVillageBox(ownV, true);
-      others.forEach(v => renderVillageBox(v, false));
+  const container = document.getElementById("villageList");
+  container.innerHTML = ""; 
 
-      // create/work button
-      const btn = document.createElement("button");
-      btn.textContent = ownV ? "🏰 Work on Village" : "🛠️ Create Village";
-      btn.onclick = () => {
-        window.location.href = `/bible-tools-website/village/createvillage.html?username=${encodeURIComponent(currentUsername)}`;
-      };
-      container.appendChild(btn);
-    }
+  // 1) Campaign section
+  container.innerHTML += "<h2>🎯 Campaign Target</h2>";
+  const campV = villages.find(v => v.id === targetGoblinId);
+  if (campV) {
+    renderVillageBox(campV, false);
+  } else {
+    container.innerHTML += "<p>🎉 Campaign Complete!</p>";
+  }
+
+  // 2) Active Villages
+  container.innerHTML += "<h2>🏘️ Active Villages</h2>";
+  const ownV = villages.find(v => v.owner === currentUsername);
+  if (ownV) {
+    renderVillageBox(ownV, true);
+  }
+
+  const others = villages
+    .filter(v => 
+      v.owner !== currentUsername 
+      && !v.id.startsWith("Goblin")   // hide all Goblin# villages here
+    )
+    .sort((a, b) => {
+      const pa = (a.power.attack||0) + (a.power.defense||0);
+      const pb = (b.power.attack||0) + (b.power.defense||0);
+      return pb - pa;
+    });
+
+  others.forEach(v => renderVillageBox(v, false));
+
+  // 3) Work/Create button
+  const btn = document.createElement("button");
+  btn.textContent = ownV ? "🏰 Work on Village" : "🛠️ Create Village";
+  btn.onclick = () => {
+    window.location.href =
+      `/bible-tools-website/village/createvillage.html?username=${encodeURIComponent(currentUsername)}`;
+  };
+  container.appendChild(btn);
+}
+
 
     function renderVillageBox(v, isOwn) {
       const div = document.createElement("div");
