@@ -77,6 +77,7 @@
     .trap { background: green; }
     .lightningStriker { background: blue; }
     .troopStructure { background: purple; }
+    .sniperTower { background: darkslategray; }
     .eraser { background: white; position: relative; }
     .eraser::after {
       content: "✖";
@@ -137,7 +138,8 @@
       archerTower:     { attack: 4, defense: 1, cost: 25 },
       trap:            { attack: 3, defense: 3, cost: 20 },
       lightningStriker:{ attack: 6, defense: 1, cost: 20 },
-      troopStructure:  { attack: 5, defense: 2, cost: 20 }
+      troopStructure:  { attack: 5, defense: 2, cost: 20 },
+      sniperTower:     { attack: 15, defense: 1, cost: 50 }
     };
 
     const buildingTypes = [
@@ -147,6 +149,7 @@
       { type: "trap", name: "Trap" },
       { type: "lightningStriker", name: "Lightning" },
       { type: "troopStructure", name: "Troops" },
+       { type: "sniperTower", name: "Sniper" },
       { type: "eraser", name: "Erase" }
     ];
 
