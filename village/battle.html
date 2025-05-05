@@ -372,7 +372,7 @@ function spawnTroop(x, y) {
   troopUnits.forEach(t => clearInterval(t.interval));
 
   if (victory) {
-    const reward = 2;  // flat 2 bucks per victory
+    const reward = 5;  // flat 2 bucks per victory
     await updateDoc(attackerRef, {
       bucks: increment(reward)
     });
