@@ -432,7 +432,8 @@ function spawnTroop(x, y) {
     }
   }, 1500);
 }
-  function startLightningAttacks(lightningTowers) {
+  // remove the "(lightningTowers)" parameter
+function startLightningAttacks() {
   setInterval(() => {
     if (battleOver) return;
 
@@ -440,68 +441,20 @@ function spawnTroop(x, y) {
       const { x: lx, y: ly } = tower;
       const key = `${lx},${ly}`;
       const towerHealth = healthMap[key];
-
-      if (!towerHealth || towerHealth.current <= 0) continue; // ✅ Skip dead towers
+      if (!towerHealth || towerHealth.current <= 0) continue;
 
       for (const troop of troopUnits) {
         if (troop.hp <= 0) continue;
-
         const dx = troop.x - lx;
         const dy = troop.y - ly;
-        const distance = Math.abs(dx) + Math.abs(dy);
-
-        if (distance <= 3) {
-          troop.hp -= 1;
-          if (troop.hpDisplay) troop.hpDisplay.textContent = troop.hp;
-          
-
-          const troopCell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
-          if (troopCell) {
-            troopCell.style.backgroundColor = 'yellow';
-            setTimeout(() => {
-              troopCell.style.backgroundColor = '';
-            }, 100);
-          }
-
-          if (troop.hp <= 0) {
-            if (troopCell) troopCell.innerHTML = "";
-            clearInterval(troop.interval);
-          }
-        }
-      }
-    }
-  }, 400);
-}
-function startTrapAttacks(trapTowers) {
-  setInterval(() => {
-    if (battleOver) return;
-
-    for (const trap of trapTowers) {
-      const { x: tx, y: ty } = trap;
-      const key = `${tx},${ty}`;
-      const trapHealth = healthMap[key];
-
-      if (!trapHealth || trapHealth.current <= 0) continue; // Skip dead traps
-
-      for (const troop of troopUnits) {
-        if (troop.hp <= 0) continue;
-
-        const dx = troop.x - tx;
-        const dy = troop.y - ty;
-        const distance = Math.sqrt(dx * dx + dy * dy); // Use Euclidean distance for 1.5 radius
-
-        if (distance <= 1.5) {
-          troop.hp -= 10;
-      if (troop.hpDisplay) troop.hpDisplay.textContent = troop.hp;
-
+        if (Math.abs(dx)+Math.abs(dy) <= 3) {
+          troop.hp--;
+          troop.hpDisplay.textContent = troop.hp;
           const cell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
           if (cell) {
-            cell.style.backgroundColor = 'orange';
-            setTimeout(() => {
-              cell.style.backgroundColor = '';
-            }, 100);
+            cell.style.backgroundColor = 'yellow';
+            setTimeout(() => cell.style.backgroundColor = '', 100);
           }
-
           if (troop.hp <= 0) {
             if (cell) cell.innerHTML = "";
             clearInterval(troop.interval);
@@ -509,8 +462,42 @@ function startTrapAttacks(trapTowers) {
         }
       }
     }
-  }, 1000); // Adjust tick speed if needed
+  }, 400);
 }
+
+// likewise, drop the "(trapTowers)" parameter
+function startTrapAttacks() {
+  setInterval(() => {
+    if (battleOver) return;
+
+    for (const trap of trapTowers) {
+      const { x: tx, y: ty } = trap;
+      const key = `${tx},${ty}`;
+      const trapHealth = healthMap[key];
+      if (!trapHealth || trapHealth.current <= 0) continue;
+
+      for (const troop of troopUnits) {
+        if (troop.hp <= 0) continue;
+        const dx = troop.x - tx;
+        const dy = troop.y - ty;
+        if (Math.hypot(dx, dy) <= 1.5) {
+          troop.hp -= 10;
+          troop.hpDisplay.textContent = troop.hp;
+          const cell = document.querySelector(`.cell[data-x="${troop.x}"][data-y="${troop.y}"]`);
+          if (cell) {
+            cell.style.backgroundColor = 'orange';
+            setTimeout(() => cell.style.backgroundColor = '', 100);
+          }
+          if (troop.hp <= 0) {
+            if (cell) cell.innerHTML = "";
+            clearInterval(troop.interval);
+          }
+        }
+      }
+    }
+  }, 1000);
+}
+
 
 
 
