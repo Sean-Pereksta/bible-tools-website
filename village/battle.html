@@ -120,6 +120,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -145,6 +147,9 @@
     let troopsLeft = 0;
     let archerInterval;
     let battleOver = false;
+    let attackerRef;
+    let defenderData;
+
 
     const buildingHealth = {
       wall: 50,
@@ -361,13 +366,28 @@ function spawnTroop(x, y) {
       }
     }
 
-    function endBattle(victory) {
-      battleOver = true;
-      clearInterval(archerInterval);
-      troopUnits.forEach(t => clearInterval(t.interval));
-      document.getElementById("resultText").textContent = victory ? "🏆 Victory!" : "❌ Defeat!";
-      document.getElementById("resultPopup").style.display = "block";
-    }
+   async function endBattle(victory) {
+  battleOver = true;
+  clearInterval(archerInterval);
+  troopUnits.forEach(t => clearInterval(t.interval));
+
+  if (victory) {
+    // calculate reward based on defender’s power+defense
+    const reward = Math.floor((defenderData.power + defenderData.defense) / 100);
+
+    // atomically add to attacker’s bucks field
+    await updateDoc(attackerRef, {
+      bucks: increment(reward)
+    });
+
+    document.getElementById("resultText").textContent =
+      `🏆 Victory! You earned ${reward} bucks.`;
+  } else {
+    document.getElementById("resultText").textContent = "❌ Defeat!";
+  }
+
+  document.getElementById("resultPopup").style.display = "block";
+}
 
    function startArcherAttacks() {
   archerInterval = setInterval(() => {
@@ -498,51 +518,58 @@ function startTrapAttacks(trapTowers) {
 
 
 
-    async function init() {
-      if (!attacker || !defender) return alert("Invalid URL");
+  async function init() {
+  if (!attacker || !defender) return alert("Invalid URL");
 
-      const attackerRef = doc(db, "villages", attacker);
-      const defenderRef = doc(db, "villages", defender);
-      const [attackerSnap, defenderSnap] = await Promise.all([
-        getDoc(attackerRef),
-        getDoc(defenderRef)
-      ]);
+  // 1) assign the global attackerRef
+  attackerRef = doc(db, "villages", attacker);
 
-      const attackerData = attackerSnap.data();
-      const defenderData = defenderSnap.data();
+  // 2) build a ref for the defender
+  const defenderRef = doc(db, "villages", defender);
 
-      const troopBuildings = attackerData.grid?.filter(t => t.type === "troopStructure").length || 0;
-      troopsLeft = troopBuildings * 5;
-      document.getElementById("troopCount").textContent = troopsLeft;
+  // 3) fetch both docs in parallel
+  const [attackerSnap, defenderSnap] = await Promise.all([
+    getDoc(attackerRef),
+    getDoc(defenderRef)
+  ]);
 
-      createGrid();
+  // 4) pull data into locals & wire up the defenderData global
+  const attackerData = attackerSnap.data();
+  defenderData       = defenderSnap.data();
 
-      for (const b of defenderData.grid || []) {
-        const key = `${b.x},${b.y}`;
-        const cell = document.querySelector(`.cell[data-x="${b.x}"][data-y="${b.y}"]`);
-        if (!cell) continue;
+  // 5) calculate how many troops you get
+  const troopBuildings = attackerData.grid?.filter(b => b.type === "troopStructure").length || 0;
+  troopsLeft           = troopBuildings * 5;
+  document.getElementById("troopCount").textContent = troopsLeft;
 
-        cell.classList.add(b.type);
-        const baseHP = buildingHealth[b.type] || 10;
-        healthMap[key] = { current: baseHP, max: baseHP };
-        renderHealth(cell, key, baseHP);
+  // 6) render the grid and place the defender’s buildings
+  createGrid();
+  for (const b of defenderData.grid || []) {
+    const key = `${b.x},${b.y}`;
+    const cell = document.querySelector(`.cell[data-x="${b.x}"][data-y="${b.y}"]`);
+    if (!cell) continue;
 
-        enemyStructures.push({ ...b });
-        if (b.type === "archerTower") archerTowers.push({ x: b.x, y: b.y });
-        if (b.type === "lightningStriker") lightningTowers.push({ x: b.x, y: b.y });
-        if (b.type === "trap") trapTowers.push({ x: b.x, y: b.y });
+    cell.classList.add(b.type);
+    const hp = buildingHealth[b.type] || 10;
+    healthMap[key] = { current: hp, max: hp };
+    renderHealth(cell, key, hp);
 
-      }
+    enemyStructures.push({ ...b });
+    if (b.type === "archerTower")      archerTowers.push({ x: b.x, y: b.y });
+    if (b.type === "lightningStriker") lightningTowers.push({ x: b.x, y: b.y });
+    if (b.type === "trap")             trapTowers.push({ x: b.x, y: b.y });
+  }
 
-      startArcherAttacks();
-      startLightningAttacks(lightningTowers);
-      startTrapAttacks(trapTowers);
+  // 7) start the tower‐attack loops
+  startArcherAttacks();
+  startLightningAttacks();
+  startTrapAttacks();
+}
 
-    }
-
-    window.selectTroopType = selectTroopType;
-
-    init();
+// wire it up and kick off initialization
+window.selectTroopType = selectTroopType;
+init();
+    
   </script>
 </body>
 </html>
