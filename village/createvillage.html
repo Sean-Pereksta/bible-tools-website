@@ -4,22 +4,83 @@
   <meta charset="UTF-8">
   <title>🎗️ Create Village</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #eef2f5; text-align: center; padding: 20px; }
-    .grid { display: grid; grid-template-columns: repeat(16, 30px); gap: 2px; margin: auto; margin-top: 20px; }
-    .cell { width: 30px; height: 30px; background: #fff; border: 1px solid #ccc; }
-    .panel { margin-top: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
-    .building-label { font-size: 0.75em; margin-top: 2px; text-align: center; max-width: 60px; }
-    .building-option { display: flex; flex-direction: column; align-items: center; width: 60px; }
-    .building { width: 30px; height: 30px; border: 2px solid black; cursor: pointer; }
-    #saveBtn, #loadBtn { margin: 10px; padding: 10px 20px; font-size: 1em; }
-
+    body {
+      font-family: Arial, sans-serif;
+      background: #eef2f5;
+      text-align: center;
+      padding: 20px;
+    }
+    #userLabel {
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    .game-area {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 40px;
+      margin-top: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(16, 30px);
+      gap: 2px;
+    }
+    .cell {
+      width: 30px;
+      height: 30px;
+      background: #fff;
+      border: 1px solid #ccc;
+    }
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .balance-box {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-bottom: 15px;
+      font-weight: bold;
+      background: #fff;
+    }
+    .panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-wrap: wrap;
+      max-width: 80px;
+    }
+    .building-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 60px;
+    }
+    .building {
+      width: 30px;
+      height: 30px;
+      border: 2px solid black;
+      cursor: pointer;
+    }
+    .building-label {
+      font-size: 0.75em;
+      margin-top: 2px;
+      text-align: center;
+      max-width: 60px;
+    }
     .wall { background: black; }
     .strongWall { background: orange; }
     .archerTower { background: red; }
     .trap { background: green; }
     .lightningStriker { background: blue; }
     .troopStructure { background: purple; }
-    .eraser { background: white; position: relative; }
+    .eraser {
+      background: white;
+      position: relative;
+    }
     .eraser::after {
       content: "✖";
       position: absolute;
@@ -28,19 +89,38 @@
       top: 2px;
       left: 7px;
     }
+    #saveBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1em;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <h1>🎗️ Build Your Village</h1>
+  <div id="userLabel">Not logged in</div>
 
-  <div class="panel" id="buildingOptions"></div>
-  <div class="grid" id="villageGrid"></div>
-  <button id="saveBtn">📂 Save Village</button>
-  <button id="loadBtn">🔄 Load Village</button>
+  <div class="game-area">
+    <div id="villageGrid" class="grid"></div>
+    <div class="sidebar">
+      <div id="balanceBox" class="balance-box">💰 0 bucks</div>
+      <div class="panel" id="buildingOptions"></div>
+      <button id="saveBtn">📂 Save Village</button>
+    </div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // — grab username from URL —
+    const params = new URLSearchParams(window.location.search);
+    const currentUsername = params.get("username");
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -50,27 +130,27 @@
       messagingSenderId: "959619818996",
       appId: "1:959619818996:web:5a9fbf492e23c765e445a1"
     };
-
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const db  = getFirestore(app);
 
+    // Real cost & stats
     const buildingStats = {
-      wall: { attack: 0, defense: 2, cost: 0 },
-      strongWall: { attack: 0, defense: 5, cost: 0 },
-      archerTower: { attack: 4, defense: 1, cost: 0 },
-      trap: { attack: 3, defense: 3, cost: 0 },
-      lightningStriker: { attack: 6, defense: 1, cost: 0 },
-      troopStructure: { attack: 5, defense: 2, cost: 0 }
+      wall:            { attack: 0, defense: 2, cost: 5 },
+      strongWall:      { attack: 0, defense: 5, cost: 15 },
+      archerTower:     { attack: 4, defense: 1, cost: 25 },
+      trap:            { attack: 3, defense: 3, cost: 20 },
+      lightningStriker:{ attack: 6, defense: 1, cost: 30 },
+      troopStructure:  { attack: 5, defense: 2, cost: 50 }
     };
 
     const buildingTypes = [
-      { type: "wall", name: "Wall" },
-      { type: "strongWall", name: "Strong Wall" },
-      { type: "archerTower", name: "Archer" },
-      { type: "trap", name: "Trap" },
-      { type: "lightningStriker", name: "Lightning" },
-      { type: "troopStructure", name: "Troops" },
-      { type: "eraser", name: "Erase" }
+      { type: "wall",            name: "Wall" },
+      { type: "strongWall",      name: "Strong Wall" },
+      { type: "archerTower",     name: "Archer" },
+      { type: "trap",            name: "Trap" },
+      { type: "lightningStriker",name: "Lightning" },
+      { type: "troopStructure",  name: "Troops" },
+      { type: "eraser",          name: "Erase" }
     ];
 
     let selectedType = null;
@@ -78,7 +158,9 @@
     const gridData = [];
 
     const buildingOptions = document.getElementById("buildingOptions");
-    const gridContainer = document.getElementById("villageGrid");
+    const gridContainer   = document.getElementById("villageGrid");
+    const userLabel       = document.getElementById("userLabel");
+    const balanceBox      = document.getElementById("balanceBox");
 
     function createBuildingButtons() {
       buildingTypes.forEach(b => {
@@ -92,14 +174,13 @@
 
         const label = document.createElement("div");
         label.className = "building-label";
-        if (b.type !== "eraser" && buildingStats[b.type]) {
+        if (b.type !== "eraser") {
           label.innerHTML = `${b.name}<br>Ⓜ $${buildingStats[b.type].cost}`;
         } else {
           label.textContent = b.name;
         }
 
-        wrapper.appendChild(div);
-        wrapper.appendChild(label);
+        wrapper.append(div, label);
         buildingOptions.appendChild(wrapper);
       });
     }
@@ -120,93 +201,103 @@
 
     function placeBuilding(cell, x, y) {
       if (!selectedType) return;
-      const index = gridData.findIndex(t => t.x === x && t.y === y);
+      const idx = gridData.findIndex(t => t.x === x && t.y === y);
 
       if (selectedType === "eraser") {
-        if (index !== -1) gridData.splice(index, 1);
+        if (idx !== -1) gridData.splice(idx, 1);
         cell.className = "cell";
         return;
       }
 
-      const newTile = { x, y, type: selectedType };
-      if (index !== -1) gridData[index] = newTile;
-      else gridData.push(newTile);
+      const tile = { x, y, type: selectedType };
+      if (idx !== -1) gridData[idx] = tile;
+      else gridData.push(tile);
 
       cell.className = `cell ${selectedType}`;
     }
 
-    async function saveVillage() {
-      const username = prompt("Enter your username:");
-      const password = prompt("Enter your password:");
-      if (!username || !password) return alert("Username and password required.");
-
-      const userRef = doc(db, "users", username);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) return alert("User not found.");
-
-      const userData = userSnap.data();
-      if (userData.password !== password) return alert("Incorrect password.");
-
-      const villageRef = doc(db, "villages", username);
-      await setDoc(villageRef, {
-        owner: username,
-        grid: gridData,
-        power: calculatePower()
+    function calculatePower() {
+      let atk = 0, def = 0;
+      gridData.forEach(t => {
+        const s = buildingStats[t.type];
+        if (s) { atk += s.attack; def += s.defense; }
       });
-      alert("Village saved!");
+      return { attack: atk, defense: def };
+    }
+
+    function calculateCost() {
+      return gridData.reduce((sum, t) => {
+        return sum + (buildingStats[t.type]?.cost || 0);
+      }, 0);
+    }
+
+    async function saveVillage() {
+      if (!currentUsername) {
+        alert("No username provided!");
+        return;
+      }
+      const pwd = prompt("Enter your password:");
+      if (!pwd) return alert("Password required.");
+
+      const uRef  = doc(db, "users", currentUsername);
+      const uSnap = await getDoc(uRef);
+      if (!uSnap.exists() || uSnap.data().password !== pwd) {
+        return alert("Authentication failed.");
+      }
+
+      const bucks = uSnap.data().bucks || 0;
+      const cost  = calculateCost();
+      if (bucks < cost) {
+        return alert(`Insufficient bucks. You have ${bucks}, need ${cost}.`);
+      }
+
+      await setDoc(uRef, { bucks: bucks - cost }, { merge: true });
+      const vRef = doc(db, "villages", currentUsername);
+      await setDoc(vRef, {
+        owner: currentUsername,
+        grid: gridData,
+        power: calculatePower(),
+        cost
+      });
+      alert(`Village saved! Spent ${cost}, remaining ${bucks - cost}.`);
+
+      // update balance display
+      balanceBox.textContent = `💰 ${bucks - cost} bucks`;
     }
 
     async function loadVillage() {
-      const username = prompt("Enter your username:");
-      const password = prompt("Enter your password:");
-      if (!username || !password) return alert("Username and password required.");
+      if (!currentUsername) return;
+      const uRef  = doc(db, "users", currentUsername);
+      const uSnap = await getDoc(uRef);
+      if (uSnap.exists()) {
+        userLabel.textContent = `Logged in as: ${currentUsername}`;
+        balanceBox.textContent = `💰 ${uSnap.data().bucks || 0} bucks`;
+      }
 
-      const userRef = doc(db, "users", username);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) return alert("User not found.");
-
-      const userData = userSnap.data();
-      if (userData.password !== password) return alert("Incorrect password.");
-
-      const villageRef = doc(db, "villages", username);
-      const villageSnap = await getDoc(villageRef);
-      if (!villageSnap.exists()) return alert("No saved village found.");
-
-      const data = villageSnap.data();
+      const vRef  = doc(db, "villages", currentUsername);
+      const vSnap = await getDoc(vRef);
+      if (!vSnap.exists()) return;  // blank canvas if no village yet
+      const data = vSnap.data();
       if (data.grid) {
-        gridData.length = 0;
-        gridData.push(...data.grid);
+        gridData.splice(0, gridData.length, ...data.grid);
         updateGridVisual();
       }
     }
 
     function updateGridVisual() {
-      const cells = gridContainer.querySelectorAll(".cell");
-      cells.forEach(cell => {
-        const x = Number(cell.dataset.x);
-        const y = Number(cell.dataset.y);
-        const match = gridData.find(d => d.x === x && d.y === y);
-        cell.className = "cell";
-        if (match) cell.classList.add(match.type);
+      document.querySelectorAll(".cell").forEach(cell => {
+        const x = +cell.dataset.x, y = +cell.dataset.y;
+        const m = gridData.find(t => t.x === x && t.y === y);
+        cell.className = m ? `cell ${m.type}` : "cell";
       });
     }
 
-    function calculatePower() {
-      let attack = 0, defense = 0;
-      for (let tile of gridData) {
-        const stats = buildingStats[tile.type];
-        if (stats) {
-          attack += stats.attack;
-          defense += stats.defense;
-        }
-      }
-      return { attack, defense };
-    }
-
-    createBuildingButtons();
-    createGrid();
-    document.getElementById("saveBtn").onclick = saveVillage;
-    document.getElementById("loadBtn").onclick = loadVillage;
+    document.addEventListener("DOMContentLoaded", () => {
+      createBuildingButtons();
+      createGrid();
+      loadVillage();  // auto-load or blank canvas
+      document.getElementById("saveBtn").onclick = saveVillage;
+    });
   </script>
 </body>
 </html>
