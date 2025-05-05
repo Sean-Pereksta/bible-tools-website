@@ -292,7 +292,7 @@ function spawnTroop(x, y) {
 
   /* -------- helper for prioritising towers (raider) -------- */
   const getClosestSpecialTarget = (ox, oy) => {
-    const prio = ["archerTower", "lightningStriker", "trap"];
+   const prio = ["archerTower", "sniperTower", "lightningStriker", "trap"];
     let best = null, bestDist = Infinity;
     for (const s of enemyStructures) {
       if (!prio.includes(s.type)) continue;
