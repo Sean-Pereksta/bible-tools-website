@@ -39,6 +39,9 @@
     .troop.guardian {
       background: darkblue;
     }
+    .troop.bomber {
+      background: red;
+    }
   
     .troop-hp {
   position: absolute;
@@ -237,6 +240,7 @@ function spawnTroop(x, y) {
   icon.textContent =
     selectedTroopType === "archer"   ? "🏹" :
     selectedTroopType === "guardian" ? "🛡️" :
+    selectedTroopType === "bomber" ? "💣" :
     selectedTroopType === "raider"   ? "🐎" : "🗡️";
 
   wrapper.appendChild(hpBar);
