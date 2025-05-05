@@ -1,4 +1,4 @@
-<!DOCTYPE html>  
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -6,48 +6,68 @@
   <style>
     body { font-family: Arial, sans-serif; background: #f4f4f4; text-align: center; padding: 20px; }
     .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
-    .village-box { background: #eee; padding: 10px; margin: 10px 0; border-radius: 6px; cursor: pointer; }
+
+    /* scrollable list */
+    #villageList {
+      max-height: 400px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    /* smaller, tighter boxes */
+    .village-box {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      margin: 4px 0;
+      font-size: 0.9em;
+      background: #eee;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .village-box.own {
+      background: #dfe6e9;
+      border: 2px solid #00b894;
+    }
+
+    .village-box button {
+      margin-left: 10px;
+      padding: 6px 10px;
+      font-size: 0.85em;
+    }
+
     .tribe-power { margin-top: 30px; background: #fafafa; padding: 10px; border-radius: 6px; }
     button { margin: 5px; padding: 10px 15px; border: none; background: #3498db; color: white; border-radius: 5px; cursor: pointer; }
     input { padding: 10px; margin: 5px; width: 200px; }
 
     #previewPopup {
-      display: none;
-      position: fixed;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 20px;
-      border: 2px solid #333;
-      border-radius: 10px;
-      z-index: 1000;
+      display: none; position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); background: white;
+      padding: 20px; border: 2px solid #333; border-radius: 10px; z-index: 1000;
     }
-
     #previewPopup button {
-      float: right;
-      font-size: 18px;
-      background: none;
-      color: black;
+      float: right; font-size: 18px; background: none; color: black;
     }
-
     #previewGrid {
-      display: grid;
-      grid-template-columns: repeat(16, 10px);
-      gap: 1px;
-      margin-top: 10px;
+      display: grid; grid-template-columns: repeat(16, 10px);
+      gap: 1px; margin-top: 10px;
     }
-
     #previewGrid div {
-      width: 10px;
-      height: 10px;
-      border: 1px solid #ccc;
-      background: #fff;
+      width: 10px; height: 10px; border: 1px solid #ccc; background: #fff;
     }
   </style>
-
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, doc, getDocs, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import {
+      getFirestore,
+      collection,
+      doc,
+      getDocs,
+      getDoc,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -57,39 +77,27 @@
       messagingSenderId: "959619818996",
       appId: "1:959619818996:web:5a9fbf492e23c765e445a1"
     };
-
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const db  = getFirestore(app);
 
     let currentUsername = null;
-
     const buildingClassMap = {
-      wall: 'black',
-      strongWall: 'orange',
-      archerTower: 'red',
-      trap: 'green',
-      lightningStriker: 'blue',
-      troopStructure: 'purple'
+      wall: 'black', strongWall: 'orange', archerTower: 'red',
+      trap: 'green', lightningStriker: 'blue', troopStructure: 'purple'
     };
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("loginBtn").onclick = async () => {
         const username = document.getElementById("username").value.trim();
         const password = document.getElementById("password").value.trim();
-
-        const userRef = doc(db, "users", username);
+        const userRef  = doc(db, "users", username);
         const userSnap = await getDoc(userRef);
 
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          if (data.password === password) {
-            currentUsername = username;
-            loadVillagePage();
-          } else {
-            alert("Incorrect password.");
-          }
+        if (userSnap.exists() && userSnap.data().password === password) {
+          currentUsername = username;
+          loadVillagePage();
         } else {
-          alert("Username not found.");
+          alert("Invalid credentials.");
         }
       };
     });
@@ -98,57 +106,77 @@
       document.getElementById("loginSection").style.display = "none";
       const villagesCol = collection(db, "villages");
       const snapshot = await getDocs(villagesCol);
-      const container = document.getElementById("villageList");
-      container.innerHTML = "<h2>🏘️ Active Villages</h2>";
-      let hasVillage = false;
 
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        const div = document.createElement("div");
-        div.className = "village-box";
-        div.innerHTML = `<strong>${docSnap.id}</strong><br>Owner: ${data.owner}<br>Power: ${JSON.stringify(data.power)}`;
-
-        div.onclick = () => {
-          const grid = data.grid || [];
-          showVillagePreview(grid);
-        };
-
-        if (data.owner !== currentUsername) {
-          const attackBtn = document.createElement("button");
-          attackBtn.textContent = "⚔️ Attack";
-          attackBtn.onclick = (e) => {
-            e.stopPropagation(); // Prevent preview popup on attack click
-            window.location.href = `/bible-tools-website/village/battle.html?attacker=${encodeURIComponent(currentUsername)}&defender=${encodeURIComponent(data.owner)}`;
-          };
-          div.appendChild(attackBtn);
-        } else {
-          hasVillage = true;
-        }
-
-        container.appendChild(div);
+      // build array of all villages
+      const villages = [];
+      snapshot.forEach(snap => {
+        villages.push({ id: snap.id, ...snap.data() });
       });
 
-      // Create or Work on Village button with username passed in URL
+      // separate your own vs others
+      const own = villages.find(v => v.owner === currentUsername);
+      const others = villages
+        .filter(v => v.owner !== currentUsername)
+        .sort((a, b) => {
+          const pa = (a.power.attack||0) + (a.power.defense||0);
+          const pb = (b.power.attack||0) + (b.power.defense||0);
+          return pb - pa;
+        });
+
+      const container = document.getElementById("villageList");
+      container.innerHTML = "<h2>🏘️ Active Villages</h2>";
+
+      // render your own first (if any)
+      if (own) renderVillageBox(own, true);
+
+      // render the rest
+      others.forEach(v => renderVillageBox(v, false));
+
+      // create/work-on button
+      const hasVillage = !!own;
       const actionBtn = document.createElement("button");
       actionBtn.textContent = hasVillage ? "🏰 Work on Village" : "🛠️ Create Village";
       actionBtn.onclick = () => {
-        const target = hasVillage
-          ? `/bible-tools-website/village/createvillage.html?username=${encodeURIComponent(currentUsername)}`
-          : `/bible-tools-website/village/createvillage.html?username=${encodeURIComponent(currentUsername)}`;
-        window.location.href = target;
+        window.location.href = `/bible-tools-website/village/createvillage.html?username=${encodeURIComponent(currentUsername)}`;
       };
       container.appendChild(actionBtn);
 
       loadTribePower();
     }
 
+    function renderVillageBox(v, isOwn) {
+      const div = document.createElement("div");
+      div.className = "village-box" + (isOwn ? " own" : "");
+      const combined = (v.power.attack||0) + (v.power.defense||0);
+      div.innerHTML = `
+        <div><strong>${v.id}</strong> (${v.owner})</div>
+        <div>Power: ${combined}</div>
+      `;
+
+      // preview on click
+      div.onclick = () => showVillagePreview(v.grid||[]);
+
+      if (!isOwn) {
+        const btn = document.createElement("button");
+        btn.textContent = "⚔️ Attack";
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          window.location.href =
+            `/bible-tools-website/village/battle.html?attacker=${encodeURIComponent(currentUsername)}&defender=${encodeURIComponent(v.owner)}`;
+        };
+        div.appendChild(btn);
+      }
+
+      document.getElementById("villageList").appendChild(div);
+    }
+
     function loadTribePower() {
       const ref = doc(db, "global", "tribePower");
-      onSnapshot(ref, (snap) => {
-        const data = snap.data();
-        const container = document.getElementById("tribePower");
-        container.innerHTML = `<h2>🔱 Tribe Power Rankings</h2>` +
-          Object.entries(data || {}).map(([tribe, power]) => `<div>${tribe}: ${power} pts</div>`).join("");
+      onSnapshot(ref, snap => {
+        const data = snap.data() || {};
+        document.getElementById("tribePower").innerHTML =
+          `<h2>🔱 Tribe Power Rankings</h2>` +
+          Object.entries(data).map(([tribe, p]) => `<div>${tribe}: ${p} pts</div>`).join("");
       });
     }
 
@@ -156,23 +184,21 @@
       const popup = document.getElementById("previewPopup");
       const previewGrid = document.getElementById("previewGrid");
       previewGrid.innerHTML = "";
-
-      const gridSize = 16;
-      for (let y = 0; y < gridSize; y++) {
-        for (let x = 0; x < gridSize; x++) {
-          const div = document.createElement("div");
-          const match = grid.find(tile => tile.x === x && tile.y === y);
-          if (match && buildingClassMap[match.type]) {
-            div.style.background = buildingClassMap[match.type];
+      for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
+          const cell = document.createElement("div");
+          const tile = grid.find(t => t.x === x && t.y === y);
+          if (tile && buildingClassMap[tile.type]) {
+            cell.style.background = buildingClassMap[tile.type];
           }
-          previewGrid.appendChild(div);
+          previewGrid.appendChild(cell);
         }
       }
-
       popup.style.display = "block";
     }
   </script>
 </head>
+
 <body>
   <div class="container">
     <h1>🛡️ Tribes of Israel</h1>
