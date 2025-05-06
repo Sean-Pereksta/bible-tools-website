@@ -156,6 +156,9 @@
     const attacker = params.get("attacker");
     const defender = params.get("defender");
 
+const defenderUserRef = doc(db, "users", defender);
+
+
     // which villages are “goblins” (lowercase/uppercase must match your doc IDs)
 const goblinVillages = [ "Goblin1", "Goblin2", "Goblin3" ];
 
@@ -214,10 +217,6 @@ const lightningTowers   = [];
 const trapTowers        = [];
 const sniperTowers      = [];  // added array for sniper towers
 
-
-    function selectTroopType(type) {
-      selectedTroopType = type;
-    }
 
     function renderHealth(cell, key, value) {
       let healthBar = cell.querySelector(".health-bar");
@@ -640,6 +639,7 @@ function startTrapAttacks() {
 
 
   async function init() {
+    await updateDoc(defenderUserRef, { bucks: increment(10) });
   if (!attacker || !defender) return alert("Invalid URL");
 
   // 1) assign the global attackerRef
