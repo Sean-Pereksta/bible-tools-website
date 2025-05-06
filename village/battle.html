@@ -455,26 +455,28 @@ async function endBattle(victory) {
   clearInterval(archerInterval);
   troopUnits.forEach(t => clearInterval(t.interval));
 
+  const attackerRef = doc(db, "users", attacker);
+  const defenderRef = doc(db, "users", defender);
+  const updates     = [];
+
   if (victory) {
+    // Attacker wins → give attacker reward, take back defender’s 10
     const reward = isGoblinBattle ? 50 : 5;
-    const userRef = doc(db, "users", attacker);
-
-    // Always give gold to the user...
-    const updates = [
-      updateDoc(userRef, { bucks: increment(reward) })
-    ];
-    // ...but only bump campaign on a goblin fight
+    updates.push(updateDoc(attackerRef, { bucks: increment(reward) }));
+    updates.push(updateDoc(defenderRef, { bucks: increment(-10) }));
     if (isGoblinBattle) {
-      updates.push(updateDoc(userRef, { campaign: increment(1) }));
+      updates.push(updateDoc(attackerRef, { campaign: increment(1) }));
     }
-
-    await Promise.all(updates);
-
     document.getElementById("resultText").textContent =
       `🏆 Victory! You earned ${reward} bucks.`;
   } else {
-    document.getElementById("resultText").textContent = "❌ Defeat!";
+    // Attacker loses → defender already has their +10, so no writes here
+    document.getElementById("resultText").textContent =
+      "❌ Defeat! Defender keeps their 10 bucks.";
   }
+
+  // run all writes in parallel
+  if (updates.length) await Promise.all(updates);
 
   document.getElementById("resultPopup").style.display = "block";
 }
