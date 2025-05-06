@@ -431,6 +431,7 @@ function selectTroopType(type) {
   // (optionally) update your UI to highlight the button, etc.
 }
 
+    window.selectTroopType = selectTroopType;
 
     function createGrid() {
       gridElement.innerHTML = "";
@@ -703,7 +704,6 @@ function startTrapAttacks() {
 }
 
 // wire it up and kick off initialization
-window.selectTroopType = selectTroopType;
 init();
     
   </script>
