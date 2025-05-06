@@ -169,45 +169,46 @@
 
     function renderVillages() {
   const container = document.getElementById("villageList");
-  container.innerHTML = ""; 
+  container.innerHTML = "";
 
-  // 1) Campaign section
-  container.innerHTML += "<h2>🎯 Campaign Target</h2>";
+  // 1) Campaign header
+  const hCampaign = document.createElement("h2");
+  hCampaign.textContent = "🎯 Campaign Target";
+  container.appendChild(hCampaign);
+
   const campV = villages.find(v => v.id === targetGoblinId);
   if (campV) {
     renderVillageBox(campV, false);
   } else {
-    container.innerHTML += "<p>🎉 Campaign Complete!</p>";
+    const msg = document.createElement("p");
+    msg.textContent = "🎉 Campaign Complete!";
+    container.appendChild(msg);
   }
 
-  // 2) Active Villages
-  container.innerHTML += "<h2>🏘️ Active Villages</h2>";
+  // 2) Active Villages header
+  const hActive = document.createElement("h2");
+  hActive.textContent = "🏘️ Active Villages";
+  container.appendChild(hActive);
+
+  // 2a) Your own village
   const ownV = villages.find(v => v.owner === currentUsername);
-  if (ownV) {
-    renderVillageBox(ownV, true);
-  }
+  if (ownV) renderVillageBox(ownV, true);
 
+  // 2b) Everyone else
   const others = villages
-    .filter(v => 
-      v.owner !== currentUsername 
-      && !v.id.startsWith("Goblin")   // hide all Goblin# villages here
-    )
-    .sort((a, b) => {
-      const pa = (a.power.attack||0) + (a.power.defense||0);
-      const pb = (b.power.attack||0) + (b.power.defense||0);
-      return pb - pa;
-    });
-
+    .filter(v => v.owner !== currentUsername && !v.id.startsWith("Goblin"))
+    .sort((a, b) => ((b.power.attack||0)+(b.power.defense||0)) 
+                 - ((a.power.attack||0)+(a.power.defense||0)));
   others.forEach(v => renderVillageBox(v, false));
 
   // 3) Work/Create button
-  const btn = document.createElement("button");
-  btn.textContent = ownV ? "🏰 Work on Village" : "🛠️ Create Village";
-  btn.onclick = () => {
+  const workBtn = document.createElement("button");
+  workBtn.textContent = ownV ? "🏰 Work on Village" : "🛠️ Create Village";
+  workBtn.onclick = () => {
     window.location.href =
       `/bible-tools-website/village/createvillage.html?username=${encodeURIComponent(currentUsername)}`;
   };
-  container.appendChild(btn);
+  container.appendChild(workBtn);
 }
 
 
