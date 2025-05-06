@@ -455,16 +455,20 @@ function spawnTroop(x, y) {
   if (victory) {
     const reward = isGoblinBattle ? 50 : 5;
 
-    // village doc: add bucks
     const villageRef = doc(db, "villages", attacker);
-    // user doc: bump campaign count
     const userRef    = doc(db, "users", attacker);
 
-    // perform both updates
-    await Promise.all([
-      updateDoc(villageRef, { bucks: increment(reward) }),
-      updateDoc(userRef,    { campaign: increment(1)      })
-    ]);
+    // always give the bucks…
+    const updates = [
+      updateDoc(villageRef, { bucks: increment(reward) })
+    ];
+
+    // …but only bump the campaign if this was a goblin battle
+    if (isGoblinBattle) {
+      updates.push(updateDoc(userRef, { campaign: increment(1) }));
+    }
+
+    await Promise.all(updates);
 
     document.getElementById("resultText").textContent =
       `🏆 Victory! You earned ${reward} bucks.`;
