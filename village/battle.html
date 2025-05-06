@@ -447,23 +447,23 @@ function spawnTroop(x, y) {
       }
     }
 
-  async function endBattle(victory) {
+  import { doc, updateDoc, increment } 
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+async function endBattle(victory) {
   battleOver = true;
   clearInterval(archerInterval);
   troopUnits.forEach(t => clearInterval(t.interval));
 
   if (victory) {
     const reward = isGoblinBattle ? 50 : 5;
+    const userRef = doc(db, "users", attacker);
 
-    const villageRef = doc(db, "villages", attacker);
-    const userRef    = doc(db, "users", attacker);
-
-    // always give the bucks…
+    // Always give gold to the user...
     const updates = [
-      updateDoc(villageRef, { bucks: increment(reward) })
+      updateDoc(userRef, { bucks: increment(reward) })
     ];
-
-    // …but only bump the campaign if this was a goblin battle
+    // ...but only bump campaign on a goblin fight
     if (isGoblinBattle) {
       updates.push(updateDoc(userRef, { campaign: increment(1) }));
     }
@@ -478,6 +478,7 @@ function spawnTroop(x, y) {
 
   document.getElementById("resultPopup").style.display = "block";
 }
+
 
 
 function startArcherAttacks() {
