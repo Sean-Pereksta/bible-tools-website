@@ -250,6 +250,7 @@ const sniperTowers      = [];  // added array for sniper towers
       }
       return closest;
     }
+  
 
 function spawnTroop(x, y) {
   /* -------- cost / placement guard ------------- */
@@ -423,6 +424,12 @@ function spawnTroop(x, y) {
   }, 1000);
 }
 
+// let this live somewhere at top-level in your module
+function selectTroopType(type) {
+  // e.g. store the user’s choice
+  selectedTroopType = type;
+  // (optionally) update your UI to highlight the button, etc.
+}
 
 
     function createGrid() {
