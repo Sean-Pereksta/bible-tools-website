@@ -116,7 +116,7 @@
       <button onclick="selectTroopType('archer')">🏹 Archer (1)</button>
       <button onclick="selectTroopType('guardian')">🛡️ Guardian (4)</button>
       <button onclick="selectTroopType('raider')">🐎 Raider (4) </button>
-      <button onclick="selectTroopType('bomber')">💣 Bomber (4)</button>
+      <button onclick="selectTroopType('bomber')">💣 Bomber (6)</button>
     </div>
     <div><strong>Troops Left:</strong> <span id="troopCount">0</span></div>
     <button id="surrenderBtn" onclick="endBattle(false)">🏳️ Surrender</button>
@@ -201,11 +201,11 @@ const structureEmoji = {
 
 
   const troopStats = {
-  base: { hp: 22, damage: 5, range: 1, speed: 1, cost: 1 },
+  base: { hp: 22, damage: 6, range: 1, speed: 1, cost: 1 },
   archer: { hp: 12, damage: 3, range: 4, speed: 1, cost: 1 },
-  guardian: { hp: 100, damage: 4, range: 1, speed: 1, cost: 4 },
+  guardian: { hp: 110, damage: 4, range: 1, speed: 1, cost: 4 },
   raider: { hp: 26, damage: 5, range: 2, speed: 2, cost: 4 },
-    bomber: { hp: 20, damage: 20, range: 2, speed: 0, cost: 4 }
+    bomber: { hp: 20, damage: 20, range: 2, speed: 0, cost: 6 }
 };
 
 
