@@ -200,19 +200,58 @@
     }
 
     function placeBuilding(cell, x, y) {
-      if (!selectedType) return;
-      const idx = gridData.findIndex(t => t.x === x && t.y === y);
+  if (!selectedType) return;
+  
+  // Find if there's already a building at (x, y)
+  const idx = gridData.findIndex(t => t.x === x && t.y === y);
 
-      if (selectedType === "eraser") {
-        if (idx !== -1) {
-          const oldType = gridData[idx].type;
-          currentBucks += buildingStats[oldType].cost;
-          balanceBox.textContent = `💰 ${currentBucks} bucks`;
-          gridData.splice(idx, 1);
-          cell.className = "cell";
-        }
-        return;
-      }
+  // Handle eraser separately:
+  if (selectedType === "eraser") {
+    if (idx !== -1) {
+      const oldType = gridData[idx].type;
+      // Refund the cost of the building being removed.
+      currentBucks += buildingStats[oldType].cost;
+      balanceBox.textContent = `💰 ${currentBucks} bucks`;
+      gridData.splice(idx, 1);
+      cell.className = "cell";
+    }
+    return;
+  }
+
+  // If something already exists in the cell, refund its cost first.
+  let refunded = 0;
+  if (idx !== -1) {
+    refunded = buildingStats[gridData[idx].type].cost;
+    currentBucks += refunded;
+    balanceBox.textContent = `💰 ${currentBucks} bucks`;
+  }
+
+  const cost = buildingStats[selectedType].cost;
+  // Check if the current bucks (after refund) are enough for the new building.
+  if (currentBucks < cost) {
+    // Revert the refund if insufficient funds.
+    if (idx !== -1) {
+      currentBucks -= refunded;
+      balanceBox.textContent = `💰 ${currentBucks} bucks`;
+    }
+    alert(`Insufficient bucks. You have ${currentBucks}, but need ${cost}.`);
+    return;
+  }
+
+  // Deduct the cost of the new building from the current bucks.
+  currentBucks -= cost;
+  balanceBox.textContent = `💰 ${currentBucks} bucks`;
+
+  // Build/rebuild on the selected cell.
+  const tile = { x, y, type: selectedType };
+  if (idx !== -1) {
+    gridData[idx] = tile;
+  } else {
+    gridData.push(tile);
+  }
+  cell.className = `cell ${selectedType}`;
+}
+
 
       const cost = buildingStats[selectedType].cost;
       if (currentBucks < cost) {
