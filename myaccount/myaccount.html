@@ -27,7 +27,7 @@
       font-size: 1.2em;
       margin-top: 10px;
     }
-    .prayer-box {
+    .prayer-box, .insight-box {
       border: 1px solid #ccc;
       margin: 5px;
       padding: 10px;
@@ -59,12 +59,19 @@
       <p>💬 Comments Posted: <span id="comments">0</span></p>
       <div class="comments-box" id="commentsBox"></div>
 
+      <!-- Prayer Journal Section -->
       <h3>🙏 Prayer Journal</h3>
       <p>Requests: <span id="prayerCount">0</span></p>
       <input type="text" id="prayerInput" placeholder="Add prayer request...">
       <button id="savePrayerBtn">Save Prayer</button>
       <div id="prayerLog"></div>
       <div id="pageNav"></div>
+
+      <!-- Insights Journal Section -->
+      <h3>📖 Insights Journal</h3>
+      <input type="text" id="insightInput" placeholder="Write your insight...">
+      <button id="saveInsightBtn">Save Insight</button>
+      <div id="insightLog"></div>
     </div>
   </div>
 
@@ -91,9 +98,11 @@
 
     const loginBtn = document.getElementById("loginBtn");
     const savePrayerBtn = document.getElementById("savePrayerBtn");
+    const saveInsightBtn = document.getElementById("saveInsightBtn");
 
     loginBtn.addEventListener("click", login);
     savePrayerBtn.addEventListener("click", savePrayer);
+    saveInsightBtn.addEventListener("click", saveInsight);
 
     async function login() {
       const inputUser = document.getElementById("username").value.trim();
@@ -133,6 +142,7 @@
 
       loadComments();
       loadPrayerLog();
+      loadInsightLog(); // Load insights on login
     }
 
     async function loadComments() {
@@ -204,6 +214,60 @@
         <button onclick="loadPrayerLog(${offset - 1})" ${offset === 0 ? 'disabled' : ''}>⬅️ Back</button>
         <button onclick="loadPrayerLog(${offset + 1})" ${(start + 5) >= prayers.length ? 'disabled' : ''}>Next ➡️</button>
       `;
+    }
+
+    // Expose loadPrayerLog to the global scope so inline onclick works.
+    window.loadPrayerLog = loadPrayerLog;
+
+    // ----------------- Insights Journal Functions -----------------
+
+    async function saveInsight() {
+      if (!username) {
+        alert("❌ You're not logged in. Please log in first.");
+        return;
+      }
+
+      const insight = document.getElementById("insightInput").value.trim();
+      if (!insight) return;
+
+      // You could use a full timestamp here if ordering by time is important.
+      const today = new Date().toISOString();
+      await addDoc(collection(db, "insights"), {
+        user: username,
+        text: insight,
+        date: today
+      });
+
+      document.getElementById("insightInput").value = "";
+      loadInsightLog();
+    }
+
+    async function loadInsightLog() {
+      const insightQuery = query(
+        collection(db, "insights"),
+        where("user", "==", username),
+        orderBy("date", "desc")
+      );
+      const snap = await getDocs(insightQuery);
+      const insights = [];
+      snap.forEach(doc => insights.push(doc.data()));
+
+      const container = document.getElementById("insightLog");
+      container.innerHTML = "";
+      
+      if (insights.length === 0) {
+        container.innerHTML = `<p>No insights recorded.</p>`;
+        return;
+      }
+
+      insights.forEach(i => {
+        const box = document.createElement("div");
+        // Optionally, create a separate CSS class for insights
+        box.className = "insight-box";
+        // Display only the date part, or the full timestamp as desired.
+        box.innerText = `${i.date.split('T')[0]}: ${i.text}`;
+        container.appendChild(box);
+      });
     }
   </script>
 </body>
