@@ -5,8 +5,18 @@
   <title>Bible Reader & Notes</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <script type="module">
+    // Import Firebase modules (now including updateDoc and doc for vote updates)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { 
+      getFirestore, 
+      collection, 
+      addDoc, 
+      getDocs, 
+      query, 
+      where, 
+      updateDoc, 
+      doc 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -19,13 +29,311 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
     window.firebaseDB = db;
-    window.firebaseFns = { collection, addDoc, getDocs, query, where };
+    window.firebaseFns = { collection, addDoc, getDocs, query, where, updateDoc, doc };
+
+    // Global state and variables
+    let bibleData = [];
+    let allNotes = [];
+    let chaptersPerBook = {};
+    let selectedBook = "";
+    let selectedChapter = "";
+    let selectedVersion = "asv";
+
+    const csvURLs = {
+      asv: "https://raw.githubusercontent.com/Sean-Pereksta/Bible-Data/refs/heads/main/asv.csv",
+      kjv: "https://raw.githubusercontent.com/Sean-Pereksta/Bible-Data/refs/heads/main/kjv.csv",
+      web: "https://raw.githubusercontent.com/Sean-Pereksta/Bible-Data/refs/heads/main/web.csv" 
+    };
+
+    // Cache DOM Elements
+    const textDisplay = document.getElementById("textDisplay");
+    const searchInput = document.getElementById("searchInput");
+    const searchResults = document.getElementById("searchResults");
+    const versionSelect = document.getElementById("versionSelect");
+    const bookSelect = document.getElementById("bookSelect");
+    const chapterTabs = document.getElementById("chapterTabs");
+    const noteList = document.getElementById("noteList");
+    const nameInput = document.getElementById("nameInput");
+    const noteInput = document.getElementById("noteInput");
+    const saveNoteBtn = document.getElementById("saveNoteBtn");
+
+    // Show a loading message when fetching Bible text
+    function showLoading(message = "Loading...") {
+      textDisplay.textContent = message;
+    }
+
+    function hideLoading() {
+      // The area will be updated after loading completes.
+    }
+
+    // Initialize event listeners
+    function initEventListeners() {
+      versionSelect.addEventListener("change", () => {
+        selectedVersion = versionSelect.value;
+        loadBibleData();
+        clearSearch();
+      });
+
+      searchInput.addEventListener("input", () => {
+        const term = searchInput.value.toLowerCase();
+        searchResults.innerHTML = "";
+        if (!term) return;
+
+        const verseResults = bibleData.filter(v => v.Text.toLowerCase().includes(term));
+        const noteResults = allNotes.filter(n => n.note.toLowerCase().includes(term));
+
+        [...verseResults, ...noteResults].slice(0, 20).forEach(item => {
+          const div = document.createElement("div");
+          if (item.Text) {
+            div.textContent = `${item.BookName} ${item.Chapter}:${item.Verse} - ${item.Text}`;
+            div.onclick = () => {
+              selectedBook = item.BookName;
+              selectedChapter = item.Chapter;
+              bookSelect.value = selectedBook;
+              setupChapters(() => loadChapter(item.Chapter));
+              clearSearch();
+            };
+          } else {
+            div.textContent = `Note: ${item.note} (${item.book} ${item.chapter})`;
+            div.onclick = () => {
+              selectedBook = item.book;
+              selectedChapter = item.chapter;
+              bookSelect.value = selectedBook;
+              setupChapters(() => loadChapter(item.chapter));
+              clearSearch();
+            };
+          }
+          searchResults.appendChild(div);
+        });
+      });
+
+      searchInput.addEventListener("blur", () => {
+        setTimeout(clearSearch, 300);
+      });
+
+      bookSelect.addEventListener("change", () => {
+        selectedBook = bookSelect.value;
+        setupChapters();
+        clearSearch();
+      });
+
+      saveNoteBtn.addEventListener("click", saveNote);
+    }
+
+    // Load Bible data from CSV and set up UI
+    async function loadBibleData() {
+      showLoading("Loading Bible text...");
+      const csvURL = csvURLs[selectedVersion];
+      try {
+        const response = await fetch(csvURL);
+        if (!response.ok) throw new Error("Network response was not ok");
+        const csvText = await response.text();
+
+        const results = Papa.parse(csvText, { header: true });
+        bibleData = results.data.filter(v => v.Text && v.BookName && v.Chapter);
+        setupBooks();
+        await loadAllNotes();
+        hideLoading();
+      } catch (error) {
+        textDisplay.textContent = "Failed to load Bible text.";
+        console.error("CSV Fetch/Parse Error:", error);
+      }
+    }
+
+    // Populate the book dropdown and set up chapter counts
+    function setupBooks() {
+      bookSelect.innerHTML = "";
+      const books = [...new Set(bibleData.map(v => v.BookName))];
+      books.forEach(book => {
+        const option = document.createElement("option");
+        option.value = book;
+        option.text = book;
+        bookSelect.appendChild(option);
+        const chapters = bibleData.filter(v => v.BookName === book).map(v => v.Chapter);
+        chaptersPerBook[book] = [...new Set(chapters)].length;
+      });
+      selectedBook = books[0] || "";
+      bookSelect.value = selectedBook;
+      setupChapters();
+    }
+
+    // Create chapter navigation buttons
+    function setupChapters(callback) {
+      chapterTabs.innerHTML = "";
+      const count = chaptersPerBook[selectedBook] || 1;
+      for (let i = 1; i <= count; i++) {
+        const btn = document.createElement("button");
+        btn.textContent = i;
+        btn.addEventListener("click", () => {
+          loadChapter(i);
+          Array.from(chapterTabs.children).forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+        });
+        if (i == selectedChapter) {
+          btn.classList.add("active");
+        }
+        chapterTabs.appendChild(btn);
+      }
+      if (callback) callback();
+    }
+
+    // Load a particular chapter’s verses and its associated notes
+    function loadChapter(chapter) {
+      selectedChapter = chapter;
+      const verses = bibleData.filter(v => v.BookName === selectedBook && v.Chapter == chapter);
+      const text = verses.map(v => `${v.Verse}. ${v.Text}`).join("\n");
+      textDisplay.textContent = text;
+      loadNotes();
+      Array.from(chapterTabs.children).forEach(b => b.classList.remove("active"));
+      const activeBtn = chapterTabs.children[chapter - 1];
+      if (activeBtn) activeBtn.classList.add("active");
+    }
+
+    // Clear search input and results
+    function clearSearch() {
+      searchInput.value = "";
+      searchResults.innerHTML = "";
+    }
+
+    // Save a new note to Firebase with an initial score of 0
+    async function saveNote() {
+      const name = nameInput.value.trim();
+      const noteText = noteInput.value.trim();
+      if (!name || !noteText || !selectedBook || !selectedChapter) {
+        alert("Fill in all fields.");
+        return;
+      }
+
+      try {
+        const { collection, addDoc } = window.firebaseFns;
+        await addDoc(collection(db, "notes"), {
+          book: selectedBook,
+          chapter: selectedChapter,
+          name: name,
+          note: `[${selectedVersion.toUpperCase()}] ${noteText}`,
+          timestamp: new Date().toISOString(),
+          score: 0
+        });
+        noteInput.value = "";
+        loadNotes();
+        await loadAllNotes();
+      } catch (e) {
+        console.error("Error saving note:", e);
+      }
+    }
+
+    // Update a note's score in Firebase
+    async function updateNoteScore(noteId, newScore) {
+      try {
+        const { doc, updateDoc } = window.firebaseFns;
+        const noteDocRef = doc(db, "notes", noteId);
+        await updateDoc(noteDocRef, { score: newScore });
+      } catch (error) {
+        console.error("Error updating vote:", error);
+      }
+    }
+
+    // Load and display notes for the current book and chapter,
+    // sorted by descending score. Also add vote buttons if the user hasn’t voted yet.
+    async function loadNotes() {
+      try {
+        const { collection, getDocs, query, where } = window.firebaseFns;
+        const q = query(
+          collection(db, "notes"),
+          where("book", "==", selectedBook),
+          where("chapter", "==", selectedChapter)
+        );
+        const querySnapshot = await getDocs(q);
+        // Map notes with their document ID, then sort descending by score.
+        let notes = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+        notes.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+        noteList.innerHTML = "";
+        notes.forEach(note => {
+          const noteDiv = document.createElement("div");
+          noteDiv.style.backgroundColor = randomColor();
+
+          // Create header with note author and current score.
+          const header = document.createElement("div");
+          header.innerHTML = `<strong>${note.name}</strong>`;
+          const scoreSpan = document.createElement("span");
+          scoreSpan.style.marginLeft = "10px";
+          scoreSpan.textContent = `Score: ${note.score || 0}`;
+          header.appendChild(scoreSpan);
+          noteDiv.appendChild(header);
+
+          // Display the note text.
+          const content = document.createElement("div");
+          content.innerHTML = note.note;
+          noteDiv.appendChild(content);
+
+          // Check if the user has already voted on this note, using localStorage.
+          const voteKey = "vote_" + note.id;
+          if (!localStorage.getItem(voteKey)) {
+            const voteWrapper = document.createElement("div");
+            voteWrapper.style.marginTop = "5px";
+
+            const upBtn = document.createElement("button");
+            upBtn.textContent = "👍";
+            upBtn.addEventListener("click", async () => {
+              const newScore = (note.score || 0) + 1;
+              await updateNoteScore(note.id, newScore);
+              localStorage.setItem(voteKey, "voted");
+              upBtn.remove();
+              downBtn.remove();
+              scoreSpan.textContent = `Score: ${newScore}`;
+            });
+            voteWrapper.appendChild(upBtn);
+
+            const downBtn = document.createElement("button");
+            downBtn.textContent = "👎";
+            downBtn.style.marginLeft = "5px";
+            downBtn.addEventListener("click", async () => {
+              const newScore = (note.score || 0) - 1;
+              await updateNoteScore(note.id, newScore);
+              localStorage.setItem(voteKey, "voted");
+              upBtn.remove();
+              downBtn.remove();
+              scoreSpan.textContent = `Score: ${newScore}`;
+            });
+            voteWrapper.appendChild(downBtn);
+
+            noteDiv.appendChild(voteWrapper);
+          }
+          noteList.appendChild(noteDiv);
+        });
+      } catch (error) {
+        console.error("Error loading notes:", error);
+      }
+    }
+
+    // Load all notes from Firebase (used for search functionality)
+    async function loadAllNotes() {
+      try {
+        const { collection, getDocs } = window.firebaseFns;
+        const querySnapshot = await getDocs(collection(db, "notes"));
+        allNotes = querySnapshot.docs.map(doc => doc.data());
+      } catch (error) {
+        console.error("Error loading all notes:", error);
+      }
+    }
+
+    // Utility: return a random color for note backgrounds
+    function randomColor() {
+      const colors = ["#ff9999", "#99ccff", "#99ff99", "#ffff99", "#ffcc99"];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    // Initialize the application once the DOM is loaded
+    window.addEventListener("DOMContentLoaded", () => {
+      initEventListeners();
+      loadBibleData();
+    });
   </script>
   <style>
     body {
-      font-family: Arial;
+      font-family: Arial, sans-serif;
       padding: 20px;
       background: linear-gradient(to right, #e0f7fa, #e8eaf6);
       color: #333;
@@ -91,10 +399,9 @@
   </style>
 </head>
 <body>
-
   <div id="scripture">
     <h1>Bible Reader</h1>
-    <input id="searchInput" placeholder="Search verses or notes..." style="width:100%; padding:5px; margin-bottom:10px;">
+    <input id="searchInput" placeholder="Search verses or notes..." style="width: 100%; padding: 5px; margin-bottom: 10px;">
     <div id="searchResults"></div>
     <select id="versionSelect">
       <option value="asv">ASV</option>
@@ -110,202 +417,8 @@
     <h3>Notes</h3>
     <input id="nameInput" placeholder="Your Name"><br>
     <textarea id="noteInput" rows="4" cols="30" placeholder="Write a note..."></textarea><br>
-    <button onclick="saveNote()">Save Note</button>
+    <button id="saveNoteBtn">Save Note</button>
     <div id="noteList"></div>
   </div>
-
-  <script>
-    let bibleData = [];
-    let allNotes = [];
-    let chaptersPerBook = {};
-    let selectedBook = "";
-    let selectedChapter = "";
-    let selectedVersion = "asv";
-
-    const csvURLs = {
-      asv: "https://raw.githubusercontent.com/Sean-Pereksta/Bible-Data/refs/heads/main/asv.csv",
-      kjv: "https://raw.githubusercontent.com/Sean-Pereksta/Bible-Data/refs/heads/main/kjv.csv",
-      web: "https://raw.githubusercontent.com/Sean-Pereksta/Bible-Data/refs/heads/main/web.csv"	
-    };
-
-    const searchInput = document.getElementById("searchInput");
-    const searchResults = document.getElementById("searchResults");
-
-    document.getElementById("versionSelect").addEventListener("change", () => {
-      selectedVersion = document.getElementById("versionSelect").value;
-      loadBibleData();
-      clearSearch();
-    });
-
-    searchInput.addEventListener("input", () => {
-      const term = searchInput.value.toLowerCase();
-      searchResults.innerHTML = "";
-      if (!term) return;
-
-      const verseResults = bibleData.filter(v => v.Text.toLowerCase().includes(term));
-      const noteResults = allNotes.filter(n => n.note.toLowerCase().includes(term));
-
-      [...verseResults, ...noteResults].slice(0, 20).forEach(item => {
-        const div = document.createElement("div");
-        if (item.Text) {
-          div.textContent = `${item.BookName} ${item.Chapter}:${item.Verse} - ${item.Text}`;
-          div.onclick = () => {
-            selectedBook = item.BookName;
-            selectedChapter = item.Chapter;
-            document.getElementById("bookSelect").value = selectedBook;
-            setupChapters(() => loadChapter(item.Chapter));
-            clearSearch();
-          };
-        } else {
-          div.textContent = `Note: ${item.note} (${item.book} ${item.chapter})`;
-          div.onclick = () => {
-            selectedBook = item.book;
-            selectedChapter = item.chapter;
-            document.getElementById("bookSelect").value = selectedBook;
-            setupChapters(() => loadChapter(item.chapter));
-            clearSearch();
-          };
-        }
-        searchResults.appendChild(div);
-      });
-    });
-
-    searchInput.addEventListener("blur", () => {
-      setTimeout(clearSearch, 300);
-    });
-
-    window.addEventListener("DOMContentLoaded", async () => {
-      loadBibleData();
-    });
-
-    async function loadBibleData() {
-      const csvURL = csvURLs[selectedVersion];
-      try {
-        const response = await fetch(csvURL);
-        if (!response.ok) throw new Error("Network response was not ok");
-        const csvText = await response.text();
-
-        const results = Papa.parse(csvText, {
-          header: true
-        });
-
-        bibleData = results.data.filter(v => v.Text && v.BookName && v.Chapter);
-        setupBooks();
-        loadAllNotes();
-      } catch (error) {
-        document.getElementById("textDisplay").textContent = "Failed to load Bible text.";
-        console.error("CSV Fetch/Parse Error:", error);
-      }
-    }
-
-    function setupBooks() {
-      const bookSelect = document.getElementById("bookSelect");
-      const books = [...new Set(bibleData.map(v => v.BookName))];
-      bookSelect.innerHTML = "";
-      books.forEach(book => {
-        const option = document.createElement("option");
-        option.value = book;
-        option.text = book;
-        bookSelect.appendChild(option);
-        const chapters = bibleData.filter(v => v.BookName === book).map(v => v.Chapter);
-        chaptersPerBook[book] = [...new Set(chapters)].length;
-      });
-      bookSelect.addEventListener("change", () => {
-        selectedBook = bookSelect.value;
-        setupChapters();
-        clearSearch();
-      });
-      selectedBook = books[0];
-      setupChapters();
-    }
-
-    function setupChapters(callback) {
-      const tabDiv = document.getElementById("chapterTabs");
-      tabDiv.innerHTML = "";
-      const count = chaptersPerBook[selectedBook];
-      for (let i = 1; i <= count; i++) {
-        const btn = document.createElement("button");
-        btn.textContent = i;
-        btn.onclick = () => {
-          loadChapter(i);
-          document.querySelectorAll("#chapterTabs button").forEach(b => b.classList.remove("active"));
-          btn.classList.add("active");
-        };
-        if (i == selectedChapter) {
-          btn.classList.add("active");
-        }
-        tabDiv.appendChild(btn);
-      }
-      if (callback) callback();
-    }
-
-    function loadChapter(chapter) {
-      selectedChapter = chapter;
-      const verses = bibleData.filter(v => v.BookName === selectedBook && v.Chapter == chapter);
-      const text = verses.map(v => v.Verse + ". " + v.Text).join("\n");
-      document.getElementById("textDisplay").textContent = text;
-      loadNotes();
-      document.querySelectorAll("#chapterTabs button").forEach(b => b.classList.remove("active"));
-      const buttons = document.querySelectorAll("#chapterTabs button");
-      if (buttons[chapter - 1]) buttons[chapter - 1].classList.add("active");
-    }
-
-    function clearSearch() {
-      searchInput.value = "";
-      searchResults.innerHTML = "";
-    }
-
-    async function saveNote() {
-      const name = document.getElementById("nameInput").value.trim();
-      const note = document.getElementById("noteInput").value.trim();
-      if (!name || !note || !selectedBook || !selectedChapter) return alert("Fill in all fields.");
-
-      const db = window.firebaseDB;
-      const { collection, addDoc } = window.firebaseFns;
-      try {
-        await addDoc(collection(db, "notes"), {
-          book: selectedBook,
-          chapter: selectedChapter,
-          name: name,
-          note: `[${selectedVersion.toUpperCase()}] ` + note,
-          timestamp: new Date().toISOString()
-        });
-        document.getElementById("noteInput").value = "";
-        loadNotes();
-        loadAllNotes();
-      } catch (e) {
-        console.error("Error saving note:", e);
-      }
-    }
-
-    async function loadNotes() {
-      const db = window.firebaseDB;
-      const { collection, getDocs, query, where } = window.firebaseFns;
-      const q = query(collection(db, "notes"), where("book", "==", selectedBook), where("chapter", "==", selectedChapter));
-      const querySnapshot = await getDocs(q);
-      const noteList = document.getElementById("noteList");
-      noteList.innerHTML = "";
-      querySnapshot.forEach(doc => {
-        const data = doc.data();
-        const div = document.createElement("div");
-        div.style.backgroundColor = randomColor();
-        div.innerHTML = `<strong>${data.name}:</strong><br>${data.note}`;
-        noteList.appendChild(div);
-      });
-    }
-
-    async function loadAllNotes() {
-      const db = window.firebaseDB;
-      const { collection, getDocs } = window.firebaseFns;
-      const querySnapshot = await getDocs(collection(db, "notes"));
-      allNotes = querySnapshot.docs.map(doc => doc.data());
-    }
-
-    function randomColor() {
-      const colors = ["#ff9999", "#99ccff", "#99ff99", "#ffff99", "#ffcc99"];
-      return colors[Math.floor(Math.random() * colors.length)];
-    }
-  </script>
-
 </body>
 </html>
