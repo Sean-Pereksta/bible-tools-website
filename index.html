@@ -65,6 +65,15 @@
       width: 100%;
       border: none;
     }
+    #toggleChatBtn {
+      margin: 5px 0;
+      padding: 5px 10px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
     #chatContainer {
       background: white;
       border-top: 1px solid #ccc;
@@ -116,7 +125,10 @@
     <button id="villageTab">🏙️ Village Lobby</button>
   </div>
   <iframe id="contentFrame" src="biblegame/biblegame.html"></iframe>
-
+  
+  <!-- Toggle Button to Hide/Show Chat -->
+  <button id="toggleChatBtn">Hide Chat</button>
+  
   <div id="chatContainer">
     <div id="chatMessages"></div>
     <div id="chatInput">
@@ -146,7 +158,6 @@
       const name = document.getElementById("chatName").value.trim();
       const text = document.getElementById("chatMessage").value.trim();
       if (!name || !text) return;
-
       await addDoc(collection(db, "chat"), {
         username: name,
         text: text,
@@ -174,6 +185,21 @@
       document.getElementById("contentFrame").src = `${tab}.html`;
     }
 
+    // Function to toggle chat container visibility
+    function toggleChat() {
+      const chatContainer = document.getElementById("chatContainer");
+      const toggleChatBtn = document.getElementById("toggleChatBtn");
+      // Use getComputedStyle to check if the chat is visible
+      const currentDisplay = getComputedStyle(chatContainer).display;
+      if (currentDisplay !== "none") {
+        chatContainer.style.display = "none";
+        toggleChatBtn.textContent = "Show Chat";
+      } else {
+        chatContainer.style.display = "block";
+        toggleChatBtn.textContent = "Hide Chat";
+      }
+    }
+
     window.addEventListener("DOMContentLoaded", () => {
       loadMessages();
       document.getElementById("sendBtn").addEventListener("click", sendMessage);
@@ -183,6 +209,9 @@
       document.getElementById("lobbyTab").addEventListener("click", () => loadTab("lobby/lobby"));
       document.getElementById("villageTab").addEventListener("click", () => loadTab("village/villagelobby"));
       document.getElementById("accountTab").addEventListener("click", () => loadTab("myaccount/myaccount"));
+
+      // Add event listener for the toggle button
+      document.getElementById("toggleChatBtn").addEventListener("click", toggleChat);
     });
   </script>
 </body>
