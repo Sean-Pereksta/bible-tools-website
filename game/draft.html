@@ -150,19 +150,26 @@
       });
     }
 
+    
     function displayDraftedBooks() {
-      const box = document.getElementById("draftedDisplay");
-      const books = draftedBooks[username] || [];
-      box.innerText = `📚 Your Books: ${books.join(", ")}`;
+  const box = document.getElementById("draftedDisplay");
+  const books = draftedBooks[username] || [];
+  box.innerText = `📚 Your Books: ${books.join(", ")}`;
 
-      const select = document.getElementById("book");
-      select.innerHTML = "";
-      books.forEach(b => {
-        const option = document.createElement("option");
-        option.value = b;
-        option.textContent = b;
-        select.appendChild(option);
-      });
+  const select = document.getElementById("book");
+  const currentSelection = select.value;  // Preserve selected value
+  select.innerHTML = "";
+  books.forEach(b => {
+    const option = document.createElement("option");
+    option.value = b;
+    option.textContent = b;
+    select.appendChild(option);
+  });
+
+  // Restore selection if it still exists in the new list
+  if (books.includes(currentSelection)) {
+    select.value = currentSelection;
+  }
     }
 
     function startGame() {
