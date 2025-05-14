@@ -308,7 +308,7 @@
             alert("Please enter both a note name and content.");
             return;
           }
-          await addDoc(collection(db, "notes"), {
+          await addDoc(collection(db, "notepad"), {
             title: noteTitle,
             text: noteText,
             timestamp: serverTimestamp()
@@ -320,7 +320,7 @@
         document.getElementById("loadNotes").addEventListener("click", async () => {
           const notesDropdown = document.getElementById("notesDropdown");
           notesDropdown.innerHTML = `<option value="">Select note...</option>`;
-          const q = query(collection(db, "notes"), orderBy("timestamp", "desc"), limit(10));
+          const q = query(collection(db, "notepad"), orderBy("timestamp", "desc"), limit(10));
           const snapshot = await getDocs(q);
           snapshot.forEach(docSnap => {
             const data = docSnap.data();
@@ -341,7 +341,7 @@
         document.getElementById("notesDropdown").addEventListener("change", async (e) => {
           const selectedId = e.target.value;
           if (selectedId) {
-            const noteDoc = await getDoc(doc(db, "notes", selectedId));
+            const noteDoc = await getDoc(doc(db, "notepad", selectedId));
             if (noteDoc.exists()) {
               const data = noteDoc.data();
               document.getElementById("noteTitle").value = data.title || "";
