@@ -105,13 +105,20 @@
         right: 10px;
         top: 100px;
         width: 300px;
-        height: 300px;
+        height: 350px;
         background: white;
         border: 1px solid #ccc;
         padding: 10px;
         box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-        display: block; /* initially visible */
+        display: block;
         z-index: 1000;
+      }
+      /* A new input for note name */
+      #noteTitle {
+        width: 100%;
+        padding: 5px;
+        margin-bottom: 5px;
+        box-sizing: border-box;
       }
       #notepad {
         width: 100%;
@@ -178,9 +185,9 @@
       <button id="lobbyTab">🟢 Multiplayer Lobby</button>
       <button id="villageTab">🏙️ Village Lobby</button>
     </div>
-    
+
     <iframe id="contentFrame" src="biblegame/biblegame.html"></iframe>
-    
+
     <div id="chatContainer">
       <div id="chatMessages"></div>
       <div id="chatInput">
@@ -192,6 +199,8 @@
 
     <!-- Notepad Container -->
     <div id="notepadContainer">
+      <!-- New input for note name -->
+      <input type="text" id="noteTitle" placeholder="Enter note name" />
       <textarea id="notepad" placeholder="Type your notes here..." wrap="soft"></textarea>
       <div class="notepad-buttons">
         <button id="saveNote">💾 Save</button>
@@ -203,9 +212,8 @@
       </select>
     </div>
 
-    <!-- Floating Toggle Notepad Button -->
+    <!-- Floating Toggle Buttons -->
     <button id="toggleNotepad">📝</button>
-    <!-- Floating Toggle Chat Button -->
     <button id="toggleChat">💬</button>
 
     <script type="module">
@@ -271,20 +279,37 @@
         // Chat event listeners
         loadMessages();
         document.getElementById("sendBtn").addEventListener("click", sendMessage);
-        document.getElementById("createUserBtn").addEventListener("click", () => loadTab("username/username"));
-        document.getElementById("gameTab").addEventListener("click", () => loadTab("biblegame/biblegame"));
-        document.getElementById("readerTab").addEventListener("click", () => loadTab("biblereader/biblereader"));
-        document.getElementById("lobbyTab").addEventListener("click", () => loadTab("lobby/lobby"));
-        document.getElementById("villageTab").addEventListener("click", () => loadTab("village/villagelobby"));
-        document.getElementById("accountTab").addEventListener("click", () => loadTab("myaccount/myaccount"));
+        document.getElementById("createUserBtn").addEventListener("click", () =>
+          loadTab("username/username")
+        );
+        document.getElementById("gameTab").addEventListener("click", () =>
+          loadTab("biblegame/biblegame")
+        );
+        document.getElementById("readerTab").addEventListener("click", () =>
+          loadTab("biblereader/biblereader")
+        );
+        document.getElementById("lobbyTab").addEventListener("click", () =>
+          loadTab("lobby/lobby")
+        );
+        document.getElementById("villageTab").addEventListener("click", () =>
+          loadTab("village/villagelobby")
+        );
+        document.getElementById("accountTab").addEventListener("click", () =>
+          loadTab("myaccount/myaccount")
+        );
 
         // Notepad functionality
 
-        // Save note to Firebase Firestore.
+        // Save note to Firebase Firestore with a note title and text.
         document.getElementById("saveNote").addEventListener("click", async () => {
+          const noteTitle = document.getElementById("noteTitle").value.trim();
           const noteText = document.getElementById("notepad").value.trim();
-          if (!noteText) return;
+          if (!noteTitle || !noteText) {
+            alert("Please enter both a note name and content.");
+            return;
+          }
           await addDoc(collection(db, "notes"), {
+            title: noteTitle,
             text: noteText,
             timestamp: serverTimestamp()
           });
@@ -299,8 +324,9 @@
           const snapshot = await getDocs(q);
           snapshot.forEach(docSnap => {
             const data = docSnap.data();
+            const title = data.title || "Untitled";
+            const truncated = title.length > 30 ? title.substring(0, 30) + "..." : title;
             const option = document.createElement("option");
-            const truncated = data.text.length > 30 ? data.text.substring(0, 30) + "..." : data.text;
             option.value = docSnap.id;
             option.textContent = `${truncated} (${
               data.timestamp
@@ -311,13 +337,15 @@
           });
         });
 
-        // When a note is selected from the dropdown, load it into the notepad.
+        // When a note is selected from the dropdown, load it into the notepad and set the note title.
         document.getElementById("notesDropdown").addEventListener("change", async (e) => {
           const selectedId = e.target.value;
           if (selectedId) {
             const noteDoc = await getDoc(doc(db, "notes", selectedId));
             if (noteDoc.exists()) {
-              document.getElementById("notepad").value = noteDoc.data().text;
+              const data = noteDoc.data();
+              document.getElementById("noteTitle").value = data.title || "";
+              document.getElementById("notepad").value = data.text || "";
             } else {
               alert("No note found");
             }
@@ -352,3 +380,4 @@
     </script>
   </body>
 </html>
+
