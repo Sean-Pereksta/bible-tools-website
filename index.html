@@ -1,218 +1,345 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>📖 Bible Tools + Chat</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9f9f9;
-      margin: 0;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    h1 {
-      background: #333;
-      color: white;
-      margin: 0;
-      padding: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .left-link {
-      margin-left: 20px;
-      font-size: 0.8em;
-    }
-    .left-link button {
-      background: #4CAF50;
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      font-size: 0.8em;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .right-link {
-      margin-right: 20px;
-    }
-    .right-link button {
-      background: #2196F3;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      font-size: 0.9em;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .tabs {
-      display: flex;
-      justify-content: center;
-      background: #444;
-    }
-    .tabs button {
-      background: none;
-      color: white;
-      border: none;
-      padding: 15px 30px;
-      cursor: pointer;
-      font-size: 1.1em;
-    }
-    iframe {
-      flex-grow: 1;
-      width: 100%;
-      border: none;
-    }
-    #toggleChatBtn {
-      margin: 5px 0;
-      padding: 5px 10px;
-      background: #2196F3;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    #chatContainer {
-      background: white;
-      border-top: 1px solid #ccc;
-      padding: 10px;
-      height: 150px;
-      overflow-y: auto;
-    }
-    #chatMessages {
-      text-align: left;
-      max-height: 100px;
-      overflow-y: auto;
-    }
-    #chatInput {
-      display: flex;
-      margin-top: 5px;
-      gap: 5px;
-    }
-    #chatName {
-      width: 80px;
-      padding: 5px;
-    }
-    #chatMessage {
-      flex: 1;
-      padding: 5px;
-    }
-    #chatInput button {
-      padding: 5px 10px;
-      background: #4CAF50;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  <h1>
-    <span class="left-link">
-      <button id="createUserBtn">➕ Create User</button>
-    </span>
-    📖 My Bible Tools
-    <span class="right-link">
-      <button id="accountTab">🙋‍♂️ My Account</button>
-    </span>
-  </h1>
-  <div class="tabs">
-    <button id="gameTab">🎮 Bible Game</button>
-    <button id="readerTab">📚 Bible Reader</button>
-    <button id="lobbyTab">🟢 Multiplayer Lobby</button>
-    <button id="villageTab">🏙️ Village Lobby</button>
-  </div>
-  <iframe id="contentFrame" src="biblegame/biblegame.html"></iframe>
-  
-  <!-- Toggle Button to Hide/Show Chat -->
-  <button id="toggleChatBtn">Hide Chat</button>
-  
-  <div id="chatContainer">
-    <div id="chatMessages"></div>
-    <div id="chatInput">
-      <input type="text" id="chatName" placeholder="Name" />
-      <input type="text" id="chatMessage" placeholder="Type a message..." />
-      <button id="sendBtn">Send</button>
-    </div>
-  </div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
-      authDomain: "bible-game-246c0.firebaseapp.com",
-      projectId: "bible-game-246c0",
-      storageBucket: "bible-game-246c0.appspot.com",
-      messagingSenderId: "959619818996",
-      appId: "1:959619818996:web:5a9fbf492e23c765e445a1"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    async function sendMessage() {
-      const name = document.getElementById("chatName").value.trim();
-      const text = document.getElementById("chatMessage").value.trim();
-      if (!name || !text) return;
-      await addDoc(collection(db, "chat"), {
-        username: name,
-        text: text,
-        timestamp: serverTimestamp()
-      });
-      document.getElementById("chatMessage").value = "";
-    }
-
-    function loadMessages() {
-      const q = query(collection(db, "chat"), orderBy("timestamp", "desc"), limit(10));
-      onSnapshot(q, (snapshot) => {
-        const chatMessages = document.getElementById("chatMessages");
-        chatMessages.innerHTML = "";
-        snapshot.docs.reverse().forEach(doc => {
-          const data = doc.data();
-          const p = document.createElement("p");
-          p.innerHTML = `<strong>${data.username}:</strong> ${data.text}`;
-          chatMessages.appendChild(p);
-        });
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-      });
-    }
-
-    function loadTab(tab) {
-      document.getElementById("contentFrame").src = `${tab}.html`;
-    }
-
-    // Function to toggle chat container visibility
-    function toggleChat() {
-      const chatContainer = document.getElementById("chatContainer");
-      const toggleChatBtn = document.getElementById("toggleChatBtn");
-      // Use getComputedStyle to check if the chat is visible
-      const currentDisplay = getComputedStyle(chatContainer).display;
-      if (currentDisplay !== "none") {
-        chatContainer.style.display = "none";
-        toggleChatBtn.textContent = "Show Chat";
-      } else {
-        chatContainer.style.display = "block";
-        toggleChatBtn.textContent = "Hide Chat";
+  <head>
+    <meta charset="UTF-8" />
+    <title>📖 Bible Tools + Chat</title>
+    <style>
+      /* Bible Tools Layout Styles */
+      body {
+        font-family: Arial, sans-serif;
+        background: #f9f9f9;
+        margin: 0;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
       }
-    }
+      
+      h1 {
+        background: #333;
+        color: white;
+        margin: 0;
+        padding: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      
+      .left-link {
+        margin-left: 20px;
+        font-size: 0.8em;
+      }
+      
+      .left-link button {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        font-size: 0.8em;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+      
+      .right-link {
+        margin-right: 20px;
+      }
+      
+      .right-link button {
+        background: #2196f3;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        font-size: 0.9em;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+      
+      .tabs {
+        display: flex;
+        justify-content: center;
+        background: #444;
+      }
+      
+      .tabs button {
+        background: none;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        cursor: pointer;
+        font-size: 1.1em;
+      }
+      
+      iframe {
+        flex-grow: 1;
+        width: 100%;
+        border: none;
+      }
+      
+      #chatContainer {
+        background: white;
+        border-top: 1px solid #ccc;
+        padding: 10px;
+        height: 150px;
+        overflow-y: auto;
+      }
+      
+      #chatMessages {
+        text-align: left;
+        max-height: 100px;
+        overflow-y: auto;
+      }
+      
+      #chatInput {
+        display: flex;
+        margin-top: 5px;
+        gap: 5px;
+      }
+      
+      #chatName {
+        width: 80px;
+        padding: 5px;
+      }
+      
+      #chatMessage {
+        flex: 1;
+        padding: 5px;
+      }
+      
+      #chatInput button {
+        padding: 5px 10px;
+        background: #4caf50;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      
+      /* Notepad Styles */
+      #notepadContainer {
+        position: fixed;
+        right: 10px;
+        top: 100px;
+        width: 300px;
+        height: 300px;
+        background: white;
+        border: 1px solid #ccc;
+        padding: 10px;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+        display: block; /* initially visible */
+        z-index: 1000;
+      }
+      
+      #notepad {
+        width: 100%;
+        height: 150px;
+        overflow-y: auto;
+        resize: none;
+        padding: 5px;
+        box-sizing: border-box;
+      }
+      
+      .notepad-buttons {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 5px;
+      }
+      
+      #notesDropdown {
+        width: 100%;
+        margin-top: 5px;
+      }
+      
+      /* Floating Toggle Notepad Button */
+      #toggleNotepad {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #2196f3;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        font-size: 1.5em;
+        cursor: pointer;
+        z-index: 1100;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>
+      <span class="left-link">
+        <button id="createUserBtn">➕ Create User</button>
+      </span>
+      📖 My Bible Tools
+      <span class="right-link">
+        <button id="accountTab">🙋‍♂️ My Account</button>
+      </span>
+    </h1>
+    <div class="tabs">
+      <button id="gameTab">🎮 Bible Game</button>
+      <button id="readerTab">📚 Bible Reader</button>
+      <button id="lobbyTab">🟢 Multiplayer Lobby</button>
+      <button id="villageTab">🏙️ Village Lobby</button>
+    </div>
+    
+    <iframe id="contentFrame" src="biblegame/biblegame.html"></iframe>
+    
+    <div id="chatContainer">
+      <div id="chatMessages"></div>
+      <div id="chatInput">
+        <input type="text" id="chatName" placeholder="Name" />
+        <input type="text" id="chatMessage" placeholder="Type a message..." />
+        <button id="sendBtn">Send</button>
+      </div>
+    </div>
 
-    window.addEventListener("DOMContentLoaded", () => {
-      loadMessages();
-      document.getElementById("sendBtn").addEventListener("click", sendMessage);
-      document.getElementById("createUserBtn").addEventListener("click", () => loadTab("username/username"));
-      document.getElementById("gameTab").addEventListener("click", () => loadTab("biblegame/biblegame"));
-      document.getElementById("readerTab").addEventListener("click", () => loadTab("biblereader/biblereader"));
-      document.getElementById("lobbyTab").addEventListener("click", () => loadTab("lobby/lobby"));
-      document.getElementById("villageTab").addEventListener("click", () => loadTab("village/villagelobby"));
-      document.getElementById("accountTab").addEventListener("click", () => loadTab("myaccount/myaccount"));
+    <!-- Notepad Container -->
+    <div id="notepadContainer">
+      <textarea id="notepad" placeholder="Type your notes here..." wrap="soft"></textarea>
+      <div class="notepad-buttons">
+        <button id="saveNote">💾 Save</button>
+        <button id="loadNotes">📂 Load</button>
+        <button id="minimizeNote">➖ Minimize</button>
+      </div>
+      <select id="notesDropdown">
+        <option value="">Select note...</option>
+      </select>
+    </div>
 
-      // Add event listener for the toggle button
-      document.getElementById("toggleChatBtn").addEventListener("click", toggleChat);
-    });
-  </script>
-</body>
+    <!-- Floating Toggle Notepad Button -->
+    <button id="toggleNotepad">📝</button>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        addDoc,
+        getDocs,
+        getDoc,
+        doc,
+        query,
+        orderBy,
+        limit,
+        onSnapshot,
+        serverTimestamp
+      } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
+        authDomain: "bible-game-246c0.firebaseapp.com",
+        projectId: "bible-game-246c0",
+        storageBucket: "bible-game-246c0.appspot.com",
+        messagingSenderId: "959619818996",
+        appId: "1:959619818996:web:5a9fbf492e23c765e445a1"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+
+      async function sendMessage() {
+        const name = document.getElementById("chatName").value.trim();
+        const text = document.getElementById("chatMessage").value.trim();
+        if (!name || !text) return;
+        await addDoc(collection(db, "chat"), {
+          username: name,
+          text: text,
+          timestamp: serverTimestamp()
+        });
+        document.getElementById("chatMessage").value = "";
+      }
+
+      function loadMessages() {
+        const q = query(collection(db, "chat"), orderBy("timestamp", "desc"), limit(10));
+        onSnapshot(q, (snapshot) => {
+          const chatMessages = document.getElementById("chatMessages");
+          chatMessages.innerHTML = "";
+          snapshot.docs.reverse().forEach(doc => {
+            const data = doc.data();
+            const p = document.createElement("p");
+            p.innerHTML = `<strong>${data.username}:</strong> ${data.text}`;
+            chatMessages.appendChild(p);
+          });
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+      }
+
+      function loadTab(tab) {
+        document.getElementById("contentFrame").src = `${tab}.html`;
+      }
+
+      window.addEventListener("DOMContentLoaded", () => {
+        // Chat event listeners
+        loadMessages();
+        document.getElementById("sendBtn").addEventListener("click", sendMessage);
+        document.getElementById("createUserBtn").addEventListener("click", () => loadTab("username/username"));
+        document.getElementById("gameTab").addEventListener("click", () => loadTab("biblegame/biblegame"));
+        document.getElementById("readerTab").addEventListener("click", () => loadTab("biblereader/biblereader"));
+        document.getElementById("lobbyTab").addEventListener("click", () => loadTab("lobby/lobby"));
+        document.getElementById("villageTab").addEventListener("click", () => loadTab("village/villagelobby"));
+        document.getElementById("accountTab").addEventListener("click", () => loadTab("myaccount/myaccount"));
+
+        // Notepad functionality
+
+        // Save note to Firebase Firestore.
+        document.getElementById("saveNote").addEventListener("click", async () => {
+          const noteText = document.getElementById("notepad").value.trim();
+          if (!noteText) return;
+          await addDoc(collection(db, "notes"), {
+            text: noteText,
+            timestamp: serverTimestamp()
+          });
+          alert("Note saved!");
+        });
+
+        // Load last 10 saved notes into the dropdown.
+        document.getElementById("loadNotes").addEventListener("click", async () => {
+          const notesDropdown = document.getElementById("notesDropdown");
+          notesDropdown.innerHTML = `<option value="">Select note...</option>`;
+          const q = query(collection(db, "notes"), orderBy("timestamp", "desc"), limit(10));
+          const snapshot = await getDocs(q);
+          snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            const option = document.createElement("option");
+            const truncated = data.text.length > 30 ? data.text.substring(0, 30) + "..." : data.text;
+            option.value = docSnap.id;
+            option.textContent = `${truncated} (${
+              data.timestamp
+                ? new Date(data.timestamp.seconds * 1000).toLocaleString()
+                : "No time"
+            })`;
+            notesDropdown.appendChild(option);
+          });
+        });
+
+        // When a note is selected from the dropdown, load it into the notepad.
+        document.getElementById("notesDropdown").addEventListener("change", async (e) => {
+          const selectedId = e.target.value;
+          if (selectedId) {
+            const noteDoc = await getDoc(doc(db, "notes", selectedId));
+            if (noteDoc.exists()) {
+              document.getElementById("notepad").value = noteDoc.data().text;
+            } else {
+              alert("No note found");
+            }
+          }
+        });
+
+        // Minimize the notepad.
+        document.getElementById("minimizeNote").addEventListener("click", () => {
+          document.getElementById("notepadContainer").style.display = "none";
+        });
+
+        // Toggle notepad visibility using the floating button.
+        document.getElementById("toggleNotepad").addEventListener("click", () => {
+          const notepadContainer = document.getElementById("notepadContainer");
+          if (notepadContainer.style.display === "none" || notepadContainer.style.display === "") {
+            notepadContainer.style.display = "block";
+          } else {
+            notepadContainer.style.display = "none";
+          }
+        });
+      });
+    </script>
+  </body>
 </html>
