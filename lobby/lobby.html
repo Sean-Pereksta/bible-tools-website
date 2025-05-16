@@ -38,6 +38,10 @@
       <button id="startBtn" onclick="startGame()">🚀 Start Game</button>
       <button onclick="leaveLobby()">❌ Leave Lobby</button>
     </div>
+    <div id="winsLeaderboard">
+  <h3>🏆 Top Players</h3>
+  <div id="leaderboardEntries"></div>
+    </div>
   </div>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -71,6 +75,7 @@
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("lobbyInterface").style.display = "block";
     loadLobbies();
+    loadLeaderboard();
     setInterval(loadLobbies, 5000);
   }
 
@@ -120,7 +125,31 @@
     isHost = false;
     listenToLobby();
   }
+async function loadLeaderboard() {
+  const q = query(collection(db, "users"));
+  const snapshot = await getDocs(q);
+  const leaderboard = [];
 
+  snapshot.forEach(docSnap => {
+    const data = docSnap.data();
+    leaderboard.push({
+      name: docSnap.id,
+      wins: data.wins || 0
+    });
+  });
+
+  // Sort by wins descending
+  leaderboard.sort((a, b) => b.wins - a.wins);
+
+  const leaderboardDiv = document.getElementById("leaderboardEntries");
+  leaderboardDiv.innerHTML = "";
+
+  leaderboard.slice(0, 10).forEach((entry, index) => {
+    const div = document.createElement("div");
+    div.innerHTML = `${index + 1}. <strong>${entry.name}</strong> — 🏆 ${entry.wins} wins`;
+    leaderboardDiv.appendChild(div);
+  });
+}
  function listenToLobby() {
   const ref = doc(db, "lobbies", currentLobbyId);
   onSnapshot(ref, async (docSnap) => {
