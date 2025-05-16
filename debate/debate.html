@@ -90,9 +90,10 @@
     fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-       body: JSON.stringify({
-    contents: [{ role: "user", parts: [{ text: `Briefly debate from a ${currentPerspective} perspective: ${userResponse}. Keep the response concise and focused.` }] }]
+      body: JSON.stringify({
+    contents: [{ role: "user", parts: [{ text: `Debate from a ${currentPerspective} perspective: ${userResponse}. Keep the response brief—only focus on 1-2 arguments.` }] }]
 })
+
 
     })
     .then(response => response.json())
