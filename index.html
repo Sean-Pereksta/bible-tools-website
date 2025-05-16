@@ -184,6 +184,7 @@
       <button id="readerTab">📚 Bible Reader</button>
       <button id="lobbyTab">🟢 Multiplayer Lobby</button>
       <button id="villageTab">🏙️ Village Lobby</button>
+      <button id="debatetab">⚖️ Debate</button>
     </div>
 
     <iframe id="contentFrame" src="biblegame/biblegame.html"></iframe>
@@ -293,6 +294,9 @@
         );
         document.getElementById("villageTab").addEventListener("click", () =>
           loadTab("village/villagelobby")
+        );
+        document.getElementById("debatetab").addEventListener("click", () =>
+          loadTab("debate/debate")
         );
         document.getElementById("accountTab").addEventListener("click", () =>
           loadTab("myaccount/myaccount")
