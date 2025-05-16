@@ -233,10 +233,10 @@
                                  .map(([name, score]) => ({ name, score }))
                                  .sort((a, b) => b.score - a.score);
         const div = document.getElementById("leaderboard");
-        div.innerHTML = `<h3>📊 Leaderboard</h3>` +
-          leaderboard.map((p, i) =>
-            `<div>${i + 1}. <strong>${p.name}</strong>: ${p.score} pts</div>`
-          ).join('');
+        const entriesDiv = document.getElementById("leaderboardEntries");
+entriesDiv.innerHTML = leaderboard.map((p, i) =>
+  `<div>${i + 1}. <strong>${p.name}</strong>: ${p.score} pts</div>`
+).join('');
       });
     }
 
@@ -292,7 +292,10 @@
     </div>
     <div id="draftedDisplay"></div>
     <div id="verseSection" style="display:none">
-      <div id="leaderboard"></div>
+      <div id="leaderboard">
+  <h3>📊 Leaderboard</h3>
+  <div id="leaderboardEntries"></div>
+      </div>
       <p id="gameTimer">⏳</p>
       <p id="verseText"></p>
       <select id="book"></select>
