@@ -74,14 +74,20 @@
         }
 
         function updateHeader() {
-            let title = currentPerspective === "muslim" ? "Muslim Thinker v.1.2" : "Atheist Thinker v.1.2";
-            let symbolSrc = currentPerspective === "muslim" 
-                ? "https://upload.wikimedia.org/wikipedia/commons/6/64/Star_and_Crescent.svg"
-                : "https://upload.wikimedia.org/wikipedia/commons/9/97/Atheism_symbol.svg";
+    let title, symbolSrc;
 
-            document.getElementById("debateTitle").innerText = title;
-            document.getElementById("symbol").src = symbolSrc;
-        }
+    if (currentPerspective === "muslim") {
+        title = "Muslim Thinker 🕌";
+        symbolSrc = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Star_and_Crescent.svg/800px-Star_and_Crescent.svg.png"; // Crescent & Star
+    } else {
+        title = "Atheist Thinker ⚛️";
+        symbolSrc = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Atheism_symbol.svg/800px-Atheism_symbol.svg.png"; // Atheism Symbol
+    }
+
+    document.getElementById("debateTitle").innerText = title;
+    document.getElementById("symbol").src = symbolSrc;
+}
+
         function restartPage() {
         location.reload();
     }
