@@ -31,20 +31,31 @@
           const API_KEY = "AIzaSyBeAFcTpJ8H7PvFwHjAfhCr5JdQuSLW7uI" ;
           const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
 
+        // Expanded Debate Topics Targeting Christians
         const debateScenarios = {
             atheist: [
-                "Why do you believe in miracles when science has logical explanations?",
-                "Isn't the Bible just a human-made book full of contradictions?",
-                "Why does God allow suffering if He is loving?",
-                "Is faith rational, or just wishful thinking?",
-                "How do you explain evolution vs creationism?"
+                "If God exists, why does He allow suffering?",
+                "Isn't the Bible full of contradictions?",
+                "Is faith rational, or just blind belief?",
+                "How do Christians reconcile evolution with creationism?",
+                "What proof exists for Jesus beyond the Bible?",
+                "Is morality independent of religion?",
+                "Can science and Christianity truly coexist?",
+                "Why are there so many denominations if Christianity is true?",
+                "Isn't religion just a man-made institution?",
+                "How do Christians justify believing in miracles?"
             ],
             muslim: [
-                "How can Jesus be God when he prayed to God?",
-                "Why does Christianity reject the final revelation of Islam?",
-                "Why is the Trinity logical when God is supposed to be one?",
-                "If the Bible has been changed over time, how do you trust it?",
-                "How does Christianity reconcile prophecies that Islam claims to fulfill?"
+                "How can Jesus be God if he prayed to God?",
+                "Why do Christians reject the Quran as God's final revelation?",
+                "Is the Trinity logical when God is supposed to be one?",
+                "Hasn't the Bible been corrupted over time?",
+                "Why is Islam not recognized as fulfilling biblical prophecy?",
+                "How do Christians explain Jesus not explicitly claiming divinity?",
+                "Was Jesus really crucified, or was it someone else?",
+                "Why do Christians eat pork if it's forbidden in earlier scriptures?",
+                "If Christianity is true, why did God allow Islam to grow?",
+                "How does Christianity explain biblical laws being different from Islamic laws?"
             ]
         };
 
@@ -63,8 +74,9 @@
 
         function updateHeader() {
             let title = currentPerspective === "muslim" ? "Muslim Thinker" : "Atheist Thinker";
-            let symbolSrc = currentPerspective === "muslim" ? "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Star_and_Crescent.svg/800px-Star_and_Crescent.svg.png" 
-                                                             : "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Atheism_symbol.svg/800px-Atheism_symbol.svg.png";
+            let symbolSrc = currentPerspective === "muslim" 
+                ? "https://upload.wikimedia.org/wikipedia/commons/6/64/Star_and_Crescent.svg"
+                : "https://upload.wikimedia.org/wikipedia/commons/9/97/Atheism_symbol.svg";
 
             document.getElementById("debateTitle").innerText = title;
             document.getElementById("symbol").src = symbolSrc;
@@ -84,7 +96,8 @@
             })
             .then(response => response.json())
             .then(data => {
-                updateConversation("AI", data.candidates?.[0]?.content || "AI response unavailable.");
+                let aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "AI response unavailable.";
+                updateConversation("AI", aiResponse);
             })
             .catch(error => {
                 console.error("API Error:", error);
@@ -108,3 +121,4 @@
     </script>
 </body>
 </html>
+
