@@ -204,8 +204,8 @@
     }
 
     async function updateScoreboard(scores) {
-      const scoreboard = document.getElementById("scoreboard");
-      scoreboard.innerHTML = "";
+      const entriesDiv = document.getElementById("scoreboardEntries");
+entriesDiv.innerHTML = "";
       const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
 
       for (const [player, score] of sorted) {
@@ -226,7 +226,7 @@
         box.innerHTML = `<div class="player-name">${player}</div>
                          <div class="player-score">${score}</div>
                          <div class="player-wins">🏆 ${wins} wins</div>`;
-        scoreboard.appendChild(box);
+        entriesDiv.appendChild(box);
       }
     }
 
@@ -240,7 +240,10 @@
 <body>
   <div class="container">
     <h1>⚡ Bible Rapid Game</h1>
-    <div id="scoreboard"></div>
+    <div id="scoreboard">
+  <h3>📊 Live Scores</h3>
+  <div id="scoreboardEntries"></div>
+    </div>
     <p id="timer">⏰ 300s</p>
     <p id="verseText">Loading verse...</p>
     <select id="book"></select>
