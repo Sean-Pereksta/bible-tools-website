@@ -80,7 +80,7 @@
         searchResults.innerHTML = "";
         if (!term) return;
 
-        const verseResults = bibleData.filter(v => v.Text.toLowerCase().includes(term));
+        const verseResults = bibleData.filter(v => v.Text && v.Text.toLowerCase().includes(term));
         const noteResults = allNotes.filter(n => n.note.toLowerCase().includes(term));
 
         [...verseResults, ...noteResults].slice(0, 20).forEach(item => {
@@ -131,7 +131,11 @@
         const csvText = await response.text();
 
         const results = Papa.parse(csvText, { header: true });
-        bibleData = results.data.filter(v => v.Text && v.BookName && v.Chapter);
+        bibleData = results.data.filter(v =>
+  v.Text && typeof v.Text === "string" &&
+  v.BookName && typeof v.BookName === "string" &&
+  v.Chapter
+);
         setupBooks();
         await loadAllNotes();
         hideLoading();
