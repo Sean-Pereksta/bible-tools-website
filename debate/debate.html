@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Christian Debate Defender</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        #header { display: flex; align-items: center; justify-content: center; }
+        #symbol { width: 50px; margin-right: 10px; }
+        select, textarea, button { width: 80%; margin: 10px auto; padding: 10px; }
+        #conversation { width: 80%; margin: auto; padding: 10px; border: 1px solid #ddd; text-align: left; }
+        #feedback { margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <img id="symbol" src="" alt="Debate Symbol">
+        <h1 id="debateTitle">AI Debate Simulator</h1>
+    </div>
+    <p id="prompt">Generating prompt...</p>
+    <div id="conversation">
+        <p><strong>AI:</strong> Waiting for your response...</p>
+    </div>
+    <textarea id="response" rows="4" placeholder="Enter your response here..."></textarea><br>
+    <button onclick="submitResponse()">Submit Response</button>
+    <button onclick="scoreResponse()">Score My Argument</button>
+    <p id="feedback"></p>
+
+    <script>
+          const API_KEY = "AIzaSyBeAFcTpJ8H7PvFwHjAfhCr5JdQuSLW7uI" ;
+          const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+
+        const debateScenarios = {
+            atheist: [
+                "Why do you believe in miracles when science has logical explanations?",
+                "Isn't the Bible just a human-made book full of contradictions?",
+                "Why does God allow suffering if He is loving?",
+                "Is faith rational, or just wishful thinking?",
+                "How do you explain evolution vs creationism?"
+            ],
+            muslim: [
+                "How can Jesus be God when he prayed to God?",
+                "Why does Christianity reject the final revelation of Islam?",
+                "Why is the Trinity logical when God is supposed to be one?",
+                "If the Bible has been changed over time, how do you trust it?",
+                "How does Christianity reconcile prophecies that Islam claims to fulfill?"
+            ]
+        };
+
+        let currentPerspective = "";
+
+        function generatePrompt() {
+            let allPrompts = [...debateScenarios.atheist, ...debateScenarios.muslim];
+            let prompt = allPrompts[Math.floor(Math.random() * allPrompts.length)];
+
+            currentPerspective = debateScenarios.muslim.includes(prompt) ? "muslim" : "atheist";
+            document.getElementById("prompt").innerText = prompt;
+
+            updateConversation("AI", "Let's debate! " + prompt);
+            updateHeader();
+        }
+
+        function updateHeader() {
+            let title = currentPerspective === "muslim" ? "Muslim Thinker" : "Atheist Thinker";
+            let symbolSrc = currentPerspective === "muslim" ? "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Star_and_Crescent.svg/800px-Star_and_Crescent.svg.png" 
+                                                             : "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Atheism_symbol.svg/800px-Atheism_symbol.svg.png";
+
+            document.getElementById("debateTitle").innerText = title;
+            document.getElementById("symbol").src = symbolSrc;
+        }
+
+        function submitResponse() {
+            let userResponse = document.getElementById("response").value;
+            updateConversation("You", userResponse);
+            document.getElementById("response").value = ""; 
+
+            fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ role: "user", parts: [{ text: `Debate from a ${currentPerspective} perspective: ${userResponse}` }] }]
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateConversation("AI", data.candidates?.[0]?.content || "AI response unavailable.");
+            })
+            .catch(error => {
+                console.error("API Error:", error);
+                updateConversation("AI", "I couldn't process that, but keep debating!");
+            });
+        }
+
+        function scoreResponse() {
+            let conversationText = document.getElementById("conversation").innerText;
+            let userResponses = conversationText.split("AI:").length - 1;
+            let score = Math.min(userResponses * 2, 10);
+            document.getElementById("feedback").innerText = `Your debate argument scored ${score}/10. Focus on structuring responses and countering arguments effectively.`;
+        }
+
+        function updateConversation(speaker, message) {
+            let conversationDiv = document.getElementById("conversation");
+            conversationDiv.innerHTML += `<p><strong>${speaker}:</strong> ${message}</p>`;
+        }
+
+        generatePrompt();
+    </script>
+</body>
+</html>
