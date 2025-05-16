@@ -82,28 +82,33 @@
             document.getElementById("symbol").src = symbolSrc;
         }
 
-        function submitResponse() {
-            let userResponse = document.getElementById("response").value;
-            updateConversation("You", userResponse);
-            document.getElementById("response").value = ""; 
+       function submitResponse() {
+    let userResponse = document.getElementById("response").value;
+    updateConversation("You", userResponse);
+    document.getElementById("response").value = ""; 
 
-            fetch(API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    contents: [{ role: "user", parts: [{ text: `Debate from a ${currentPerspective} perspective: ${userResponse}` }] }]
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                let aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "AI response unavailable.";
-                updateConversation("AI", aiResponse);
-            })
-            .catch(error => {
-                console.error("API Error:", error);
-                updateConversation("AI", "I couldn't process that, but keep debating!");
-            });
-        }
+    fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: `Debate from a ${currentPerspective} perspective: ${userResponse}` }] }]
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("Raw Response:", data); // Debugging: Check full API response format
+
+        // Extract AI response correctly
+        let aiResponse = data.candidates?.[0]?.content?.parts?.map(part => part.text).join(" ") || "AI response unavailable.";
+        
+        updateConversation("AI", aiResponse);
+    })
+    .catch(error => {
+        console.error("API Error:", error);
+        updateConversation("AI", "I couldn't process that, but keep debating!");
+    });
+}
+
 
         function scoreResponse() {
             let conversationText = document.getElementById("conversation").innerText;
