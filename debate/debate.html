@@ -25,6 +25,7 @@
     <textarea id="response" rows="4" placeholder="Enter your response here..."></textarea><br>
     <button onclick="submitResponse()">Submit Response</button>
     <button onclick="scoreResponse()">Score My Argument</button>
+    <button onclick="restartPage()">Restart Debate</button>
     <p id="feedback"></p>
 
     <script>
@@ -81,6 +82,9 @@
             document.getElementById("debateTitle").innerText = title;
             document.getElementById("symbol").src = symbolSrc;
         }
+        function restartPage() {
+        location.reload();
+    }
 
        function submitResponse() {
     let userResponse = document.getElementById("response").value;
