@@ -11,12 +11,16 @@
         select, textarea, button { width: 80%; margin: 10px auto; padding: 10px; }
         #conversation { width: 80%; margin: auto; padding: 10px; border: 1px solid #ddd; text-align: left; }
         #feedback { margin-top: 20px; font-weight: bold; }
-        #toggleSpeechContainer { margin: 10px auto; width: 80%; text-align: left; }
+        #toggleSpeechContainer, #toggleResearchContainer {
+            margin: 10px auto;
+            width: 80%;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
     <div id="header">
-        <img id="symbol" src="" alt="Debate Symbol">
+        <img id="symbol" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Dialogue_icon.svg/800px-Dialogue_icon.svg.png" alt="Debate Symbol">
         <h1 id="debateTitle">AI Debate Simulator</h1>
     </div>
 
@@ -26,6 +30,13 @@
         <label>
             <input type="checkbox" id="toggleSpeech" checked>
             Read AI responses aloud
+        </label>
+    </div>
+
+    <div id="toggleResearchContainer">
+        <label>
+            <input type="checkbox" id="toggleResearch">
+            Research Mode (quote scripture or studies)
         </label>
     </div>
 
@@ -103,15 +114,18 @@
             updateConversation("You", userResponse);
             document.getElementById("response").value = "";
 
+            const useResearch = document.getElementById("toggleResearch").checked;
+            const researchNote = useResearch ? " Try to quote scripture or research studies." : "";
+
+            const finalPrompt = `Discuss from a ${currentPerspective} perspective: ${userResponse}.${researchNote} Keep the response quite brief—only focus on 1-2 arguments.`;
+
             fetch(API_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     contents: [{
                         role: "user",
-                        parts: [{
-                            text: `discuss from a ${currentPerspective} perspective: ${userResponse}. Keep the response quite brief—only focus on 1-2 arguments.`
-                        }]
+                        parts: [{ text: finalPrompt }]
                     }]
                 })
             })
@@ -137,7 +151,7 @@
             if (!shouldSpeak) return;
 
             const utterance = new SpeechSynthesisUtterance(text);
-            speechSynthesis.cancel(); // cancel any current speech
+            speechSynthesis.cancel();
             speechSynthesis.speak(utterance);
         }
 
