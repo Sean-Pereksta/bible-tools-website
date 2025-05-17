@@ -11,6 +11,7 @@
         select, textarea, button { width: 80%; margin: 10px auto; padding: 10px; }
         #conversation { width: 80%; margin: auto; padding: 10px; border: 1px solid #ddd; text-align: left; }
         #feedback { margin-top: 20px; font-weight: bold; }
+        #toggleSpeechContainer { margin: 10px auto; width: 80%; text-align: left; }
     </style>
 </head>
 <body>
@@ -18,10 +19,20 @@
         <img id="symbol" src="" alt="Debate Symbol">
         <h1 id="debateTitle">AI Debate Simulator</h1>
     </div>
+
     <p id="prompt">Generating prompt...</p>
+
+    <div id="toggleSpeechContainer">
+        <label>
+            <input type="checkbox" id="toggleSpeech" checked>
+            Read AI responses aloud
+        </label>
+    </div>
+
     <div id="conversation">
         <p><strong>AI:</strong> Waiting for your response...</p>
     </div>
+
     <textarea id="response" rows="4" placeholder="Enter your response here..."></textarea><br>
     <button onclick="submitResponse()">Submit Response</button>
     <button onclick="scoreResponse()">Score My Argument</button>
@@ -29,10 +40,9 @@
     <p id="feedback"></p>
 
     <script>
-          const API_KEY = "AIzaSyBeAFcTpJ8H7PvFwHjAfhCr5JdQuSLW7uI" ;
-          const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+        const API_KEY = "AIzaSyBeAFcTpJ8H7PvFwHjAfhCr5JdQuSLW7uI";
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
 
-        // Expanded Debate Topics Targeting Christians
         const debateScenarios = {
             atheist: [
                 "If God exists, why does He allow suffering?",
@@ -65,62 +75,71 @@
         function generatePrompt() {
             let allPrompts = [...debateScenarios.atheist, ...debateScenarios.muslim];
             let prompt = allPrompts[Math.floor(Math.random() * allPrompts.length)];
-
             currentPerspective = debateScenarios.muslim.includes(prompt) ? "muslim" : "atheist";
             document.getElementById("prompt").innerText = prompt;
-
             updateConversation("AI", "Let's debate! " + prompt);
             updateHeader();
         }
 
         function updateHeader() {
-    let title, symbolSrc;
-
-    if (currentPerspective === "muslim") {
-        title = "Muslim Thinker 🕌";
-        symbolSrc = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Star_and_Crescent.svg/800px-Star_and_Crescent.svg.png"; // Crescent & Star
-    } else {
-        title = "Atheist Thinker ⚛️";
-        symbolSrc = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Atheism_symbol.svg/800px-Atheism_symbol.svg.png"; // Atheism Symbol
-    }
-
-    document.getElementById("debateTitle").innerText = title;
-    document.getElementById("symbol").src = symbolSrc;
-}
+            let title, symbolSrc;
+            if (currentPerspective === "muslim") {
+                title = "Muslim Thinker 🕌";
+                symbolSrc = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Star_and_Crescent.svg/800px-Star_and_Crescent.svg.png";
+            } else {
+                title = "Atheist Thinker ⚛️";
+                symbolSrc = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Atheism_symbol.svg/800px-Atheism_symbol.svg.png";
+            }
+            document.getElementById("debateTitle").innerText = title;
+            document.getElementById("symbol").src = symbolSrc;
+        }
 
         function restartPage() {
-        location.reload();
-    }
+            location.reload();
+        }
 
-       function submitResponse() {
-    let userResponse = document.getElementById("response").value;
-    updateConversation("You", userResponse);
-    document.getElementById("response").value = ""; 
+        function submitResponse() {
+            let userResponse = document.getElementById("response").value;
+            updateConversation("You", userResponse);
+            document.getElementById("response").value = "";
 
-    fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-    contents: [{ role: "user", parts: [{ text: `discuss from a ${currentPerspective} perspective: ${userResponse}. Keep the response quite brief—only focus on 1-2 arguments.` }] }]
-})
+            fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{
+                        role: "user",
+                        parts: [{
+                            text: `discuss from a ${currentPerspective} perspective: ${userResponse}. Keep the response quite brief—only focus on 1-2 arguments.`
+                        }]
+                    }]
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                let aiResponse = data.candidates?.[0]?.content?.parts?.map(part => part.text).join(" ") || "AI response unavailable.";
+                updateConversation("AI", aiResponse);
+                speakText(aiResponse);
+            })
+            .catch(error => {
+                console.error("API Error:", error);
+                updateConversation("AI", "I couldn't process that, but keep debating!");
+            });
+        }
 
+        function updateConversation(speaker, message) {
+            let conversationDiv = document.getElementById("conversation");
+            conversationDiv.innerHTML += `<p><strong>${speaker}:</strong> ${message}</p>`;
+        }
 
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log("Raw Response:", data); // Debugging: Check full API response format
+        function speakText(text) {
+            const shouldSpeak = document.getElementById("toggleSpeech").checked;
+            if (!shouldSpeak) return;
 
-        // Extract AI response correctly
-        let aiResponse = data.candidates?.[0]?.content?.parts?.map(part => part.text).join(" ") || "AI response unavailable.";
-        
-        updateConversation("AI", aiResponse);
-    })
-    .catch(error => {
-        console.error("API Error:", error);
-        updateConversation("AI", "I couldn't process that, but keep debating!");
-    });
-}
-
+            const utterance = new SpeechSynthesisUtterance(text);
+            speechSynthesis.cancel(); // cancel any current speech
+            speechSynthesis.speak(utterance);
+        }
 
         function scoreResponse() {
             let conversationText = document.getElementById("conversation").innerText;
@@ -129,13 +148,7 @@
             document.getElementById("feedback").innerText = `Your debate argument scored ${score}/10. Focus on structuring responses and countering arguments effectively.`;
         }
 
-        function updateConversation(speaker, message) {
-            let conversationDiv = document.getElementById("conversation");
-            conversationDiv.innerHTML += `<p><strong>${speaker}:</strong> ${message}</p>`;
-        }
-
         generatePrompt();
     </script>
 </body>
 </html>
-
