@@ -150,8 +150,11 @@ function savePosition() {
   };
 
   if (isAlive) {
-    payload.alive = true; // ✅ only include this if truly alive
-  }
+  payload.alive = true;
+} else {
+  // do NOT include alive at all, leave it untouched
+}
+
 
   setDoc(playerRef, payload, { merge: true });
 }
@@ -348,6 +351,7 @@ function catBehavior() {
     console.log(`💀 Cat killed ${name}`);
     const playerRef = doc(db, `games/${gameId}/players/${name}`);
     updateDoc(playerRef, { alive: false });
+      console.log("✅ Set alive to false for", name);
   }
 }
 
@@ -415,7 +419,7 @@ onSnapshot(playerRef, (docSnap) => {
     isAlive = data.alive === false ? false : true;
     cheeseCount = data.cheese || 0;
     document.getElementById("cheeseCount").textContent = cheeseCount;
-
+    console.log("🔥 Player isAlive = ", isAlive);
     if (!data.alive) {
       document.getElementById("status").textContent = "💀 You are dead!";
     } else {
