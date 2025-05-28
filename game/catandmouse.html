@@ -340,14 +340,6 @@ function catBehavior() {
 
 
 
-function checkReviveFlag() {
-  if (playerPos.x === 15 && playerPos.y === 15 && !isAlive) {
-    isAlive = true;
-    savePosition();
-    document.getElementById("status").textContent = "";
-    renderGrid();
-  }
-}
 
 function listenToGame() {
   onSnapshot(collection(db, `games/${gameId}/structures`), (snap) => {
