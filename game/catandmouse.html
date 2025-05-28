@@ -72,27 +72,26 @@ function renderGrid() {
     for (let x = 0; x < gridSize; x++) {
       const cell = document.getElementById(`cell-${x}-${y}`);
       cell.textContent = grid[y][x];
-      cell.innerHTML = grid[y][x];
     }
   }
+
   for (const name in players) {
     const p = players[name];
-    if (p.alive) {
-      const cell = document.getElementById(`cell-${p.x}-${p.y}`);
-      if (name === username) {
-        cell.textContent = "🐭";
-      } else {
-        cell.textContent = "🐭";
-      }
-      const nameTag = document.createElement("div");
-      nameTag.className = "name";
-      nameTag.textContent = name;
-      cell.appendChild(nameTag);
-    }
+    if (!p.alive) continue; // ✅ Skip dead players
+
+    const cell = document.getElementById(`cell-${p.x}-${p.y}`);
+    cell.textContent = "🐭";
+
+    const nameTag = document.createElement("div");
+    nameTag.className = "name";
+    nameTag.textContent = name;
+    cell.appendChild(nameTag);
   }
+
   const catCell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
   catCell.textContent = "🐱";
 }
+
 
 function movePlayer(dx, dy) {
   if (!gameStarted || !isAlive) return;
@@ -327,22 +326,26 @@ function listenToGame() {
     renderGrid();
   });
 
-  const playerRef = doc(db, `games/${gameId}/players/${username}`);
-  onSnapshot(playerRef, (docSnap) => {
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      playerPos = { x: data.x, y: data.y };
-      isAlive = data.alive;
-      cheeseCount = data.cheese || 0;
-      document.getElementById("cheeseCount").textContent = cheeseCount;
-      if (!data.alive) {
-        document.getElementById("status").textContent = "💀 You are dead!";
-      } else {
-        document.getElementById("status").textContent = "";
-      }
+ const playerRef = doc(db, `games/${gameId}/players/${username}`);
+onSnapshot(playerRef, (docSnap) => {
+  if (docSnap.exists()) {
+    const data = docSnap.data();
+    playerPos = { x: data.x, y: data.y };
+    isAlive = data.alive;
+    cheeseCount = data.cheese || 0;
+    document.getElementById("cheeseCount").textContent = cheeseCount;
+
+    if (!data.alive) {
+      document.getElementById("status").textContent = "💀 You are dead!";
+    } else {
+      document.getElementById("status").textContent = "";
     }
-  });
+
+    renderGrid(); // ✅ Make sure the grid updates after state change
+  }
+});
 }
+  
 window.addEventListener("keydown", (e) => {
   if (!canMove) return; // prevent movement if still in cooldown
 
