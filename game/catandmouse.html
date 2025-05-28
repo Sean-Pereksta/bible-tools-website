@@ -16,6 +16,7 @@
 <div id="grid"></div>
 <div id="info">
   <p id="status"></p>
+  <div id="playerStatus" style="margin-top: 10px;"></div>
   <p>Selected Build: <span id="buildType">None</span></p>
   <p>Cheese Collected: <span id="cheeseCount">0</span></p>
 </div>
@@ -92,6 +93,19 @@ function renderGrid() {
     nameTag.textContent = name;
     cell.appendChild(nameTag);
   }
+  // 🔄 Update player status display
+const statusDiv = document.getElementById("playerStatus");
+statusDiv.innerHTML = ""; // clear previous
+
+for (const name in players) {
+  const p = players[name];
+  const statusSpan = document.createElement("span");
+  statusSpan.style.marginRight = "10px";
+  statusSpan.style.fontWeight = "bold";
+  statusSpan.style.color = (p.alive === false) ? "red" : "green";
+  statusSpan.textContent = `${name}: ${p.alive === false ? "DEAD" : "ALIVE"}`;
+  statusDiv.appendChild(statusSpan);
+}
 
 const catCell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
 catCell.textContent = "🐱";
