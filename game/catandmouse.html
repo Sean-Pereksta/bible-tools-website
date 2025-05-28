@@ -125,13 +125,19 @@ function savePosition() {
   const cleanUsername = username.trim().toLowerCase();
   const playerRef = doc(db, `games/${gameId}/players/${cleanUsername}`);
 
-  setDoc(playerRef, {
+  const payload = {
     x: playerPos.x,
     y: playerPos.y,
-    alive: true,
     cheese: cheeseCount
-  }, { merge: true });
+  };
+
+  if (isAlive) {
+    payload.alive = true; // ✅ only include this if truly alive
+  }
+
+  setDoc(playerRef, payload, { merge: true });
 }
+
 
 function startCatBehaviorLoop() {
   if (catMoveInterval) clearInterval(catMoveInterval);
