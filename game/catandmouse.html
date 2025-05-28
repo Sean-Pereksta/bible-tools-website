@@ -197,24 +197,53 @@ function turretAttack() {
 }
 
 function catBehavior() {
-  const nearbyMice = Object.entries(players).filter(([_, p]) => p.alive && Math.abs(p.x - catPos.x) <= 3 && Math.abs(p.y - catPos.y) <= 3);
-  if (nearbyMice.length > 0) {
-    const target = nearbyMice[0][1];
-    const dx = Math.sign(target.x - catPos.x);
-    const dy = Math.sign(target.y - catPos.y);
-    const nextX = catPos.x + dx;
-    const nextY = catPos.y + dy;
+  // Get all alive players
+  const aliveMice = Object.entries(players).filter(([_, p]) => p.alive);
 
-    // Block cat from walking through walls
-    if (
-      nextX >= 0 && nextX < gridSize &&
-      nextY >= 0 && nextY < gridSize &&
-      grid[nextY][nextX] !== "🧱"
-    ) {
-      catPos.x = nextX;
-      catPos.y = nextY;
+  if (aliveMice.length === 0) return;
+
+  // STEP 1: Find closest player (using Manhattan distance)
+  let closest = null;
+  let minDist = Infinity;
+
+  for (const [_, p] of aliveMice) {
+    const dist = Math.abs(p.x - catPos.x) + Math.abs(p.y - catPos.y);
+    if (dist < minDist) {
+      closest = p;
+      minDist = dist;
     }
   }
+
+  // STEP 2: Check if anyone is within 3 spaces
+  const nearby = aliveMice.find(p => 
+    Math.abs(p.x - catPos.x) <= 3 && Math.abs(p.y - catPos.y) <= 3
+  );
+  const target = nearby || closest;
+
+  // STEP 3: Greedy move toward target (1 step in x or y direction)
+  const dx = target.x - catPos.x;
+  const dy = target.y - catPos.y;
+
+  let moveX = 0, moveY = 0;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    moveX = Math.sign(dx);
+  } else {
+    moveY = Math.sign(dy);
+  }
+
+  const nextX = catPos.x + moveX;
+  const nextY = catPos.y + moveY;
+
+  if (
+    nextX >= 0 && nextX < gridSize &&
+    nextY >= 0 && nextY < gridSize &&
+    grid[nextY][nextX] !== "🧱"
+  ) {
+    catPos.x = nextX;
+    catPos.y = nextY;
+  }
+
+  // Attack structures around cat
   for (let dy = -1; dy <= 1; dy++) {
     for (let dx = -1; dx <= 1; dx++) {
       const tx = catPos.x + dx;
@@ -226,16 +255,19 @@ function catBehavior() {
       }
     }
   }
+
+  // Kill any mouse on the same tile
   for (const [name, p] of Object.entries(players)) {
-  if (p.alive && catPos.x === p.x && catPos.y === p.y) {
-    // Kill mouse
-    const playerRef = doc(db, `games/${gameId}/players/${name}`);
-    updateDoc(playerRef, { alive: false });
+    if (p.alive && catPos.x === p.x && catPos.y === p.y) {
+      const playerRef = doc(db, `games/${gameId}/players/${name}`);
+      updateDoc(playerRef, { alive: false });
+    }
   }
-}
+
   updateDoc(doc(db, `games/${gameId}`), { cat: { x: catPos.x, y: catPos.y, health: catHealth } });
   renderGrid();
 }
+
 
 function checkReviveFlag() {
   if (playerPos.x === 15 && playerPos.y === 15 && !isAlive) {
