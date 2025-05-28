@@ -166,7 +166,7 @@ function placeStructure(dir) {
   const key = `${tx}_${ty}`;
   if (grid[ty][tx] === "") {
     grid[ty][tx] = symbol;
-    structureHealth[key] = selectedBuild === 1 ? 5 : 1;
+    structureHealth[key] = selectedBuild === 1 ? 25 : 1;
     cheeseCount -= selectedBuild;
     document.getElementById("cheeseCount").textContent = cheeseCount;
     savePosition();
