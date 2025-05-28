@@ -6,7 +6,8 @@
   <style>
     body { font-family: sans-serif; text-align: center; background: #f4f4f4; }
     #grid { display: grid; grid-template-columns: repeat(30, 20px); grid-template-rows: repeat(30, 20px); margin: 20px auto; }
-    .cell { width: 20px; height: 20px; text-align: center; font-size: 16px; }
+    .cell { width: 20px; height: 20px; text-align: center; font-size: 16px; position: relative; }
+    .name { font-size: 10px; position: absolute; top: -12px; left: 0; right: 0; text-align: center; }
     #info { margin-top: 10px; }
   </style>
 </head>
@@ -16,11 +17,12 @@
 <div id="info">
   <p id="status"></p>
   <p>Selected Build: <span id="buildType">None</span></p>
+  <p>Cheese Collected: <span id="cheeseCount">0</span></p>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, getDocs, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -34,7 +36,6 @@ const db = getFirestore(app);
 const urlParams = new URLSearchParams(window.location.search);
 const gameId = urlParams.get("gameId");
 const username = urlParams.get("username");
-const isHost = false;
 
 const gridSize = 30;
 const gridElement = document.getElementById("grid");
@@ -42,8 +43,14 @@ let grid = [];
 let playerPos = { x: 1, y: 1 };
 let catPos = { x: 15, y: 15 };
 let gameStarted = false;
+let selectedBuild = null;
+let cheeseCount = 0;
+let isAlive = true;
+let catHealth = 100;
+let players = {};
 
-// Initialize grid
+let structureHealth = {}; // key: "x_y", value: health
+
 for (let y = 0; y < gridSize; y++) {
   grid[y] = [];
   for (let x = 0; x < gridSize; x++) {
@@ -59,41 +66,169 @@ function renderGrid() {
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
       const cell = document.getElementById(`cell-${x}-${y}`);
-      cell.textContent = "";
+      cell.textContent = grid[y][x];
+      cell.innerHTML = grid[y][x];
     }
   }
-  document.getElementById(`cell-${catPos.x}-${catPos.y}`).textContent = "🐱";
-  document.getElementById(`cell-${playerPos.x}-${playerPos.y}`).textContent = "🐭";
+  for (const name in players) {
+    const p = players[name];
+    if (p.alive) {
+      const cell = document.getElementById(`cell-${p.x}-${p.y}`);
+      if (name === username) {
+        cell.textContent = "🐭";
+      } else {
+        cell.textContent = "🐭";
+      }
+      const nameTag = document.createElement("div");
+      nameTag.className = "name";
+      nameTag.textContent = name;
+      cell.appendChild(nameTag);
+    }
+  }
+  const catCell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
+  catCell.textContent = "🐱";
 }
 
 function movePlayer(dx, dy) {
-  if (!gameStarted) return;
+  if (!gameStarted || !isAlive) return;
   const newX = Math.max(0, Math.min(gridSize - 1, playerPos.x + dx));
   const newY = Math.max(0, Math.min(gridSize - 1, playerPos.y + dy));
   playerPos = { x: newX, y: newY };
   savePosition();
+  checkCheese();
+  checkReviveFlag();
   renderGrid();
 }
 
 function savePosition() {
   const playerRef = doc(db, `games/${gameId}/players/${username}`);
-  setDoc(playerRef, { x: playerPos.x, y: playerPos.y, alive: true }, { merge: true });
+  setDoc(playerRef, { x: playerPos.x, y: playerPos.y, alive: true, cheese: cheeseCount }, { merge: true });
+}
+
+function checkCheese() {
+  if (grid[playerPos.y][playerPos.x] === "🧀") {
+    grid[playerPos.y][playerPos.x] = "";
+    cheeseCount++;
+    document.getElementById("cheeseCount").textContent = cheeseCount;
+    renderGrid();
+  }
+}
+
+function placeStructure(dir) {
+  if (!gameStarted || !selectedBuild || cheeseCount < selectedBuild) return;
+  let tx = playerPos.x, ty = playerPos.y;
+  if (dir === 'w') ty--;
+  if (dir === 'a') tx--;
+  if (dir === 's') ty++;
+  if (dir === 'd') tx++;
+  if (tx < 0 || ty < 0 || tx >= gridSize || ty >= gridSize) return;
+  const symbol = selectedBuild === 1 ? "🧱" : selectedBuild === 2 ? "🔫" : "";
+  const key = `${tx}_${ty}`;
+  if (grid[ty][tx] === "") {
+    grid[ty][tx] = symbol;
+    structureHealth[key] = selectedBuild === 1 ? 2 : 1;
+    cheeseCount -= selectedBuild;
+    document.getElementById("cheeseCount").textContent = cheeseCount;
+    savePosition();
+    renderGrid();
+  }
+}
+
+function spawnCheese() {
+  const x = Math.floor(Math.random() * gridSize);
+  const y = Math.floor(Math.random() * gridSize);
+  if (grid[y][x] === "") {
+    grid[y][x] = "🧀";
+    renderGrid();
+  }
+}
+
+function damageStructure(x, y) {
+  const key = `${x}_${y}`;
+  if (structureHealth[key] !== undefined) {
+    structureHealth[key]--;
+    if (structureHealth[key] <= 0) {
+      grid[y][x] = "";
+      delete structureHealth[key];
+    }
+  }
+}
+
+function turretAttack() {
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      if (grid[y][x] === "🔫") {
+        const dx = Math.abs(catPos.x - x);
+        const dy = Math.abs(catPos.y - y);
+        if (dx <= 3 && dy <= 3) {
+          catHealth--;
+          updateDoc(doc(db, `games/${gameId}/cat`), { health: catHealth });
+          if (catHealth <= 0) {
+            document.getElementById("status").textContent = "🎉 Mice win!";
+          }
+        }
+      }
+    }
+  }
+}
+
+function catBehavior() {
+  const nearbyMice = Object.entries(players).filter(([_, p]) => p.alive && Math.abs(p.x - catPos.x) <= 3 && Math.abs(p.y - catPos.y) <= 3);
+  if (nearbyMice.length > 0) {
+    const target = nearbyMice[0][1];
+    catPos.x += Math.sign(target.x - catPos.x);
+    catPos.y += Math.sign(target.y - catPos.y);
+  }
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const tx = catPos.x + dx;
+      const ty = catPos.y + dy;
+      if (tx >= 0 && tx < gridSize && ty >= 0 && ty < gridSize) {
+        if (grid[ty][tx] === "🧱" || grid[ty][tx] === "🔫") {
+          damageStructure(tx, ty);
+        }
+      }
+    }
+  }
+  updateDoc(doc(db, `games/${gameId}/cat`), { x: catPos.x, y: catPos.y });
+  renderGrid();
+}
+
+function checkReviveFlag() {
+  if (playerPos.x === 15 && playerPos.y === 15 && !isAlive) {
+    isAlive = true;
+    savePosition();
+    document.getElementById("status").textContent = "";
+    renderGrid();
+  }
 }
 
 function listenToGame() {
-  const catRef = doc(db, `games/${gameId}/cat`);
-  onSnapshot(catRef, (docSnap) => {
+  onSnapshot(doc(db, `games/${gameId}/cat`), (docSnap) => {
     if (docSnap.exists()) {
       const data = docSnap.data();
       catPos = { x: data.x, y: data.y };
+      catHealth = data.health || 100;
       renderGrid();
     }
+  });
+
+  onSnapshot(collection(db, `games/${gameId}/players`), (snap) => {
+    players = {};
+    snap.forEach((docSnap) => {
+      players[docSnap.id] = docSnap.data();
+    });
+    renderGrid();
   });
 
   const playerRef = doc(db, `games/${gameId}/players/${username}`);
   onSnapshot(playerRef, (docSnap) => {
     if (docSnap.exists()) {
       const data = docSnap.data();
+      playerPos = { x: data.x, y: data.y };
+      isAlive = data.alive;
+      cheeseCount = data.cheese || 0;
+      document.getElementById("cheeseCount").textContent = cheeseCount;
       if (!data.alive) {
         document.getElementById("status").textContent = "💀 You are dead!";
       } else {
@@ -114,16 +249,23 @@ function startCountdown() {
       clearInterval(interval);
       gameStarted = true;
       status.textContent = "Go!";
+      setInterval(spawnCheese, 30000);
+      setInterval(turretAttack, 1000);
+      if (username === "host") setInterval(catBehavior, 1000);
     }
   }, 1000);
 }
 
 window.addEventListener("keydown", (e) => {
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
   switch (e.key) {
     case "ArrowUp": movePlayer(0, -1); break;
     case "ArrowDown": movePlayer(0, 1); break;
     case "ArrowLeft": movePlayer(-1, 0); break;
     case "ArrowRight": movePlayer(1, 0); break;
+    case "1": selectedBuild = 1; document.getElementById("buildType").textContent = "Wall 🧱"; break;
+    case "2": selectedBuild = 2; document.getElementById("buildType").textContent = "Turret 🔫"; break;
+    case "w": case "a": case "s": case "d": placeStructure(e.key); break;
   }
 });
 
