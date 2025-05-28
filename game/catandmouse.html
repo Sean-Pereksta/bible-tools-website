@@ -269,15 +269,27 @@ function listenToGame() {
     });
     renderGrid();
   });
-  onSnapshot(doc(db, `games/${gameId}`), (docSnap) => {
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      const cat = data.cat || {};
-      catPos = { x: cat.x || 15, y: cat.y || 15 };
-      catHealth = cat.health || 100;
-      renderGrid();
+ onSnapshot(doc(db, `games/${gameId}`), (docSnap) => {
+  if (docSnap.exists()) {
+    const data = docSnap.data();
+
+    // 👉 Add this block here:
+    if (!data.cat || data.cat.x === undefined || data.cat.y === undefined) {
+      data.cat = {
+        x: Math.floor(Math.random() * gridSize),
+        y: 1
+      };
+      // Save to Firestore so others see it
+      updateDoc(doc(db, `games/${gameId}`), { cat: data.cat });
     }
-  });
+
+    const cat = data.cat || {};
+    catPos = { x: cat.x || 15, y: cat.y || 15 };
+    catHealth = cat.health || 100;
+    renderGrid();
+  }
+});
+
 
   onSnapshot(collection(db, `games/${gameId}/players`), (snap) => {
     players = {};
@@ -347,9 +359,14 @@ window.addEventListener("keydown", (e) => {
     case "w": case "a": case "s": case "d": placeStructure(e.key); break;
   }
 });
-
 listenToGame();
-startCountdown();
+gameStarted = true;
+catPos = { x: 15, y: 25 };
+grid[25][15] = "🐱";
+grid[24][15] = "🧱";
+grid[25][14] = "🧱";
+grid[25][16] = "🧱";
+renderGrid();
 </script>
 </body>
 </html>
