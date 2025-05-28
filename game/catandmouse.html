@@ -50,7 +50,7 @@ let catHealth = 100;
 let players = {};
 let isHost = false;
   let canMove = true;
-const moveCooldown = 150; // in milliseconds
+const moveCooldown = 250; // in milliseconds
   let catPower = 0;
   let catMoveInterval = null;
 
@@ -487,7 +487,7 @@ setInterval(turretAttack, 1000);
       console.log(`Cat power increased to ${catPower}`);
       startCatBehaviorLoop(); // Restart cat interval with new speed
     }
-  }, 60000);
+  }, 30000);
 }
 })();
 
