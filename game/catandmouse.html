@@ -215,30 +215,55 @@ function turretAttack() {
 }
 
 function catBehavior() {
-  // Get all alive players
   const aliveMice = Object.entries(players).filter(([_, p]) => p.alive);
-
   if (aliveMice.length === 0) return;
 
-  // STEP 1: Find closest player (using Manhattan distance)
-  let closest = null;
-  let minDist = Infinity;
-
+  // Find the closest mouse
+  let closestMouse = null;
+  let minMouseDist = Infinity;
   for (const [_, p] of aliveMice) {
     const dist = Math.abs(p.x - catPos.x) + Math.abs(p.y - catPos.y);
-    if (dist < minDist) {
-      closest = p;
-      minDist = dist;
+    if (dist < minMouseDist) {
+      closestMouse = p;
+      minMouseDist = dist;
     }
   }
 
-  // STEP 2: Check if anyone is within 3 spaces
-  const nearby = aliveMice.find(p => 
-    Math.abs(p.x - catPos.x) <= 3 && Math.abs(p.y - catPos.y) <= 3
-  );
-  const target = nearby || closest;
+  let target = null;
 
-  // STEP 3: Greedy move toward target (1 step in x or y direction)
+  // 🧠 Priority: If a mouse is within 5 tiles, chase them
+  if (minMouseDist <= 5) {
+    target = closestMouse;
+  } else {
+    // 🧱🔫🐭 Otherwise, find the nearest wall, turret, or mouse
+    let minTargetDist = Infinity;
+
+    // Check all grid cells for walls and turrets
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        if (grid[y][x] === "🧱" || grid[y][x] === "🔫") {
+          const dist = Math.abs(x - catPos.x) + Math.abs(y - catPos.y);
+          if (dist < minTargetDist) {
+            minTargetDist = dist;
+            target = { x, y };
+          }
+        }
+      }
+    }
+
+    // Also check faraway mice
+    for (const [_, p] of aliveMice) {
+      const dist = Math.abs(p.x - catPos.x) + Math.abs(p.y - catPos.y);
+      if (dist < minTargetDist) {
+        minTargetDist = dist;
+        target = { x: p.x, y: p.y };
+      }
+    }
+  }
+
+  if (!target) return; // failsafe
+
+  // 🧭 Move 1 step toward target
   const dx = target.x - catPos.x;
   const dy = target.y - catPos.y;
 
@@ -261,7 +286,7 @@ function catBehavior() {
     catPos.y = nextY;
   }
 
-  // Attack structures around cat
+  // Destroy adjacent walls or turrets
   for (let dy = -1; dy <= 1; dy++) {
     for (let dx = -1; dx <= 1; dx++) {
       const tx = catPos.x + dx;
@@ -285,6 +310,7 @@ function catBehavior() {
   updateDoc(doc(db, `games/${gameId}`), { cat: { x: catPos.x, y: catPos.y, health: catHealth } });
   renderGrid();
 }
+
 
 
 function checkReviveFlag() {
@@ -404,7 +430,7 @@ grid[25][16] = "🧱";
 renderGrid();
 
 // Start cheese spawn and turret attack globally
-setInterval(spawnCheese, 2000);
+setInterval(spawnCheese, 10000);
 setInterval(turretAttack, 1000);
 
 // ✅ Wrap host logic in an async function
