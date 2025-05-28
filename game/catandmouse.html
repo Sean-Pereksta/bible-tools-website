@@ -155,13 +155,23 @@ function placeStructure(dir) {
 }
 
 function spawnCheese() {
-  const x = Math.floor(Math.random() * gridSize);
-  const y = Math.floor(Math.random() * gridSize);
-  if (grid[y][x] === "") {
-    grid[y][x] = "🧀";
-    renderGrid();
+  let spawned = 0;
+  let attempts = 0;
+  const maxAttempts = 100; // avoid infinite loop if grid is full
+
+  while (spawned < 3 && attempts < maxAttempts) {
+    const x = Math.floor(Math.random() * gridSize);
+    const y = Math.floor(Math.random() * gridSize);
+    if (grid[y][x] === "") {
+      grid[y][x] = "🧀";
+      spawned++;
+    }
+    attempts++;
   }
+
+  renderGrid();
 }
+
 
 function damageStructure(x, y) {
   const key = `${x}_${y}`;
@@ -388,7 +398,7 @@ grid[25][16] = "🧱";
 renderGrid();
 
 // Start cheese spawn and turret attack globally
-setInterval(spawnCheese, 10000);
+setInterval(spawnCheese, 2000);
 setInterval(turretAttack, 1000);
 
 // ✅ Wrap host logic in an async function
