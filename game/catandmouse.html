@@ -103,6 +103,14 @@ function movePlayer(dx, dy) {
 function savePosition() {
   const playerRef = doc(db, `games/${gameId}/players/${username}`);
   setDoc(playerRef, { x: playerPos.x, y: playerPos.y, alive: true, cheese: cheeseCount }, { merge: true });
+  // Check if host is already set
+const gameRef = doc(db, `games/${gameId}`);
+getDoc(gameRef).then((docSnap) => {
+  if (!docSnap.exists() || !docSnap.data().host) {
+    // If no host set, assign this player as host
+    setDoc(gameRef, { host: username }, { merge: true });
+  }
+});
 }
 
 function checkCheese() {
