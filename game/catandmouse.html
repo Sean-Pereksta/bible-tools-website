@@ -255,10 +255,13 @@ function turretAttack() {
 
 function catBehavior() {
   console.log("🐱 Cat behavior running");
-  const aliveMice = Object.entries(players).filter(([_, p]) => p.alive);
-  if (aliveMice.length === 0) return;
 
-  // Find the closest mouse
+  const aliveMice = Object.entries(players).filter(([_, p]) => p.alive);
+  if (aliveMice.length === 0) {
+    console.log("❌ No alive mice.");
+    return;
+  }
+
   let closestMouse = null;
   let minMouseDist = Infinity;
   for (const [_, p] of aliveMice) {
@@ -271,14 +274,13 @@ function catBehavior() {
 
   let target = null;
 
-  // 🧠 Priority: If a mouse is within 5 tiles, chase them
   if (minMouseDist <= 5) {
     target = closestMouse;
+    console.log("🎯 Chasing close mouse:", target);
   } else {
-    // 🧱🔫🐭 Otherwise, find the nearest wall, turret, or mouse
     let minTargetDist = Infinity;
 
-    // Check all grid cells for walls and turrets
+    // Structures
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
         if (grid[y][x] === "🧱" || grid[y][x] === "🔫") {
@@ -291,7 +293,7 @@ function catBehavior() {
       }
     }
 
-    // Also check faraway mice
+    // Distant mice
     for (const [_, p] of aliveMice) {
       const dist = Math.abs(p.x - catPos.x) + Math.abs(p.y - catPos.y);
       if (dist < minTargetDist) {
@@ -299,11 +301,15 @@ function catBehavior() {
         target = { x: p.x, y: p.y };
       }
     }
+
+    console.log("🎯 Chasing distant target:", target);
   }
 
-  if (!target) return; // failsafe
+  if (!target) {
+    console.log("❌ No target found.");
+    return;
+  }
 
-  // 🧭 Move 1 step toward target
   const dx = target.x - catPos.x;
   const dy = target.y - catPos.y;
 
@@ -324,9 +330,12 @@ function catBehavior() {
   ) {
     catPos.x = nextX;
     catPos.y = nextY;
+    console.log(`✅ Cat moved to (${catPos.x}, ${catPos.y})`);
+  } else {
+    console.log("🚫 Cat movement blocked.");
   }
 
-  // Destroy adjacent walls or turrets
+  // Destroy nearby structures
   for (let dy = -1; dy <= 1; dy++) {
     for (let dx = -1; dx <= 1; dx++) {
       const tx = catPos.x + dx;
@@ -339,32 +348,27 @@ function catBehavior() {
     }
   }
 
-for (const [name, p] of Object.entries(players)) {
-  if ((p.alive ?? true) && catPos.x === p.x && catPos.y === p.y) {
-    console.log(`💀 Cat killed ${name}`);
-    const playerRef = doc(db, `games/${gameId}/players/${name}`);
-    updateDoc(playerRef, { alive: false });
-    console.log("✅ Set alive to false for", name);
+  // Kill any players standing on cat
+  for (const [name, p] of Object.entries(players)) {
+    if ((p.alive ?? true) && catPos.x === p.x && catPos.y === p.y) {
+      console.log(`💀 Cat killed ${name}`);
+      const playerRef = doc(db, `games/${gameId}/players/${name}`);
+      updateDoc(playerRef, { alive: false });
+      console.log("✅ Set alive to false for", name);
 
-    // 🔥 Force local update if it's YOU
-    if (name === username) {
-      isAlive = false;
-      document.getElementById("status").textContent = "💀 You are dead!";
-      console.log("⚠️ Forced isAlive = false locally for self");
+      if (name === username) {
+        isAlive = false;
+        document.getElementById("status").textContent = "💀 You are dead!";
+        console.log("⚠️ Forced isAlive = false locally for self");
+      }
     }
   }
-}
 
-
-
-
-  updateDoc(doc(db, `games/${gameId}`), { cat: { x: catPos.x, y: catPos.y, health: catHealth } });
+  updateDoc(doc(db, `games/${gameId}`), {
+    cat: { x: catPos.x, y: catPos.y, health: catHealth }
+  });
   renderGrid();
 }
-
-
-
-
 function listenToGame() {
   
   onSnapshot(collection(db, `games/${gameId}/structures`), (snap) => {
@@ -495,22 +499,26 @@ setInterval(turretAttack, 1000);
 
  if (host === cleanUsername) {
   isHost = true;
-  console.log("You are host. Starting cat AI.");
+  console.log("👑 You are host. Starting cat AI.");
+  gameStarted = true;
 
-  // 🧠 Start cat AI loop
+  // Start initial cat behavior loop
   startCatBehaviorLoop();
 
-  // 🆙 Power up every minute
+  // Increase power every 30 seconds
   setInterval(async () => {
     if (gameStarted) {
       catPower++;
       catHealth += 10;
+      console.log(`🔋 Cat power increased to ${catPower}`);
+
       await updateDoc(doc(db, `games/${gameId}`), {
         catPower,
         cat: { ...catPos, health: catHealth }
       });
-      console.log(`Cat power increased to ${catPower}`);
-      startCatBehaviorLoop(); // Restart cat interval with new speed
+
+      // Restart loop with updated speed
+      startCatBehaviorLoop();
     }
   }, 30000);
 }
