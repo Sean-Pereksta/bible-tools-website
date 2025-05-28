@@ -179,7 +179,7 @@ function checkCheese() {
 }
 
 function placeStructure(dir) {
-  if (!gameStarted || !selectedBuild || cheeseCount < selectedBuild) return;
+  if (!gameStarted || !isAlive || !selectedBuild || cheeseCount < selectedBuild) return;
   let tx = playerPos.x, ty = playerPos.y;
   if (dir === 'w') ty--;
   if (dir === 'a') tx--;
@@ -428,7 +428,7 @@ onSnapshot(playerRef, (docSnap) => {
 }
   
 window.addEventListener("keydown", (e) => {
-  if (!canMove) return; // prevent movement if still in cooldown
+  if (!canMove || !isAlive) return; // ⛔ Block input if dead
 
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
 
@@ -454,8 +454,9 @@ window.addEventListener("keydown", (e) => {
   }
 
   canMove = false;
-  setTimeout(() => canMove = true, moveCooldown); // reset cooldown
+  setTimeout(() => canMove = true, moveCooldown);
 });
+
 
 
 // After listenToGame():
