@@ -110,7 +110,10 @@ function checkCheese() {
     grid[playerPos.y][playerPos.x] = "";
     cheeseCount++;
     document.getElementById("cheeseCount").textContent = cheeseCount;
+    savePosition();
     renderGrid();
+  }
+}
   }
 }
 
@@ -290,9 +293,15 @@ function startCountdown() {
       clearInterval(interval);
       gameStarted = true;
       status.textContent = "Go!";
-      setInterval(spawnCheese, 30000);
+      setInterval(spawnCheese, 10000);
+
+      if (username === "host") {
+        setInterval(() => {
+          if (gameStarted) catBehavior();
+        }, 1000);
+      }
+
       setInterval(turretAttack, 1000);
-      if (username === "host") setInterval(catBehavior, 1000);
     }
   }, 1000);
 }
@@ -310,11 +319,10 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-renderGrid();
-savePosition();
 listenToGame();
 startCountdown();
 </script>
 </body>
 </html>
+
 
