@@ -139,14 +139,6 @@ function placeStructure(dir) {
     renderGrid();
   }
 }
-    } else {
-      await updateDoc(doc(db, `games/${gameId}/structures/${key}`), {
-        health: structureHealth[key]
-      });
-    }
-    renderGrid();
-  }
-}
 
 function spawnCheese() {
   const x = Math.floor(Math.random() * gridSize);
@@ -326,4 +318,3 @@ startCountdown();
 </script>
 </body>
 </html>
-
