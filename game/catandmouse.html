@@ -369,8 +369,8 @@ function catBehavior() {
   });
   renderGrid();
 }
-function listenToGame() {
-  
+async function listenToGame() {
+
   onSnapshot(collection(db, `games/${gameId}/structures`), (snap) => {
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
@@ -387,27 +387,27 @@ function listenToGame() {
     });
     renderGrid();
   });
- onSnapshot(doc(db, `games/${gameId}`), (docSnap) => {
-  if (docSnap.exists()) {
-    const data = docSnap.data();
 
-    // ✅ Only the host should auto-create the cat if it's missing
-    if (isHost && (!data.cat || typeof data.cat.x !== "number" || typeof data.cat.y !== "number")) {
-  const initialCat = {
-    x: gridSize - 1,  // bottom-right X (29 if gridSize is 30)
-    y: gridSize - 1,  // bottom-right Y
-    health: 100
-  };
-  updateDoc(doc(db, `games/${gameId}`), { cat: initialCat });
-}
+  onSnapshot(doc(db, `games/${gameId}`), (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
 
-    const cat = data.cat || {};
-    catPower = data.catPower || 0;
-    catPos = { x: cat.x || 15, y: cat.y || 15 };
-    catHealth = cat.health || 100;
-    renderGrid();
-  }
-});
+      if (isHost && (!data.cat || typeof data.cat.x !== "number" || typeof data.cat.y !== "number")) {
+        const initialCat = {
+          x: gridSize - 1,
+          y: gridSize - 1,
+          health: 100
+        };
+        updateDoc(doc(db, `games/${gameId}`), { cat: initialCat });
+      }
+
+      const cat = data.cat || {};
+      catPower = data.catPower || 0;
+      catPos = { x: cat.x || 15, y: cat.y || 15 };
+      catHealth = cat.health || 100;
+      renderGrid();
+    }
+  });
 
   onSnapshot(collection(db, `games/${gameId}/players`), (snap) => {
     players = {};
@@ -417,33 +417,29 @@ function listenToGame() {
     renderGrid();
   });
 
- const playerRef = doc(db, `games/${gameId}/players/${username}`);
+  const playerRef = doc(db, `games/${gameId}/players/${username}`);
   await setDoc(playerRef, {
-  x: playerPos.x,
-  y: playerPos.y,
-  cheese: 0,
-  alive: true // ✅ Ensure alive status is written when joining
-}, { merge: true });
+    x: playerPos.x,
+    y: playerPos.y,
+    cheese: 0,
+    alive: true
+  }, { merge: true });
 
-onSnapshot(playerRef, (docSnap) => {
-  if (docSnap.exists()) {
-    const data = docSnap.data();
-    playerPos = { x: data.x, y: data.y };
-    isAlive = data.alive === false ? false : true;
-    cheeseCount = data.cheese || 0;
-    document.getElementById("cheeseCount").textContent = cheeseCount;
-    console.log("🔥 Player isAlive = ", isAlive);
-    if (!data.alive) {
-      document.getElementById("status").textContent = "💀 You are dead!";
-    } else {
-      document.getElementById("status").textContent = "";
+  onSnapshot(playerRef, (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      playerPos = { x: data.x, y: data.y };
+      isAlive = data.alive !== false;
+      cheeseCount = data.cheese || 0;
+      document.getElementById("cheeseCount").textContent = cheeseCount;
+      console.log("🔥 Player isAlive = ", isAlive);
+      document.getElementById("status").textContent = isAlive
+        ? ""
+        : "💀 You are dead!";
+      renderGrid();
     }
-
-    renderGrid(); // ✅ Make sure the grid updates after state change
-  }
-});
+  });
 }
-  
 window.addEventListener("keydown", (e) => {
   if (!canMove || !isAlive) return; // ⛔ Block input if dead
 
