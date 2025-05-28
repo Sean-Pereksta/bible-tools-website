@@ -359,14 +359,31 @@ window.addEventListener("keydown", (e) => {
     case "w": case "a": case "s": case "d": placeStructure(e.key); break;
   }
 });
+// After listenToGame():
 listenToGame();
 gameStarted = true;
-catPos = { x: 15, y: 25 };
-grid[25][15] = "🐱";
+
+const catRef = doc(db, `games/${gameId}`);
+setDoc(catRef, {
+  cat: { x: 15, y: 25, health: 100 }
+}, { merge: true });
+
+// Place walls manually
 grid[24][15] = "🧱";
 grid[25][14] = "🧱";
 grid[25][16] = "🧱";
 renderGrid();
+
+// Start cat behavior if host
+getDoc(catRef).then(docSnap => {
+  const host = docSnap.data()?.host;
+  if (username === host) {
+    setInterval(() => {
+      if (gameStarted) catBehavior();
+    }, 1000);
+  }
+});
+
 </script>
 </body>
 </html>
