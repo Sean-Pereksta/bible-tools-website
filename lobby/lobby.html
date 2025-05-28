@@ -30,6 +30,7 @@
         <option value="7rounds">7 Rounds</option>
         <option value="rapid">Rapid</option>
         <option value="draft">Draft</option>
+       <option value="cat">Cat n Mouse</option>
       </select>
         <button onclick="startLobby()">Start Lobby</button>
       </div>
@@ -183,6 +184,7 @@ async function loadLeaderboard() {
       if (data.gameType === "rapid") gameFile = "rapid.html";
       else if (data.gameType === "draft") gameFile = "draft.html";
       else if (data.gameType === "10rounds") gameFile = "game-10rounds.html"; // fallback
+       else if (data.gameType === "cat") gameFile = "Catandmouse.html"; // fallback
       window.location.href = `https://sean-pereksta.github.io/bible-tools-website/game/${gameFile}?gameId=${currentLobbyId}&username=${username}`;
     }
   });
