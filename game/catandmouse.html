@@ -148,14 +148,6 @@ function savePosition() {
     y: playerPos.y,
     cheese: cheeseCount
   };
-
-  if (isAlive) {
-  payload.alive = true;
-} else {
-  // do NOT include alive at all, leave it untouched
-}
-
-
   setDoc(playerRef, payload, { merge: true });
 }
 
