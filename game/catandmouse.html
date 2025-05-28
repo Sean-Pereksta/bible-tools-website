@@ -49,6 +49,9 @@ let isAlive = true;
 let catHealth = 100;
 let players = {};
 let isHost = false;
+  let canMove = true;
+const moveCooldown = 150; // in milliseconds
+
 
 
 let structureHealth = {}; // key: "x_y", value: health
@@ -341,7 +344,10 @@ function listenToGame() {
   });
 }
 window.addEventListener("keydown", (e) => {
+  if (!canMove) return; // prevent movement if still in cooldown
+
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
+
   switch (e.key) {
     case "ArrowUp": movePlayer(0, -1); break;
     case "ArrowDown": movePlayer(0, 1); break;
@@ -362,7 +368,11 @@ window.addEventListener("keydown", (e) => {
       placeStructure(e.key);
       break;
   }
+
+  canMove = false;
+  setTimeout(() => canMove = true, moveCooldown); // reset cooldown
 });
+
 
 // After listenToGame():
 listenToGame();
