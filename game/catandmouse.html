@@ -92,14 +92,21 @@ function renderGrid() {
     cell.appendChild(nameTag);
   }
 
- const catCell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
+const catCell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
 catCell.textContent = "🐱";
 
-// Create or update the cat's health tag
-const catHealthTag = document.createElement("div");
-catHealthTag.className = "name"; // Reuse the same style as player names
-catHealthTag.textContent = `❤️ ${catHealth}`;
-catCell.appendChild(catHealthTag);
+// Create a container to hold both health and power
+const catInfoContainer = document.createElement("div");
+catInfoContainer.style.position = "absolute";
+catInfoContainer.style.top = "-26px"; // raised higher above the cell
+catInfoContainer.style.left = "0";
+catInfoContainer.style.right = "0";
+catInfoContainer.style.fontSize = "10px";
+catInfoContainer.style.lineHeight = "1.2";
+catInfoContainer.style.textAlign = "center";
+catInfoContainer.innerHTML = `❤️ ${catHealth} <br>⚡ Lv. ${catPower}`;
+
+catCell.appendChild(catInfoContainer);
 }
 
 
