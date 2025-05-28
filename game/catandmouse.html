@@ -39,7 +39,9 @@ const db = getFirestore(app);
 
 const urlParams = new URLSearchParams(window.location.search);
 const gameId = urlParams.get("gameId");
-const username = urlParams.get("username");
+let username = urlParams.get("username");
+  username = username.trim().toLowerCase(); // ✅ Normalize once
+
 
 const gridSize = 30;
 const gridElement = document.getElementById("grid");
@@ -410,20 +412,22 @@ async function listenToGame() {
   });
 
   onSnapshot(collection(db, `games/${gameId}/players`), (snap) => {
-    players = {};
-    snap.forEach((docSnap) => {
-      players[docSnap.id] = docSnap.data();
-    });
-    renderGrid();
+  players = {};
+  snap.forEach((docSnap) => {
+    players[docSnap.id.toLowerCase()] = docSnap.data(); // ✅ force lowercase key
   });
+  renderGrid();
+});
 
   const playerRef = doc(db, `games/${gameId}/players/${username}`);
   await setDoc(playerRef, {
-    x: playerPos.x,
-    y: playerPos.y,
-    cheese: 0,
-    alive: true
-  }, { merge: true });
+  x: playerPos.x,
+  y: playerPos.y,
+  cheese: 0,
+  alive: true,
+  displayName: urlParams.get("username").trim()
+}, { merge: true });
+
 
   onSnapshot(playerRef, (docSnap) => {
     if (docSnap.exists()) {
