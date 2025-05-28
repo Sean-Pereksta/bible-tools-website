@@ -130,6 +130,20 @@ function placeStructure(dir) {
     cheeseCount -= selectedBuild;
     document.getElementById("cheeseCount").textContent = cheeseCount;
     savePosition();
+    setDoc(doc(db, `games/${gameId}/structures/${key}`), {
+      x: tx,
+      y: ty,
+      type: symbol,
+      health: structureHealth[key]
+    });
+    renderGrid();
+  }
+}
+    } else {
+      await updateDoc(doc(db, `games/${gameId}/structures/${key}`), {
+        health: structureHealth[key]
+      });
+    }
     renderGrid();
   }
 }
@@ -150,7 +164,13 @@ function damageStructure(x, y) {
     if (structureHealth[key] <= 0) {
       grid[y][x] = "";
       delete structureHealth[key];
+      setDoc(doc(db, `games/${gameId}/structures/${key}`), {}); // clears the data in Firestore
+    } else {
+      updateDoc(doc(db, `games/${gameId}/structures/${key}`), {
+        health: structureHealth[key]
+      });
     }
+    renderGrid();
   }
 }
 
@@ -162,7 +182,7 @@ function turretAttack() {
         const dy = Math.abs(catPos.y - y);
         if (dx <= 3 && dy <= 3) {
           catHealth--;
-          updateDoc(doc(db, `games/${gameId}/cat`), { health: catHealth });
+          updateDoc(doc(db, `games/${gameId}`), { cat: { x: catPos.x, y: catPos.y, health: catHealth } });
           if (catHealth <= 0) {
             document.getElementById("status").textContent = "🎉 Mice win!";
           }
@@ -176,8 +196,20 @@ function catBehavior() {
   const nearbyMice = Object.entries(players).filter(([_, p]) => p.alive && Math.abs(p.x - catPos.x) <= 3 && Math.abs(p.y - catPos.y) <= 3);
   if (nearbyMice.length > 0) {
     const target = nearbyMice[0][1];
-    catPos.x += Math.sign(target.x - catPos.x);
-    catPos.y += Math.sign(target.y - catPos.y);
+    const dx = Math.sign(target.x - catPos.x);
+    const dy = Math.sign(target.y - catPos.y);
+    const nextX = catPos.x + dx;
+    const nextY = catPos.y + dy;
+
+    // Block cat from walking through walls
+    if (
+      nextX >= 0 && nextX < gridSize &&
+      nextY >= 0 && nextY < gridSize &&
+      grid[nextY][nextX] !== "🧱"
+    ) {
+      catPos.x = nextX;
+      catPos.y = nextY;
+    }
   }
   for (let dy = -1; dy <= 1; dy++) {
     for (let dx = -1; dx <= 1; dx++) {
@@ -190,7 +222,7 @@ function catBehavior() {
       }
     }
   }
-  updateDoc(doc(db, `games/${gameId}/cat`), { x: catPos.x, y: catPos.y });
+  updateDoc(doc(db, `games/${gameId}`), { cat: { x: catPos.x, y: catPos.y, health: catHealth } });
   renderGrid();
 }
 
@@ -204,12 +236,30 @@ function checkReviveFlag() {
 }
 
 function listenToGame() {
-  onSnapshot(doc(db, `games/${gameId}/cat`), (docSnap) => {
+  onSnapshot(collection(db, `games/${gameId}/structures`), (snap) => {
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        if (grid[y][x] === "🧱" || grid[y][x] === "🔫") grid[y][x] = "";
+      }
+    }
+    structureHealth = {};
+    snap.forEach((docSnap) => {
+      const { x, y, type, health } = docSnap.data();
+      if (x !== undefined && y !== undefined && type) {
+        grid[y][x] = type;
+        structureHealth[`${x}_${y}`] = health;
+      }
+    });
+    renderGrid();
+  });
+  onSnapshot(doc(db, `games/${gameId}`), (docSnap) => {
     if (docSnap.exists()) {
       const data = docSnap.data();
-      catPos = { x: data.x, y: data.y };
-      catHealth = data.health || 100;
+      const cat = data.cat || {};
+      catPos = { x: cat.x || 15, y: cat.y || 15 };
+      catHealth = cat.health || 100;
       renderGrid();
+    }
     }
   });
 
@@ -276,3 +326,4 @@ startCountdown();
 </script>
 </body>
 </html>
+
