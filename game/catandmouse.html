@@ -254,6 +254,7 @@ function turretAttack() {
 }
 
 function catBehavior() {
+  console.log("🐱 Cat behavior running");
   const aliveMice = Object.entries(players).filter(([_, p]) => p.alive);
   if (aliveMice.length === 0) return;
 
