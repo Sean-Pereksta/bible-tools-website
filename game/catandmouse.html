@@ -418,6 +418,13 @@ function listenToGame() {
   });
 
  const playerRef = doc(db, `games/${gameId}/players/${username}`);
+  await setDoc(playerRef, {
+  x: playerPos.x,
+  y: playerPos.y,
+  cheese: 0,
+  alive: true // ✅ Ensure alive status is written when joining
+}, { merge: true });
+
 onSnapshot(playerRef, (docSnap) => {
   if (docSnap.exists()) {
     const data = docSnap.data();
