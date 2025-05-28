@@ -319,13 +319,14 @@ function catBehavior() {
     }
   }
 
-  // Kill any mouse on the same tile
-  for (const [name, p] of Object.entries(players)) {
-    if (p.alive && catPos.x === p.x && catPos.y === p.y) {
-      const playerRef = doc(db, `games/${gameId}/players/${name}`);
-      updateDoc(playerRef, { alive: false });
-    }
+ for (const [name, p] of Object.entries(players)) {
+  if ((p.alive ?? true) && catPos.x === p.x && catPos.y === p.y) {
+    console.log(`💀 Cat killed ${name}`);
+    const playerRef = doc(db, `games/${gameId}/players/${name}`);
+    updateDoc(playerRef, { alive: false });
   }
+}
+
 
   updateDoc(doc(db, `games/${gameId}`), { cat: { x: catPos.x, y: catPos.y, health: catHealth } });
   renderGrid();
