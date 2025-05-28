@@ -13,13 +13,16 @@
 </head>
 <body>
 <h1>🐱 Cat vs 🐭 Mouse</h1>
-<div id="grid"></div>
+
 <div id="info">
   <p id="status"></p>
   <div id="playerStatus" style="margin-top: 10px;"></div>
   <p>Selected Build: <span id="buildType">None</span></p>
   <p>Cheese Collected: <span id="cheeseCount">0</span></p>
 </div>
+
+<div id="grid"></div> <!-- ⬅️ Now it's below the UI elements -->
+
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
