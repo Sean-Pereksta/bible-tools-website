@@ -105,23 +105,15 @@ function movePlayer(dx, dy) {
 function savePosition() {
   const cleanUsername = username.trim().toLowerCase();
   const playerRef = doc(db, `games/${gameId}/players/${cleanUsername}`);
+
   setDoc(playerRef, {
     x: playerPos.x,
     y: playerPos.y,
     alive: true,
     cheese: cheeseCount
   }, { merge: true });
-
-  // Check if host is already set
-  const gameRef = doc(db, `games/${gameId}`);
-  getDoc(gameRef).then((docSnap) => {
-    const host = docSnap.exists() ? docSnap.data().host : null;
-    if (!host) {
-      // Assign this player as host if none set
-      setDoc(gameRef, { host: cleanUsername }, { merge: true });
-    }
-  });
 }
+
 
 
 function checkCheese() {
@@ -369,6 +361,7 @@ setInterval(turretAttack, 1000);
   const host = updatedSnap.data().host;
 
   if (host === cleanUsername) {
+    isHost = true;
     console.log("You are host. Starting cat AI.");
     setInterval(() => {
       if (gameStarted) catBehavior();
