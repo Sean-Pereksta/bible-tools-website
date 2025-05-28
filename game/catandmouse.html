@@ -81,7 +81,8 @@ function renderGrid() {
 
   for (const name in players) {
     const p = players[name];
-    if (!p.alive) continue; // ✅ Skip dead players
+   if (p.alive === false) continue;
+
 
     const cell = document.getElementById(`cell-${p.x}-${p.y}`);
     cell.textContent = "🐭";
@@ -117,7 +118,6 @@ function movePlayer(dx, dy) {
   playerPos = { x: newX, y: newY };
   savePosition();
   checkCheese();
-  checkReviveFlag();
   renderGrid();
 }
 
@@ -365,14 +365,14 @@ function listenToGame() {
     const data = docSnap.data();
 
     // ✅ Only the host should auto-create the cat if it's missing
-    if ((!data.cat || data.cat.x === undefined || data.cat.y === undefined) && isHost) {
-      data.cat = {
-        x: Math.floor(Math.random() * gridSize),
-        y: 1,
-        health: 100
-      };
-      updateDoc(doc(db, `games/${gameId}`), { cat: data.cat });
-    }
+    if (isHost && (!data.cat || typeof data.cat.x !== "number" || typeof data.cat.y !== "number")) {
+  const initialCat = {
+    x: gridSize - 1,  // bottom-right X (29 if gridSize is 30)
+    y: gridSize - 1,  // bottom-right Y
+    health: 100
+  };
+  updateDoc(doc(db, `games/${gameId}`), { cat: initialCat });
+}
 
     const cat = data.cat || {};
     catPower = data.catPower || 0;
