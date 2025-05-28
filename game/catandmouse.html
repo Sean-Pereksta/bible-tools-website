@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🐭 Cat vs Mouse</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #f4f4f4; }
+    #grid { display: grid; grid-template-columns: repeat(30, 20px); grid-template-rows: repeat(30, 20px); margin: 20px auto; }
+    .cell { width: 20px; height: 20px; text-align: center; font-size: 16px; }
+    #info { margin-top: 10px; }
+  </style>
+</head>
+<body>
+<h1>🐱 Cat vs 🐭 Mouse</h1>
+<div id="grid"></div>
+<div id="info">
+  <p id="status"></p>
+  <p>Selected Build: <span id="buildType">None</span></p>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
+  authDomain: "bible-game-246c0.firebaseapp.com",
+  projectId: "bible-game-246c0"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const urlParams = new URLSearchParams(window.location.search);
+const gameId = urlParams.get("gameId");
+const username = urlParams.get("username");
+const isHost = false;
+
+const gridSize = 30;
+const gridElement = document.getElementById("grid");
+let grid = [];
+let playerPos = { x: 1, y: 1 };
+let catPos = { x: 15, y: 15 };
+let gameStarted = false;
+
+// Initialize grid
+for (let y = 0; y < gridSize; y++) {
+  grid[y] = [];
+  for (let x = 0; x < gridSize; x++) {
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    cell.id = `cell-${x}-${y}`;
+    gridElement.appendChild(cell);
+    grid[y][x] = "";
+  }
+}
+
+function renderGrid() {
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      const cell = document.getElementById(`cell-${x}-${y}`);
+      cell.textContent = "";
+    }
+  }
+  document.getElementById(`cell-${catPos.x}-${catPos.y}`).textContent = "🐱";
+  document.getElementById(`cell-${playerPos.x}-${playerPos.y}`).textContent = "🐭";
+}
+
+function movePlayer(dx, dy) {
+  if (!gameStarted) return;
+  const newX = Math.max(0, Math.min(gridSize - 1, playerPos.x + dx));
+  const newY = Math.max(0, Math.min(gridSize - 1, playerPos.y + dy));
+  playerPos = { x: newX, y: newY };
+  savePosition();
+  renderGrid();
+}
+
+function savePosition() {
+  const playerRef = doc(db, `games/${gameId}/players/${username}`);
+  setDoc(playerRef, { x: playerPos.x, y: playerPos.y, alive: true }, { merge: true });
+}
+
+function listenToGame() {
+  const catRef = doc(db, `games/${gameId}/cat`);
+  onSnapshot(catRef, (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      catPos = { x: data.x, y: data.y };
+      renderGrid();
+    }
+  });
+
+  const playerRef = doc(db, `games/${gameId}/players/${username}`);
+  onSnapshot(playerRef, (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      if (!data.alive) {
+        document.getElementById("status").textContent = "💀 You are dead!";
+      } else {
+        document.getElementById("status").textContent = "";
+      }
+    }
+  });
+}
+
+function startCountdown() {
+  let seconds = 30;
+  const status = document.getElementById("status");
+  status.textContent = `Game starts in ${seconds}...`;
+  const interval = setInterval(() => {
+    seconds--;
+    status.textContent = `Game starts in ${seconds}...`;
+    if (seconds <= 0) {
+      clearInterval(interval);
+      gameStarted = true;
+      status.textContent = "Go!";
+    }
+  }, 1000);
+}
+
+window.addEventListener("keydown", (e) => {
+  switch (e.key) {
+    case "ArrowUp": movePlayer(0, -1); break;
+    case "ArrowDown": movePlayer(0, 1); break;
+    case "ArrowLeft": movePlayer(-1, 0); break;
+    case "ArrowRight": movePlayer(1, 0); break;
+  }
+});
+
+renderGrid();
+savePosition();
+listenToGame();
+startCountdown();
+</script>
+</body>
+</html>
