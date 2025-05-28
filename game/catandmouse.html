@@ -295,11 +295,18 @@ function startCountdown() {
       status.textContent = "Go!";
       setInterval(spawnCheese, 10000);
 
-      if (username === "host") {
-        setInterval(() => {
-          if (gameStarted) catBehavior();
-        }, 1000);
-      }
+     // Get the actual host name from Firebase and compare
+getDoc(doc(db, `games/${gameId}`)).then(docSnap => {
+  if (docSnap.exists()) {
+    const host = docSnap.data().host;
+    if (username === host) {
+      setInterval(() => {
+        if (gameStarted) catBehavior();
+      }, 1000);
+    }
+  }
+});
+
 
       setInterval(turretAttack, 1000);
     }
@@ -324,5 +331,4 @@ startCountdown();
 </script>
 </body>
 </html>
-
 
