@@ -48,6 +48,8 @@ let cheeseCount = 0;
 let isAlive = true;
 let catHealth = 100;
 let players = {};
+let isHost = false;
+
 
 let structureHealth = {}; // key: "x_y", value: health
 
@@ -273,13 +275,13 @@ function listenToGame() {
   if (docSnap.exists()) {
     const data = docSnap.data();
 
-    // 👉 Add this block here:
-    if (!data.cat || data.cat.x === undefined || data.cat.y === undefined) {
+    // ✅ Only the host should auto-create the cat if it's missing
+    if ((!data.cat || data.cat.x === undefined || data.cat.y === undefined) && isHost) {
       data.cat = {
         x: Math.floor(Math.random() * gridSize),
-        y: 1
+        y: 1,
+        health: 100
       };
-      // Save to Firestore so others see it
       updateDoc(doc(db, `games/${gameId}`), { cat: data.cat });
     }
 
@@ -289,7 +291,6 @@ function listenToGame() {
     renderGrid();
   }
 });
-
 
   onSnapshot(collection(db, `games/${gameId}/players`), (snap) => {
     players = {};
@@ -315,38 +316,6 @@ function listenToGame() {
     }
   });
 }
-
-function startCountdown() {
-  let seconds = 10;
-  const status = document.getElementById("status");
-  status.textContent = `Game starts in ${seconds}...`;
-  const interval = setInterval(() => {
-    seconds--;
-    status.textContent = `Game starts in ${seconds}...`;
-    if (seconds <= 0) {
-      clearInterval(interval);
-      gameStarted = true;
-      status.textContent = "Go!";
-      setInterval(spawnCheese, 10000);
-
-     // Get the actual host name from Firebase and compare
-getDoc(doc(db, `games/${gameId}`)).then(docSnap => {
-  if (docSnap.exists()) {
-    const host = docSnap.data().host;
-    if (username === host) {
-      setInterval(() => {
-        if (gameStarted) catBehavior();
-      }, 1000);
-    }
-  }
-});
-
-
-      setInterval(turretAttack, 1000);
-    }
-  }, 1000);
-}
-
 window.addEventListener("keydown", (e) => {
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
   switch (e.key) {
@@ -354,35 +323,62 @@ window.addEventListener("keydown", (e) => {
     case "ArrowDown": movePlayer(0, 1); break;
     case "ArrowLeft": movePlayer(-1, 0); break;
     case "ArrowRight": movePlayer(1, 0); break;
-    case "1": selectedBuild = 1; document.getElementById("buildType").textContent = "Wall 🧱"; break;
-    case "2": selectedBuild = 2; document.getElementById("buildType").textContent = "Turret 🔫"; break;
-    case "w": case "a": case "s": case "d": placeStructure(e.key); break;
+    case "1":
+      selectedBuild = 1;
+      document.getElementById("buildType").textContent = "Wall 🧱";
+      break;
+    case "2":
+      selectedBuild = 2;
+      document.getElementById("buildType").textContent = "Turret 🔫";
+      break;
+    case "w":
+    case "a":
+    case "s":
+    case "d":
+      placeStructure(e.key);
+      break;
   }
 });
+
 // After listenToGame():
 listenToGame();
 gameStarted = true;
 
-const catRef = doc(db, `games/${gameId}`);
-setDoc(catRef, {
-  cat: { x: 15, y: 25, health: 100 }
-}, { merge: true });
-
-// Place walls manually
+// Place initial structures
 grid[24][15] = "🧱";
 grid[25][14] = "🧱";
 grid[25][16] = "🧱";
 renderGrid();
 
-// Start cat behavior if host
-getDoc(catRef).then(docSnap => {
-  const host = docSnap.data()?.host;
-  if (username === host) {
+// Start cheese spawn and turret attack globally
+setInterval(spawnCheese, 10000);
+setInterval(turretAttack, 1000);
+
+// ✅ Wrap host logic in an async function
+(async () => {
+  const cleanUsername = username.trim().toLowerCase();
+  const gameRef = doc(db, `games/${gameId}`);
+
+  const docSnap = await getDoc(gameRef);
+  const data = docSnap.exists() ? docSnap.data() : {};
+  if (!data.host) {
+    await setDoc(gameRef, { host: cleanUsername }, { merge: true });
+  }
+
+  const updatedSnap = await getDoc(gameRef);
+  const host = updatedSnap.data().host;
+
+  if (host === cleanUsername) {
+    console.log("You are host. Starting cat AI.");
     setInterval(() => {
       if (gameStarted) catBehavior();
     }, 1000);
+  } else {
+    console.log("Not host. Cat AI will not run.");
   }
-});
+})();
+
+
 
 </script>
 </body>
