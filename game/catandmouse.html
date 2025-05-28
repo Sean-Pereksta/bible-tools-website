@@ -51,6 +51,10 @@ let players = {};
 let isHost = false;
   let canMove = true;
 const moveCooldown = 150; // in milliseconds
+  let catPower = 0;
+  let catMoveInterval = null;
+
+
 
 
 
@@ -122,6 +126,15 @@ function savePosition() {
   }, { merge: true });
 }
 
+function startCatBehaviorLoop() {
+  if (catMoveInterval) clearInterval(catMoveInterval);
+
+  // 🕒 Speed = faster interval as power increases
+  const speed = Math.max(200, 1000 - catPower * 50); // e.g. power 10 = 500ms
+  catMoveInterval = setInterval(() => {
+    if (gameStarted) catBehavior();
+  }, speed);
+}
 
 
 function checkCheese() {
@@ -182,7 +195,7 @@ function spawnCheese() {
 function damageStructure(x, y) {
   const key = `${x}_${y}`;
   if (structureHealth[key] !== undefined) {
-    structureHealth[key]--;
+    structureHealth[key] -= (1 + Math.floor(catPower / 3)); // scale damage
     if (structureHealth[key] <= 0) {
       grid[y][x] = "";
       delete structureHealth[key];
@@ -354,6 +367,7 @@ function listenToGame() {
     }
 
     const cat = data.cat || {};
+    catPower = data.catPower || 0;
     catPos = { x: cat.x || 15, y: cat.y || 15 };
     catHealth = cat.health || 100;
     renderGrid();
@@ -447,15 +461,27 @@ setInterval(turretAttack, 1000);
   const updatedSnap = await getDoc(gameRef);
   const host = updatedSnap.data().host;
 
-  if (host === cleanUsername) {
-    isHost = true;
-    console.log("You are host. Starting cat AI.");
-    setInterval(() => {
-      if (gameStarted) catBehavior();
-    }, 1000);
-  } else {
-    console.log("Not host. Cat AI will not run.");
-  }
+ if (host === cleanUsername) {
+  isHost = true;
+  console.log("You are host. Starting cat AI.");
+
+  // 🧠 Start cat AI loop
+  startCatBehaviorLoop();
+
+  // 🆙 Power up every minute
+  setInterval(async () => {
+    if (gameStarted) {
+      catPower++;
+      catHealth += 10;
+      await updateDoc(doc(db, `games/${gameId}`), {
+        catPower,
+        cat: { ...catPos, health: catHealth }
+      });
+      console.log(`Cat power increased to ${catPower}`);
+      startCatBehaviorLoop(); // Restart cat interval with new speed
+    }
+  }, 60000);
+}
 })();
 
 
