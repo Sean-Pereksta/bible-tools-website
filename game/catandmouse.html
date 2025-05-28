@@ -346,14 +346,23 @@ function catBehavior() {
     }
   }
 
- for (const [name, p] of Object.entries(players)) {
+for (const [name, p] of Object.entries(players)) {
   if ((p.alive ?? true) && catPos.x === p.x && catPos.y === p.y) {
     console.log(`💀 Cat killed ${name}`);
     const playerRef = doc(db, `games/${gameId}/players/${name}`);
     updateDoc(playerRef, { alive: false });
-      console.log("✅ Set alive to false for", name);
+    console.log("✅ Set alive to false for", name);
+
+    // 🔥 Force local update if it's YOU
+    if (name === username) {
+      isAlive = false;
+      document.getElementById("status").textContent = "💀 You are dead!";
+      console.log("⚠️ Forced isAlive = false locally for self");
+    }
   }
 }
+
+
 
 
   updateDoc(doc(db, `games/${gameId}`), { cat: { x: catPos.x, y: catPos.y, health: catHealth } });
