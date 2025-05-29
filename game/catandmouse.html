@@ -467,32 +467,44 @@ function catBehavior() {
   const aliveMice = Object.entries(players).filter(([_, p]) => p.alive);
   const preferredTargets = [];
 
-  // 🥇 Priority: mice within 8 spaces
+  // 🥇 Priority: mice within 8 *path* steps
   for (const [_, p] of aliveMice) {
-    const dist = Math.abs(p.x - catPos.x) + Math.abs(p.y - catPos.y);
-    if (dist <= 8) preferredTargets.push({ x: p.x, y: p.y, type: "mouse" });
+    const path = findPath(catPos.x, catPos.y, p.x, p.y);
+    if (path && path.length <= 8) {
+      preferredTargets.push({ x: p.x, y: p.y, type: "mouse", distance: path.length });
+    }
   }
 
-  // 🥈 Priority: turret, flea nest, then walls
+  // 🥈 Priority: turret > flea nest > wall
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
-      if (grid[y][x] === "🔫" || grid[y][x] === "🪳" || grid[y][x] === "🧱") {
+      const type = grid[y][x];
+      if (type === "🔫" || type === "🪳" || type === "🧱") {
         const dist = Math.abs(x - catPos.x) + Math.abs(y - catPos.y);
-        preferredTargets.push({ x, y, type: grid[y][x] });
+        preferredTargets.push({ x, y, type, distance: dist });
+      }
+    }
+  }
+
+  // 🐭 Add all remaining mice as last priority if no others
+  if (!preferredTargets.some(t => t.type === "mouse")) {
+    for (const [_, p] of aliveMice) {
+      const path = findPath(catPos.x, catPos.y, p.x, p.y);
+      if (path) {
+        preferredTargets.push({ x: p.x, y: p.y, type: "mouse", distance: path.length });
       }
     }
   }
 
   if (preferredTargets.length === 0) return;
 
-  // 📍 Find the nearest target
+  // 📍 Sort: nearest distance, then mouse > turret > flea > wall
   preferredTargets.sort((a, b) => {
-    const da = Math.abs(a.x - catPos.x) + Math.abs(a.y - catPos.y);
-    const db = Math.abs(b.x - catPos.x) + Math.abs(b.y - catPos.y);
-
-    // Prioritize mouse > turret/flea > wall
-    const score = (t) => t.type === "mouse" ? 1 : t.type === "🔫" || t.type === "🪳" ? 2 : 3;
-    return da - db || score(a) - score(b);
+    const score = (t) =>
+      t.type === "mouse" ? 1 :
+      t.type === "🔫" ? 2 :
+      t.type === "🪳" ? 3 : 4;
+    return a.distance - b.distance || score(a) - score(b);
   });
 
   const target = preferredTargets[0];
@@ -558,6 +570,7 @@ function catBehavior() {
 
   renderGrid();
 }
+
 
 
 
