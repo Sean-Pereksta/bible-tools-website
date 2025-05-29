@@ -118,6 +118,7 @@ const fleas = [];
 
 
 
+
 for (let y = 0; y < gridSize; y++) {
   grid[y] = [];
   for (let x = 0; x < gridSize; x++) {
@@ -272,7 +273,7 @@ function startCatBehaviorLoop() {
   if (catMoveInterval) clearInterval(catMoveInterval);
 
   // 🕒 Speed = faster interval as power increases
-  const speed = Math.max(150, 1200 - catPower * 75); // e.g. power 10 = 500ms
+  const speed = Math.max(150, 1200 - catPower * 55); // e.g. power 10 = 500ms
   catMoveInterval = setInterval(() => {
     if (gameStarted) catBehavior();
   }, speed);
