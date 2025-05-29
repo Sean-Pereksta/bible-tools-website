@@ -472,27 +472,29 @@ function catBehavior() {
     }
   }
 
-  // 2. 🎯 Find reachable turret if no mouse in range
-  if (!target) {
-    let closestTurret = null;
-    let closestPath = null;
+ // 2. 🎯 Find closest reachable turret or flea nest
+if (!target) {
+  let closestTarget = null;
+  let closestPath = null;
 
-    for (let y = 0; y < gridSize; y++) {
-      for (let x = 0; x < gridSize; x++) {
-        if (grid[y][x] === "🔫") {
-          const path = findPath(catPos.x, catPos.y, x, y);
-          if (path && (!closestPath || path.length < closestPath.length)) {
-            closestPath = path;
-            closestTurret = { x, y, type: "turret" };
-          }
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      const symbol = grid[y][x];
+      if (symbol === "🔫" || symbol === "🪳") {
+        const path = findPath(catPos.x, catPos.y, x, y);
+        if (path && (!closestPath || path.length < closestPath.length)) {
+          closestPath = path;
+          closestTarget = { x, y, type: "structure" };
         }
       }
     }
-
-    if (closestTurret) {
-      target = closestTurret;
-    }
   }
+
+  if (closestTarget) {
+    target = closestTarget;
+  }
+}
+
 
   // 3. 🧱 Fallback to nearest wall or flea nest
   if (!target) {
