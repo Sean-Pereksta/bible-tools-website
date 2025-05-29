@@ -147,13 +147,37 @@ function renderGrid() {
 
   viewport.style.gridTemplateColumns = `repeat(${endX - startX}, 20px)`;
   viewport.style.gridTemplateRows = `repeat(${endY - startY}, 20px)`;
+const generatorTriggers = new Set();
+
+for (let y = 0; y < gridSize; y++) {
+  for (let x = 0; x < gridSize; x++) {
+    if (grid[y][x] === "🏭") {
+      for (const p of Object.values(players)) {
+        if (p.alive !== false) {
+          const dx = Math.abs(p.x - x);
+          const dy = Math.abs(p.y - y);
+          if (dx + dy <= 6) {
+            generatorTriggers.add(`${x}_${y}`);
+            break;
+          }
+        }
+      }
+    }
+  }
+}
 
   for (let y = startY; y < endY; y++) {
     for (let x = startX; x < endX; x++) {
       const cell = document.createElement("div");
       cell.id = `cell-${x}-${y}`;
       cell.className = "cell";
-      cell.style.background = "#c8f7c5"; // green background
+     const key = `${x}_${y}`;
+      if (generatorTriggers.has(key)) {
+        cell.style.background = "#fff977"; // glowing yellow if near a player
+      } else {
+        cell.style.background = "#c8f7c5"; // normal grass
+      }
+
       cell.textContent = grid[y][x];
 
       viewport.appendChild(cell);
@@ -768,36 +792,41 @@ renderGrid();
 setInterval(spawnCheese, 10000);
 setInterval(turretAttack, 1000);
 
-  setInterval(() => {
-  const cleanUsername = username.trim().toLowerCase();
-
-  let earned = 0;
-
+setInterval(() => {
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
       if (grid[y][x] === "🏭") {
-        const p = players[cleanUsername];
-        if (p && p.alive !== false) {
-          const dx = Math.abs(p.x - x);
-          const dy = Math.abs(p.y - y);
-          if (dx <= 3 && dy <= 3) {
-            cheeseCount += 1;
-            earned += 1;
+        // Highlight the generator for visual effect
+        const cell = document.getElementById(`cell-${x}-${y}`);
+        if (cell) {
+          cell.style.backgroundColor = "#fff977"; // yellow flash
+          setTimeout(() => {
+            cell.style.backgroundColor = "#c8f7c5"; // reset to grass
+          }, 300);
+        }
+
+        // Reward each alive player nearby
+        for (const [name, p] of Object.entries(players)) {
+          if (p.alive !== false) {
+            const dx = Math.abs(p.x - x);
+            const dy = Math.abs(p.y - y);
+            if (dx + dy <= 6) { // Manhattan distance within 6
+              if (name === username.trim().toLowerCase()) {
+                cheeseCount += 1;
+                document.getElementById("cheeseCount").textContent = cheeseCount;
+                updateDoc(doc(db, `games/${gameId}/players/${name}`), {
+                  cheese: cheeseCount
+                });
+                console.log(`💰 Generator at (${x},${y}) gave cheese to ${name}`);
+              }
+            }
           }
         }
       }
     }
   }
+}, 10000); // Every 10 seconds
 
-  if (earned > 0) {
-    console.log(`🏭 Earned ${earned} cheese from generators`);
-    document.getElementById("cheeseCount").textContent = cheeseCount;
-
-    updateDoc(doc(db, `games/${gameId}/players/${cleanUsername}`), {
-      cheese: cheeseCount
-    });
-  }
-}, 10000);
 
 
 
