@@ -466,7 +466,7 @@ function catBehavior() {
   // 1️⃣ Mice within 8 tiles
   for (const [_, p] of aliveMice) {
     const dist = Math.abs(p.x - catPos.x) + Math.abs(p.y - catPos.y);
-    if (dist <= 8) {
+    if (dist <= 6) {
       const pPath = findPath(catPos.x, catPos.y, p.x, p.y);
       if (pPath && (!path || pPath.length < path.length)) {
         target = { x: p.x, y: p.y, type: "mouse" };
@@ -482,7 +482,7 @@ function catBehavior() {
         const symbol = grid[y][x];
         if (symbol === "🔫" || symbol === "🪳") {
           const dist = Math.abs(x - catPos.x) + Math.abs(y - catPos.y);
-          if (dist <= 8) {
+          if (dist <= 9) {
             const sPath = findPath(catPos.x, catPos.y, x, y);
             if (sPath && (!path || sPath.length < path.length)) {
               target = { x, y, type: "structure" };
