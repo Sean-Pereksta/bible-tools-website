@@ -396,7 +396,7 @@ function turretAttack() {
         // 🔫 First check if cat is within 3 tiles
         const dxCat = Math.abs(catPos.x - x);
         const dyCat = Math.abs(catPos.y - y);
-        if (dxCat <= 3 && dyCat <= 3) {
+        if (dxCat <= 5 && dyCat <= 5) {
           catHealth--;
           updateDoc(doc(db, `games/${gameId}`), {
             cat: { x: catPos.x, y: catPos.y, health: catHealth }
@@ -414,8 +414,8 @@ function turretAttack() {
 
             const dxRat = Math.abs(rat.x - x);
             const dyRat = Math.abs(rat.y - y);
-            if (dxRat <= 3 && dyRat <= 3) {
-              rat.health -= 1;
+            if (dxRat <= 5 && dyRat <= 5) {
+              rat.health -= 3;
               console.log(`💥 Turret hit rat at (${rat.x}, ${rat.y}) → HP: ${rat.health}`);
               attacked = true;
               break; // stop after hitting one rat
@@ -769,33 +769,36 @@ setInterval(spawnCheese, 10000);
 setInterval(turretAttack, 1000);
 
   setInterval(() => {
-  const cleanUsername = username.trim().toLowerCase(); // normalize
+  const cleanUsername = username.trim().toLowerCase();
+
+  let earned = 0;
 
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
-      if (grid[y][x] === "🏭") { // ✅ only the factory emoji
-
-        for (const [name, p] of Object.entries(players)) {
-          if (p.alive !== false) {
-            const dx = Math.abs(p.x - x);
-            const dy = Math.abs(p.y - y);
-            if (dx <= 3 && dy <= 3 && name === cleanUsername) {
-              cheeseCount += 1;
-              document.getElementById("cheeseCount").textContent = cheeseCount;
-
-              updateDoc(doc(db, `games/${gameId}/players/${cleanUsername}`), {
-                cheese: cheeseCount
-              });
-
-              console.log(`🏭 Generator at (${x},${y}) gave cheese to ${cleanUsername}`);
-              break;
-            }
+      if (grid[y][x] === "🏭") {
+        const p = players[cleanUsername];
+        if (p && p.alive !== false) {
+          const dx = Math.abs(p.x - x);
+          const dy = Math.abs(p.y - y);
+          if (dx <= 3 && dy <= 3) {
+            cheeseCount += 1;
+            earned += 1;
           }
         }
       }
     }
   }
+
+  if (earned > 0) {
+    console.log(`🏭 Earned ${earned} cheese from generators`);
+    document.getElementById("cheeseCount").textContent = cheeseCount;
+
+    updateDoc(doc(db, `games/${gameId}/players/${cleanUsername}`), {
+      cheese: cheeseCount
+    });
+  }
 }, 10000);
+
 
 
   // 🐀 Summon Rats every 2 minutes based on catPower
