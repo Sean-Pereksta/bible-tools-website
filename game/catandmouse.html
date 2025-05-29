@@ -467,44 +467,58 @@ function catBehavior() {
   const aliveMice = Object.entries(players).filter(([_, p]) => p.alive);
   const preferredTargets = [];
 
-  // 🥇 Priority: mice within 8 *path* steps
+  // 🐭 Check all mice for path and distance
+  let farthestMice = [];
+
   for (const [_, p] of aliveMice) {
     const path = findPath(catPos.x, catPos.y, p.x, p.y);
-    if (path && path.length <= 8) {
-      preferredTargets.push({ x: p.x, y: p.y, type: "mouse", distance: path.length });
+    if (path) {
+      const target = { x: p.x, y: p.y, type: "mouse", distance: path.length, near: path.length <= 8 };
+      if (target.near) {
+        preferredTargets.push(target); // 🥇 Always chase mouse within 8 steps
+      } else {
+        farthestMice.push(target); // 🐁 Save for fallback
+      }
     }
   }
 
-  // 🥈 Priority: turret > flea nest > wall
+  // 🏰 Add turrets, flea nests, walls
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
       const type = grid[y][x];
       if (type === "🔫" || type === "🪳" || type === "🧱") {
-        const dist = Math.abs(x - catPos.x) + Math.abs(y - catPos.y);
-        preferredTargets.push({ x, y, type, distance: dist });
+        const path = findPath(catPos.x, catPos.y, x, y);
+        if (path) {
+          preferredTargets.push({
+            x, y, type,
+            distance: path.length,
+            near: false
+          });
+        }
       }
     }
   }
 
-  // 🐭 Add all remaining mice as last priority if no others
-  if (!preferredTargets.some(t => t.type === "mouse")) {
-    for (const [_, p] of aliveMice) {
-      const path = findPath(catPos.x, catPos.y, p.x, p.y);
-      if (path) {
-        preferredTargets.push({ x: p.x, y: p.y, type: "mouse", distance: path.length });
-      }
-    }
+  // 🐭 Fallback: if no near mouse or structure, chase any mouse
+  if (preferredTargets.length === 0 && farthestMice.length > 0) {
+    preferredTargets.push(...farthestMice);
   }
 
   if (preferredTargets.length === 0) return;
 
-  // 📍 Sort: nearest distance, then mouse > turret > flea > wall
+  // 🎯 Sort: near mouse > closer distance > type priority
   preferredTargets.sort((a, b) => {
     const score = (t) =>
       t.type === "mouse" ? 1 :
       t.type === "🔫" ? 2 :
       t.type === "🪳" ? 3 : 4;
-    return a.distance - b.distance || score(a) - score(b);
+
+    if (a.near && !b.near) return -1;
+    if (!a.near && b.near) return 1;
+
+    if (a.distance !== b.distance) return a.distance - b.distance;
+
+    return score(a) - score(b);
   });
 
   const target = preferredTargets[0];
@@ -533,7 +547,7 @@ function catBehavior() {
     console.log("🚫 Cat movement blocked.");
   }
 
-  // 💥 Attack one adjacent structure only
+  // 💥 Attack adjacent structures
   let attacked = false;
   for (let dy = -1; dy <= 1 && !attacked; dy++) {
     for (let dx = -1; dx <= 1 && !attacked; dx++) {
@@ -570,6 +584,7 @@ function catBehavior() {
 
   renderGrid();
 }
+
 
 
 
