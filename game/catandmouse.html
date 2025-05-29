@@ -324,7 +324,7 @@ else if (selectedBuild === 4) cost = 4; // ✅ New
     health = 20;
   }
   else if (selectedBuild === 4) {
-  symbol = "🧀🏭";
+  symbol = "🏭";
   health = 10;
   cost = 4;  // Add this if you're doing cost inline instead of above
 }
@@ -517,7 +517,7 @@ function catBehavior() {
         if (
           wx >= 0 && wx < gridSize &&
           wy >= 0 && wy < gridSize &&
-           (grid[wy][wx] === "🧱" || grid[wy][wx] === "🧀🏭") // ✅ Add cheese generator
+           (grid[wy][wx] === "🧱" || grid[wy][wx] === "🏭") // ✅ Add cheese generator
         ) {
           const wPath = findPath(catPos.x, catPos.y, wx, wy, true); // allow wall targeting
           if (wPath) {
@@ -560,7 +560,7 @@ function catBehavior() {
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
         const symbol = grid[y][x];
-        if (symbol === "🧱" || symbol === "🔫" || symbol === "🪳" || symbol === "🧀🏭") { // ✅ Added
+        if (symbol === "🧱" || symbol === "🔫" || symbol === "🪳" || symbol === "🏭") { // ✅ Added
           const fPath = findPath(catPos.x, catPos.y, x, y, false);
           if (fPath) {
             console.log(`⬅️ Fallback target (${symbol}) at (${x}, ${y}) - ${fPath.length} steps`);
@@ -608,7 +608,7 @@ function catBehavior() {
       if (
         tx >= 0 && tx < gridSize &&
         ty >= 0 && ty < gridSize &&
-        (grid[ty][tx] === "🧱" || grid[ty][tx] === "🔫" || grid[ty][tx] === "🪳" || grid[ty][tx] === "🧀🏭") // ✅
+        (grid[ty][tx] === "🧱" || grid[ty][tx] === "🔫" || grid[ty][tx] === "🪳" || grid[ty][tx] === "🏭") // ✅
       ) {
         console.log(`💥 Cat attacked ${grid[ty][tx]} at (${tx}, ${ty})`);
         damageStructure(tx, ty);
@@ -741,7 +741,7 @@ window.addEventListener("keydown", (e) => {
       break;
     case "4":
       selectedBuild = 4;
-      document.getElementById("buildType").textContent = "Cheese Generator 🧀🏭 (Cost: 4)";
+      document.getElementById("buildType").textContent = "Cheese Generator 🏭 (Cost: 4)";
       break;
   }
 
@@ -771,7 +771,7 @@ setInterval(turretAttack, 1000);
   setInterval(() => {
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
-      if (grid[y][x] === "🧀🏭") {
+      if (grid[y][x] === "🏭") {
         // Find the player closest to the generator
         for (const [name, p] of Object.entries(players)) {
           if (p.alive !== false) {
@@ -846,7 +846,7 @@ setInterval(() => {
 
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
-    if (["🧱", "🔫", "🪳", "🧀🏭"].includes(grid[y][x])) {
+    if (["🧱", "🔫", "🪳", "🏭"].includes(grid[y][x])) {
           const dist = Math.abs(x - rat.x) + Math.abs(y - rat.y);
           if (dist < minDist) {
             minDist = dist;
@@ -858,7 +858,7 @@ setInterval(() => {
 
     if (closestTarget) {
       const path = findPath(rat.x, rat.y, closestTarget.x, closestTarget.y, (x, y) => {
-       return !["🧱", "🧀🏭"].includes(grid[y][x]); // 🧱 and 🧀🏭 block path
+       return !["🧱", "🏭"].includes(grid[y][x]); // 🧱 and 🏭 block path
       });
 
       if (path.length > 0) {
