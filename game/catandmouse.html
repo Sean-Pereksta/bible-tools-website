@@ -15,6 +15,9 @@
 <h1>🐱 Cat vs 🐭 Mouse</h1>
 
 <div id="info">
+  <p style="margin: 5px 0; font-size: 14px; color: #444;">
+  🎮 Arrow keys to move | A/W/S/D to build | 1/2/3 to select building
+</p>
   <p id="status"></p>
   <div id="playerStatus" style="margin-top: 10px;"></div>
   <p>Selected Build: <span id="buildType">None</span></p>
@@ -66,6 +69,8 @@ const moveCooldown = 250; // in milliseconds
 
 let structureHealth = {}; // key: "x_y", value: health
 const fleas = [];
+  const rats = []; // 🐀
+
 
 
 for (let y = 0; y < gridSize; y++) {
@@ -119,6 +124,33 @@ for (const name in players) {
   const cell = document.getElementById(`cell-${flea.x}-${flea.y}`);
   cell.textContent = "🐞";
 }
+  for (let rat of rats) {
+  if (rat.health <= 0) continue;
+  const cell = document.getElementById(`cell-${rat.x}-${rat.y}`);
+  cell.textContent = "🐀";
+
+  const healthTag = document.createElement("div");
+  healthTag.className = "name";
+  healthTag.style.color = "brown";
+  healthTag.textContent = `❤️${rat.health}`;
+  cell.appendChild(healthTag);
+}
+    // 🧱 Show wall and flea nest health
+  for (let key in structureHealth) {
+    const [xStr, yStr] = key.split("_");
+    const x = parseInt(xStr), y = parseInt(yStr);
+    const symbol = grid[y][x];
+    if (symbol === "🧱" || symbol === "🪳") {
+      const cell = document.getElementById(`cell-${x}-${y}`);
+      const healthTag = document.createElement("div");
+      healthTag.className = "name";
+      healthTag.style.color = symbol === "🧱" ? "gray" : "purple";
+      healthTag.textContent = `❤️${structureHealth[key]}`;
+      cell.appendChild(healthTag);
+    }
+  }
+
+
 
 const catCell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
 catCell.textContent = "🐱";
@@ -206,7 +238,7 @@ function placeStructure(dir) {
 
   if (selectedBuild === 1) {
     symbol = "🧱";
-    health = 25;
+    health = 30;
   } else if (selectedBuild === 2) {
     symbol = "🔫";
     health = 5;
@@ -254,14 +286,14 @@ function spawnCheese() {
 }
 
 
-function damageStructure(x, y) {
+function damageStructure(x, y, damageAmount = (1 + Math.floor(catPower / 3))) {
   const key = `${x}_${y}`;
   if (structureHealth[key] !== undefined) {
-    structureHealth[key] -= (1 + Math.floor(catPower / 3)); // scale damage
+    structureHealth[key] -= damageAmount;
     if (structureHealth[key] <= 0) {
       grid[y][x] = "";
       delete structureHealth[key];
-      setDoc(doc(db, `games/${gameId}/structures/${key}`), {}); // clears the data in Firestore
+      setDoc(doc(db, `games/${gameId}/structures/${key}`), {});
     } else {
       updateDoc(doc(db, `games/${gameId}/structures/${key}`), {
         health: structureHealth[key]
@@ -271,23 +303,47 @@ function damageStructure(x, y) {
   }
 }
 
+
 function turretAttack() {
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
       if (grid[y][x] === "🔫") {
-        const dx = Math.abs(catPos.x - x);
-        const dy = Math.abs(catPos.y - y);
-        if (dx <= 3 && dy <= 3) {
+        // 🔫 Check if cat is within 3 tiles
+        const dxCat = Math.abs(catPos.x - x);
+        const dyCat = Math.abs(catPos.y - y);
+        if (dxCat <= 3 && dyCat <= 3) {
           catHealth--;
-          updateDoc(doc(db, `games/${gameId}`), { cat: { x: catPos.x, y: catPos.y, health: catHealth } });
+          updateDoc(doc(db, `games/${gameId}`), {
+            cat: { x: catPos.x, y: catPos.y, health: catHealth }
+          });
           if (catHealth <= 0) {
             document.getElementById("status").textContent = "🎉 Mice win!";
+          }
+        }
+
+        // 🔫 Check if any rats are within 3 tiles
+        for (let rat of rats) {
+          if (rat.health <= 0) continue;
+
+          const dxRat = Math.abs(rat.x - x);
+          const dyRat = Math.abs(rat.y - y);
+          if (dxRat <= 3 && dyRat <= 3) {
+            rat.health -= 1;
+            console.log(`💥 Turret hit rat at (${rat.x}, ${rat.y}) → HP: ${rat.health}`);
           }
         }
       }
     }
   }
+
+  // 🧹 Clean up dead rats
+  for (let i = rats.length - 1; i >= 0; i--) {
+    if (rats[i].health <= 0) rats.splice(i, 1);
+  }
+
+  renderGrid();
 }
+
 
 function catBehavior() {
   console.log("🐱 Cat behavior running");
@@ -433,7 +489,7 @@ async function listenToGame() {
         const initialCat = {
           x: gridSize - 1,
           y: gridSize - 1,
-          health: 100
+          health: 300
         };
         updateDoc(doc(db, `games/${gameId}`), { cat: initialCat });
       }
@@ -490,17 +546,18 @@ window.addEventListener("keydown", (e) => {
     case "ArrowLeft": movePlayer(-1, 0); break;
     case "ArrowRight": movePlayer(1, 0); break;
     case "1":
-      selectedBuild = 1;
-      document.getElementById("buildType").textContent = "Wall 🧱";
-      break;
-    case "2":
-      selectedBuild = 2;
-      document.getElementById("buildType").textContent = "Turret 🔫";
-      break;
-    case "3":
-  selectedBuild = 3;
-  document.getElementById("buildType").textContent = "Flea Nest 🪳";
+  selectedBuild = 1;
+  document.getElementById("buildType").textContent = "Wall 🧱 (Cost: 1)";
   break;
+case "2":
+  selectedBuild = 2;
+  document.getElementById("buildType").textContent = "Turret 🔫 (Cost: 2)";
+  break;
+case "3":
+  selectedBuild = 3;
+  document.getElementById("buildType").textContent = "Flea Nest 🪳 (Cost: 3)";
+  break;
+
 
     case "w":
     case "a":
@@ -529,6 +586,103 @@ renderGrid();
 // Start cheese spawn and turret attack globally
 setInterval(spawnCheese, 10000);
 setInterval(turretAttack, 1000);
+
+  // 🐀 Summon Rats every 2 minutes based on catPower
+setInterval(() => {
+  if (!gameStarted || catPower <= 0) return;
+
+  let spawned = 0;
+  const maxRats = catPower;
+  const offsets = [
+    { x: 0, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 },
+    { x: 0, y: 1 }, { x: 0, y: -1 }, { x: 1, y: 1 },
+    { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 },
+    { x: 2, y: 0 }, { x: 0, y: 2 }, { x: -2, y: 0 }, { x: 0, y: -2 }
+  ]; // Spacing options
+
+  for (let i = 0; i < offsets.length && spawned < maxRats; i++) {
+    const ox = catPos.x + offsets[i].x;
+    const oy = catPos.y + offsets[i].y;
+
+    if (
+      ox >= 0 && ox < gridSize &&
+      oy >= 0 && oy < gridSize &&
+      !rats.some(r => r.x === ox && r.y === oy) // no overlap
+    ) {
+      rats.push({ x: ox, y: oy, health: 5 });
+      spawned++;
+    }
+  }
+
+  console.log(`🐀 ${spawned} rats spawned (Power Level: ${catPower})`);
+}, 60000);
+
+setInterval(() => {
+  for (let rat of rats) {
+    // Skip dead rats
+    if (rat.health <= 0) continue;
+
+    let closestTarget = null;
+    let minDist = Infinity;
+
+    // Look for mice
+    for (const [name, p] of Object.entries(players)) {
+      if (p.alive !== false) {
+        const dist = Math.abs(p.x - rat.x) + Math.abs(p.y - rat.y);
+        if (dist < minDist) {
+          minDist = dist;
+          closestTarget = { x: p.x, y: p.y, type: "mouse", name };
+        }
+      }
+    }
+
+    // Look for structures
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        if (["🧱", "🔫", "🪳"].includes(grid[y][x])) {
+          const dist = Math.abs(x - rat.x) + Math.abs(y - rat.y);
+          if (dist < minDist) {
+            minDist = dist;
+            closestTarget = { x, y, type: "structure" };
+          }
+        }
+      }
+    }
+
+    // Move toward target
+    if (closestTarget) {
+      const dx = closestTarget.x - rat.x;
+      const dy = closestTarget.y - rat.y;
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        rat.x += Math.sign(dx);
+      } else {
+        rat.y += Math.sign(dy);
+      }
+
+      // If on target, deal damage
+      if (rat.x === closestTarget.x && rat.y === closestTarget.y) {
+        if (closestTarget.type === "structure") {
+          damageStructure(rat.x, rat.y, 1); // fixed damage from rats
+        } else if (closestTarget.type === "mouse") {
+          const playerRef = doc(db, `games/${gameId}/players/${closestTarget.name}`);
+          updateDoc(playerRef, { alive: false });
+          if (closestTarget.name === username) {
+            isAlive = false;
+            document.getElementById("status").textContent = "💀 You are dead!";
+          }
+        }
+      }
+    }
+  }
+  for (let i = rats.length - 1; i >= 0; i--) {
+  if (rats[i].health <= 0) rats.splice(i, 1);
+}
+
+  renderGrid();
+  
+}, 500);
+
 
 // 🪳 Flea Spawning Every 5 Seconds from Nests
 setInterval(() => {
