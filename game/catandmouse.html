@@ -282,7 +282,7 @@ function startCatBehaviorLoop() {
 function checkCheese() {
   if (grid[playerPos.y][playerPos.x] === "🧀") {
     grid[playerPos.y][playerPos.x] = "";
-    cheeseCount += 3;
+    cheeseCount += 4;
     document.getElementById("cheeseCount").textContent = cheeseCount;
     savePosition();
     renderGrid();
@@ -606,7 +606,7 @@ async function listenToGame() {
       const cat = data.cat || {};
       catPower = data.catPower || 0;
       catPos = { x: cat.x || 15, y: cat.y || 15 };
-      catHealth = cat.health || 100;
+      catHealth = cat.health || 300;
       renderGrid();
     }
   });
