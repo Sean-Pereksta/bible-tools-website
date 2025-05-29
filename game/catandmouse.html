@@ -468,16 +468,21 @@ function catBehavior() {
   let target = null;
   let path = null;
 
-  // 1️⃣ Try to path to nearby mice (within 6-8 tiles)
+  console.log("📌 Checking mice nearby...");
   for (const [_, p] of aliveMice) {
     const dist = Math.abs(p.x - catPos.x) + Math.abs(p.y - catPos.y);
+    console.log(`➡️ Mouse at (${p.x}, ${p.y}) is ${dist} tiles away`);
+
     if (dist <= 6) {
       const pPath = findPath(catPos.x, catPos.y, p.x, p.y);
-      if (pPath && (!path || pPath.length < path.length)) {
-        target = { x: p.x, y: p.y, type: "mouse" };
-        path = pPath;
-      } else if (!pPath) {
-        // 🧱 Mouse is blocked! Attack nearby wall
+      if (pPath) {
+        console.log(`✅ Found path to mouse (${pPath.length} steps)`);
+        if (!path || pPath.length < path.length) {
+          target = { x: p.x, y: p.y, type: "mouse" };
+          path = pPath;
+        }
+      } else {
+        console.log("🧱 Mouse is blocked! Looking for wall to break...");
         const directions = [
           [1, 0], [-1, 0], [0, 1], [0, -1]
         ];
@@ -490,9 +495,14 @@ function catBehavior() {
             grid[wy][wx] === "🧱"
           ) {
             const wPath = findPath(catPos.x, catPos.y, wx, wy);
-            if (wPath && (!path || wPath.length < path.length)) {
-              target = { x: wx, y: wy, type: "wallToBreak" };
-              path = wPath;
+            if (wPath) {
+              console.log(`🔨 Found wall at (${wx}, ${wy}) to break through (${wPath.length} steps)`);
+              if (!path || wPath.length < path.length) {
+                target = { x: wx, y: wy, type: "wallToBreak" };
+                path = wPath;
+              }
+            } else {
+              console.log(`🚫 Cannot reach wall at (${wx}, ${wy})`);
             }
           }
         }
@@ -502,6 +512,7 @@ function catBehavior() {
 
   // 2️⃣ Structures (if no mouse target)
   if (!target) {
+    console.log("📌 Checking structures...");
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
         const symbol = grid[y][x];
@@ -509,9 +520,12 @@ function catBehavior() {
           const dist = Math.abs(x - catPos.x) + Math.abs(y - catPos.y);
           if (dist <= 9) {
             const sPath = findPath(catPos.x, catPos.y, x, y);
-            if (sPath && (!path || sPath.length < path.length)) {
-              target = { x, y, type: "structure" };
-              path = sPath;
+            if (sPath) {
+              console.log(`🎯 Found structure (${symbol}) at (${x}, ${y}) - ${sPath.length} steps`);
+              if (!path || sPath.length < path.length) {
+                target = { x, y, type: "structure" };
+                path = sPath;
+              }
             }
           }
         }
@@ -521,14 +535,18 @@ function catBehavior() {
 
   // 3️⃣ Fallback: nearest anything
   if (!target) {
+    console.log("📌 No mice or structures in range. Looking for fallback targets...");
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
         const symbol = grid[y][x];
         if (symbol === "🧱" || symbol === "🔫" || symbol === "🪳") {
           const fPath = findPath(catPos.x, catPos.y, x, y);
-          if (fPath && (!path || fPath.length < path.length)) {
-            target = { x, y, type: "fallback" };
-            path = fPath;
+          if (fPath) {
+            console.log(`⬅️ Fallback structure at (${x}, ${y}) - ${fPath.length} steps`);
+            if (!path || fPath.length < path.length) {
+              target = { x, y, type: "fallback" };
+              path = fPath;
+            }
           }
         }
       }
@@ -536,11 +554,20 @@ function catBehavior() {
 
     for (const [_, p] of aliveMice) {
       const fPath = findPath(catPos.x, catPos.y, p.x, p.y);
-      if (fPath && (!path || fPath.length < path.length)) {
-        target = { x: p.x, y: p.y, type: "fallbackMouse" };
-        path = fPath;
+      if (fPath) {
+        console.log(`⬅️ Fallback mouse at (${p.x}, ${p.y}) - ${fPath.length} steps`);
+        if (!path || fPath.length < path.length) {
+          target = { x: p.x, y: p.y, type: "fallbackMouse" };
+          path = fPath;
+        }
       }
     }
+  }
+
+  if (target && path) {
+    console.log(`🎯 Final target: ${target.type} at (${target.x}, ${target.y}) — Path length: ${path.length}`);
+  } else {
+    console.log("❌ No target found. Cat is frozen.");
   }
 
   // 🐾 Move
@@ -562,6 +589,7 @@ function catBehavior() {
         ty >= 0 && ty < gridSize &&
         (grid[ty][tx] === "🧱" || grid[ty][tx] === "🔫" || grid[ty][tx] === "🪳")
       ) {
+        console.log(`💥 Cat attacked ${grid[ty][tx]} at (${tx}, ${ty})`);
         damageStructure(tx, ty);
         attacked = true;
       }
@@ -581,12 +609,14 @@ function catBehavior() {
     }
   }
 
+  // 🔄 Update grid + Firebase
   updateDoc(doc(db, `games/${gameId}`), {
     cat: { x: catPos.x, y: catPos.y, health: catHealth }
   });
 
   renderGrid();
 }
+
 
 
 
