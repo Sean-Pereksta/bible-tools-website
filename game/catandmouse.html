@@ -308,7 +308,9 @@ function turretAttack() {
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
       if (grid[y][x] === "🔫") {
-        // 🔫 Check if cat is within 3 tiles
+        let attacked = false;
+
+        // 🔫 First check if cat is within 3 tiles
         const dxCat = Math.abs(catPos.x - x);
         const dyCat = Math.abs(catPos.y - y);
         if (dxCat <= 3 && dyCat <= 3) {
@@ -319,17 +321,22 @@ function turretAttack() {
           if (catHealth <= 0) {
             document.getElementById("status").textContent = "🎉 Mice win!";
           }
+          attacked = true;
         }
 
-        // 🔫 Check if any rats are within 3 tiles
-        for (let rat of rats) {
-          if (rat.health <= 0) continue;
+        // 🔫 If cat not hit, try to hit one rat
+        if (!attacked) {
+          for (let rat of rats) {
+            if (rat.health <= 0) continue;
 
-          const dxRat = Math.abs(rat.x - x);
-          const dyRat = Math.abs(rat.y - y);
-          if (dxRat <= 3 && dyRat <= 3) {
-            rat.health -= 1;
-            console.log(`💥 Turret hit rat at (${rat.x}, ${rat.y}) → HP: ${rat.health}`);
+            const dxRat = Math.abs(rat.x - x);
+            const dyRat = Math.abs(rat.y - y);
+            if (dxRat <= 3 && dyRat <= 3) {
+              rat.health -= 1;
+              console.log(`💥 Turret hit rat at (${rat.x}, ${rat.y}) → HP: ${rat.health}`);
+              attacked = true;
+              break; // stop after hitting one rat
+            }
           }
         }
       }
@@ -343,6 +350,7 @@ function turretAttack() {
 
   renderGrid();
 }
+
 
 
 function catBehavior() {
@@ -619,13 +627,12 @@ setInterval(() => {
 
 setInterval(() => {
   for (let rat of rats) {
-    // Skip dead rats
     if (rat.health <= 0) continue;
 
     let closestTarget = null;
     let minDist = Infinity;
 
-    // Look for mice
+    // 🧠 Step 1: Find nearest target (mouse or structure)
     for (const [name, p] of Object.entries(players)) {
       if (p.alive !== false) {
         const dist = Math.abs(p.x - rat.x) + Math.abs(p.y - rat.y);
@@ -636,7 +643,6 @@ setInterval(() => {
       }
     }
 
-    // Look for structures
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
         if (["🧱", "🔫", "🪳"].includes(grid[y][x])) {
@@ -649,38 +655,83 @@ setInterval(() => {
       }
     }
 
-    // Move toward target
+    // 🧠 Step 2: Basic targeting movement
+    let dx = 0, dy = 0;
     if (closestTarget) {
-      const dx = closestTarget.x - rat.x;
-      const dy = closestTarget.y - rat.y;
+      const dxt = closestTarget.x - rat.x;
+      const dyt = closestTarget.y - rat.y;
 
-      if (Math.abs(dx) > Math.abs(dy)) {
-        rat.x += Math.sign(dx);
+      if (Math.abs(dxt) > Math.abs(dyt)) {
+        dx = Math.sign(dxt);
       } else {
-        rat.y += Math.sign(dy);
+        dy = Math.sign(dyt);
       }
+    }
 
-      // If on target, deal damage
-      if (rat.x === closestTarget.x && rat.y === closestTarget.y) {
-        if (closestTarget.type === "structure") {
-          damageStructure(rat.x, rat.y, 1); // fixed damage from rats
-        } else if (closestTarget.type === "mouse") {
-          const playerRef = doc(db, `games/${gameId}/players/${closestTarget.name}`);
-          updateDoc(playerRef, { alive: false });
-          if (closestTarget.name === username) {
-            isAlive = false;
-            document.getElementById("status").textContent = "💀 You are dead!";
-          }
+    // 🧠 Step 3: Cohesion - move toward average nearby rat position
+    let avgX = 0, avgY = 0, nearby = 0;
+    for (let other of rats) {
+      if (other !== rat && other.health > 0) {
+        const dist = Math.abs(other.x - rat.x) + Math.abs(other.y - rat.y);
+        if (dist <= 3) {
+          avgX += other.x;
+          avgY += other.y;
+          nearby++;
+        }
+      }
+    }
+
+    if (nearby > 0) {
+      avgX = avgX / nearby;
+      avgY = avgY / nearby;
+      const cohesionDx = Math.sign(avgX - rat.x);
+      const cohesionDy = Math.sign(avgY - rat.y);
+
+      // Mix target chase and cohesion
+      dx += cohesionDx * 0.5;
+      dy += cohesionDy * 0.5;
+    }
+
+    // 🧠 Step 4: Separation - avoid other rats on same spot
+    const occupied = rats.some(other => other !== rat && other.x === rat.x + dx && other.y === rat.y + dy);
+    if (occupied) {
+      dx = 0;
+      dy = 0;
+    }
+
+    // Move if valid
+    const newX = rat.x + Math.sign(dx);
+    const newY = rat.y + Math.sign(dy);
+    if (
+      newX >= 0 && newX < gridSize &&
+      newY >= 0 && newY < gridSize &&
+      grid[newY][newX] !== "🧱"
+    ) {
+      rat.x = newX;
+      rat.y = newY;
+    }
+
+    // Attack
+    if (closestTarget && rat.x === closestTarget.x && rat.y === closestTarget.y) {
+      if (closestTarget.type === "structure") {
+        damageStructure(rat.x, rat.y, 1);
+      } else if (closestTarget.type === "mouse") {
+        const playerRef = doc(db, `games/${gameId}/players/${closestTarget.name}`);
+        updateDoc(playerRef, { alive: false });
+        if (closestTarget.name === username) {
+          isAlive = false;
+          document.getElementById("status").textContent = "💀 You are dead!";
         }
       }
     }
   }
+
+  // Cleanup
   for (let i = rats.length - 1; i >= 0; i--) {
-  if (rats[i].health <= 0) rats.splice(i, 1);
-}
+    if (rats[i].health <= 0) rats.splice(i, 1);
+  }
 
   renderGrid();
-  
 }, 500);
 
 
