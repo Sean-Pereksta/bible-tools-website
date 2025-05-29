@@ -267,7 +267,7 @@ function startCatBehaviorLoop() {
   if (catMoveInterval) clearInterval(catMoveInterval);
 
   // 🕒 Speed = faster interval as power increases
-  const speed = Math.max(200, 1000 - catPower * 50); // e.g. power 10 = 500ms
+  const speed = Math.max(150, 900 - catPower * 75); // e.g. power 10 = 500ms
   catMoveInterval = setInterval(() => {
     if (gameStarted) catBehavior();
   }, speed);
@@ -422,113 +422,129 @@ function turretAttack() {
 
 
 
-function catBehavior() {
-  console.log("🐱 Cat behavior running");
+// 🔁 BFS Pathfinding
+function findPath(startX, startY, targetX, targetY) {
+  const queue = [[startX, startY, []]];
+  const visited = new Set();
+  visited.add(`${startX},${startY}`);
 
-  const aliveMice = Object.entries(players).filter(([_, p]) => p.alive);
-  if (aliveMice.length === 0) {
-    console.log("❌ No alive mice.");
-    return;
-  }
+  const directions = [
+    [1, 0], [-1, 0], [0, 1], [0, -1]
+  ];
 
-  let closestMouse = null;
-  let minMouseDist = Infinity;
-  for (const [_, p] of aliveMice) {
-    const dist = Math.abs(p.x - catPos.x) + Math.abs(p.y - catPos.y);
-    if (dist < minMouseDist) {
-      closestMouse = p;
-      minMouseDist = dist;
+  while (queue.length > 0) {
+    const [x, y, path] = queue.shift();
+    if (x === targetX && y === targetY) return path;
+
+    for (const [dx, dy] of directions) {
+      const nx = x + dx;
+      const ny = y + dy;
+      const key = `${nx},${ny}`;
+
+      if (
+        nx >= 0 && nx < gridSize &&
+        ny >= 0 && ny < gridSize &&
+        !visited.has(key) &&
+        grid[ny][nx] !== "🧱"
+      ) {
+        visited.add(key);
+        queue.push([nx, ny, [...path, { x: nx, y: ny }]]);
+      }
     }
   }
 
+  return null;
+}
+
+// 🐱 Cat Behavior
+function catBehavior() {
+  const aliveMice = Object.entries(players).filter(([_, p]) => p.alive);
+  if (aliveMice.length === 0) return;
+
   let target = null;
 
-  if (minMouseDist <= 5) {
-    target = closestMouse;
-    console.log("🎯 Chasing close mouse:", target);
-  } else {
-    let minTargetDist = Infinity;
+  // 1. 👀 Chase mouse if within 8 spaces
+  for (const [_, p] of aliveMice) {
+    const dist = Math.abs(p.x - catPos.x) + Math.abs(p.y - catPos.y);
+    if (dist <= 8) {
+      target = { x: p.x, y: p.y, type: "mouse" };
+      break;
+    }
+  }
 
-    // Structures: walls, turrets, and flea nests
+  // 2. 🎯 Find reachable turret if no mouse in range
+  if (!target) {
+    let closestTurret = null;
+    let closestPath = null;
+
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
-        if (grid[y][x] === "🧱" || grid[y][x] === "🔫" || grid[y][x] === "🪳") {
-          const dist = Math.abs(x - catPos.x) + Math.abs(y - catPos.y);
-          if (dist < minTargetDist) {
-            minTargetDist = dist;
-            target = { x, y };
+        if (grid[y][x] === "🔫") {
+          const path = findPath(catPos.x, catPos.y, x, y);
+          if (path && (!closestPath || path.length < closestPath.length)) {
+            closestPath = path;
+            closestTurret = { x, y, type: "turret" };
           }
         }
       }
     }
 
-    // Distant mice still outrank structures if closer
-    for (const [_, p] of aliveMice) {
-      const dist = Math.abs(p.x - catPos.x) + Math.abs(p.y - catPos.y);
-      if (dist < minTargetDist) {
-        minTargetDist = dist;
-        target = { x: p.x, y: p.y };
-      }
+    if (closestTurret) {
+      target = closestTurret;
     }
-
-    console.log("🎯 Chasing distant target:", target);
   }
 
+  // 3. 🧱 Fallback to nearest wall or flea nest
   if (!target) {
-    console.log("❌ No target found.");
-    return;
-  }
-
-  const dx = target.x - catPos.x;
-  const dy = target.y - catPos.y;
-
-  let moveX = 0, moveY = 0;
-  if (Math.abs(dx) > Math.abs(dy)) {
-    moveX = Math.sign(dx);
-  } else {
-    moveY = Math.sign(dy);
-  }
-
-  const nextX = catPos.x + moveX;
-  const nextY = catPos.y + moveY;
-
-  if (
-    nextX >= 0 && nextX < gridSize &&
-    nextY >= 0 && nextY < gridSize &&
-    grid[nextY][nextX] !== "🧱"
-  ) {
-    catPos.x = nextX;
-    catPos.y = nextY;
-    console.log(`✅ Cat moved to (${catPos.x}, ${catPos.y})`);
-  } else {
-    console.log("🚫 Cat movement blocked.");
-  }
-
-  // Destroy nearby structures (including flea nests)
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      const tx = catPos.x + dx;
-      const ty = catPos.y + dy;
-      if (tx >= 0 && tx < gridSize && ty >= 0 && ty < gridSize) {
-        if (grid[ty][tx] === "🧱" || grid[ty][tx] === "🔫" || grid[ty][tx] === "🪳") {
-          damageStructure(tx, ty);
+    let closestDist = Infinity;
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        const symbol = grid[y][x];
+        if (symbol === "🧱" || symbol === "🪳") {
+          const dist = Math.abs(catPos.x - x) + Math.abs(catPos.y - y);
+          if (dist < closestDist) {
+            closestDist = dist;
+            target = { x, y, type: "structure" };
+          }
         }
       }
     }
   }
 
-  // Kill any players standing on cat
+  if (!target) return;
+
+  // 🚶 Move using pathfinding
+  const path = findPath(catPos.x, catPos.y, target.x, target.y);
+  if (path && path.length > 0) {
+    const nextStep = path[0];
+    catPos.x = nextStep.x;
+    catPos.y = nextStep.y;
+  }
+
+  // 💥 Attack one adjacent structure only
+  const attackDirs = [
+    [0, -1], [0, 1], [-1, 0], [1, 0]
+  ];
+  for (let [dx, dy] of attackDirs) {
+    const tx = catPos.x + dx;
+    const ty = catPos.y + dy;
+    if (tx >= 0 && tx < gridSize && ty >= 0 && ty < gridSize) {
+      const symbol = grid[ty][tx];
+      if (symbol === "🧱" || symbol === "🔫" || symbol === "🪳") {
+        damageStructure(tx, ty);
+        break; // ✅ Only hit 1 target per turn
+      }
+    }
+  }
+
+  // 💀 Kill player if standing on cat
   for (const [name, p] of Object.entries(players)) {
     if ((p.alive ?? true) && catPos.x === p.x && catPos.y === p.y) {
-      console.log(`💀 Cat killed ${name}`);
       const playerRef = doc(db, `games/${gameId}/players/${name}`);
       updateDoc(playerRef, { alive: false });
-      console.log("✅ Set alive to false for", name);
-
       if (name === username) {
         isAlive = false;
         document.getElementById("status").textContent = "💀 You are dead!";
-        console.log("⚠️ Forced isAlive = false locally for self");
       }
     }
   }
@@ -536,8 +552,10 @@ function catBehavior() {
   updateDoc(doc(db, `games/${gameId}`), {
     cat: { x: catPos.x, y: catPos.y, health: catHealth }
   });
+
   renderGrid();
 }
+
 
 async function listenToGame() {
 
