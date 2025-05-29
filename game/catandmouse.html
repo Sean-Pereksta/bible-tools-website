@@ -65,6 +65,8 @@ const moveCooldown = 250; // in milliseconds
 
 
 let structureHealth = {}; // key: "x_y", value: health
+const fleas = [];
+
 
 for (let y = 0; y < gridSize; y++) {
   grid[y] = [];
@@ -84,6 +86,7 @@ function renderGrid() {
       cell.textContent = grid[y][x];
     }
   }
+
 
   for (const name in players) {
     const p = players[name];
@@ -110,6 +113,11 @@ for (const name in players) {
   statusSpan.style.color = (p.alive === false) ? "red" : "green";
   statusSpan.textContent = `${name}: ${p.alive === false ? "DEAD" : "ALIVE"}`;
   statusDiv.appendChild(statusSpan);
+}
+
+  for (let flea of fleas) {
+  const cell = document.getElementById(`cell-${flea.x}-${flea.y}`);
+  cell.textContent = "🐞";
 }
 
 const catCell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
@@ -183,7 +191,18 @@ function placeStructure(dir) {
   if (dir === 's') ty++;
   if (dir === 'd') tx++;
   if (tx < 0 || ty < 0 || tx >= gridSize || ty >= gridSize) return;
-  const symbol = selectedBuild === 1 ? "🧱" : selectedBuild === 2 ? "🔫" : "";
+ let symbol = "";
+let health = 1;
+if (selectedBuild === 1) {
+  symbol = "🧱";
+  health = 25;
+} else if (selectedBuild === 2) {
+  symbol = "🔫";
+  health = 1;
+} else if (selectedBuild === 3) {
+  symbol = "🪳"; // flea nest
+  health = 3;
+}
   const key = `${tx}_${ty}`;
   if (grid[ty][tx] === "") {
     grid[ty][tx] = symbol;
@@ -282,10 +301,10 @@ function catBehavior() {
   } else {
     let minTargetDist = Infinity;
 
-    // Structures
+    // Structures: walls, turrets, and flea nests
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
-        if (grid[y][x] === "🧱" || grid[y][x] === "🔫") {
+        if (grid[y][x] === "🧱" || grid[y][x] === "🔫" || grid[y][x] === "🪳") {
           const dist = Math.abs(x - catPos.x) + Math.abs(y - catPos.y);
           if (dist < minTargetDist) {
             minTargetDist = dist;
@@ -295,7 +314,7 @@ function catBehavior() {
       }
     }
 
-    // Distant mice
+    // Distant mice still outrank structures if closer
     for (const [_, p] of aliveMice) {
       const dist = Math.abs(p.x - catPos.x) + Math.abs(p.y - catPos.y);
       if (dist < minTargetDist) {
@@ -337,13 +356,13 @@ function catBehavior() {
     console.log("🚫 Cat movement blocked.");
   }
 
-  // Destroy nearby structures
+  // Destroy nearby structures (including flea nests)
   for (let dy = -1; dy <= 1; dy++) {
     for (let dx = -1; dx <= 1; dx++) {
       const tx = catPos.x + dx;
       const ty = catPos.y + dy;
       if (tx >= 0 && tx < gridSize && ty >= 0 && ty < gridSize) {
-        if (grid[ty][tx] === "🧱" || grid[ty][tx] === "🔫") {
+        if (grid[ty][tx] === "🧱" || grid[ty][tx] === "🔫" || grid[ty][tx] === "🪳") {
           damageStructure(tx, ty);
         }
       }
@@ -371,6 +390,7 @@ function catBehavior() {
   });
   renderGrid();
 }
+
 async function listenToGame() {
 
   onSnapshot(collection(db, `games/${gameId}/structures`), (snap) => {
@@ -462,6 +482,11 @@ window.addEventListener("keydown", (e) => {
       selectedBuild = 2;
       document.getElementById("buildType").textContent = "Turret 🔫";
       break;
+    case "3":
+  selectedBuild = 3;
+  document.getElementById("buildType").textContent = "Flea Nest 🪳";
+  break;
+
     case "w":
     case "a":
     case "s":
@@ -489,6 +514,68 @@ renderGrid();
 // Start cheese spawn and turret attack globally
 setInterval(spawnCheese, 10000);
 setInterval(turretAttack, 1000);
+
+// 🪳 Flea Spawning Every 5 Seconds from Nests
+setInterval(() => {
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      if (grid[y][x] === "🪳") {
+        fleas.push({ x, y, lifetime: 10 }); // spawn flea
+      }
+    }
+  }
+}, 5000);
+
+// 🐞 Flea Behavior Loop (chase cat, deal damage, die)
+setInterval(() => {
+  for (let flea of fleas) {
+    let dx = 0, dy = 0;
+    const xDiff = catPos.x - flea.x;
+    const yDiff = catPos.y - flea.y;
+
+    if (Math.abs(xDiff) > Math.abs(yDiff)) {
+      dx = Math.sign(xDiff);
+    } else {
+      dy = Math.sign(yDiff);
+    }
+
+    const newX = flea.x + dx;
+    const newY = flea.y + dy;
+
+    if (
+      newX >= 0 && newX < gridSize &&
+      newY >= 0 && newY < gridSize &&
+      grid[newY][newX] !== "🧱" &&
+      grid[newY][newX] !== "🪳"
+    ) {
+      flea.x = newX;
+      flea.y = newY;
+    }
+
+    flea.lifetime--;
+
+    if (flea.x === catPos.x && flea.y === catPos.y) {
+      catHealth -= 1;
+      flea.lifetime = 0;
+
+      updateDoc(doc(db, `games/${gameId}`), {
+        cat: { ...catPos, health: catHealth }
+      });
+
+      if (catHealth <= 0) {
+        document.getElementById("status").textContent = "🎉 Mice win!";
+      }
+    }
+  }
+
+  for (let i = fleas.length - 1; i >= 0; i--) {
+    if (fleas[i].lifetime <= 0) fleas.splice(i, 1);
+  }
+
+  renderGrid();
+}, 700);
+
+
 
 // ✅ Wrap host logic in an async function
 (async () => {
