@@ -2,15 +2,53 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>🐭 Cat vs Mouse</title>
-  <style>
-    body { font-family: sans-serif; text-align: center; background: #f4f4f4; }
-    #grid { display: grid; grid-template-columns: repeat(30, 20px); grid-template-rows: repeat(30, 20px); margin: 20px auto; }
-    .cell { width: 20px; height: 20px; text-align: center; font-size: 16px; position: relative; }
-    .name { font-size: 10px; position: absolute; top: -12px; left: 0; right: 0; text-align: center; }
-    #info { margin-top: 10px; }
-  </style>
-</head>
+ <title>🐭 Cat vs Mouse</title>
+<style>
+  body {
+    font-family: sans-serif;
+    text-align: center;
+    background: #f4f4f4;
+  }
+
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(30, 20px);
+    grid-template-rows: repeat(30, 20px);
+    margin: 20px auto;
+  }
+
+  .cell {
+    width: 20px;
+    height: 20px;
+    text-align: center;
+    font-size: 16px;
+    position: relative;
+    background: #c8f7c5; /* green grass background */
+  }
+
+  .name {
+    font-size: 10px;
+    position: absolute;
+    top: -12px;
+    left: 0;
+    right: 0;
+    text-align: center;
+  }
+
+  .health-bar {
+    position: absolute;
+    top: -6px;
+    left: 0;
+    height: 3px;
+    background-color: red;
+    border-radius: 1px;
+  }
+
+  #info {
+    margin-top: 10px;
+  }
+</style>
+
 <body>
 <h1>🐱 Cat vs 🐭 Mouse</h1>
 
@@ -85,18 +123,40 @@ for (let y = 0; y < gridSize; y++) {
 }
 
 function renderGrid() {
-  for (let y = 0; y < gridSize; y++) {
-    for (let x = 0; x < gridSize; x++) {
-      const cell = document.getElementById(`cell-${x}-${y}`);
+  const viewSize = 20;
+  const halfView = Math.floor(viewSize / 2);
+  const viewport = document.getElementById("grid");
+  viewport.innerHTML = ""; // Clear old cells
+
+  // Center around player
+  const centerX = playerPos.x;
+  const centerY = playerPos.y;
+
+  const startX = Math.max(0, centerX - halfView);
+  const endX = Math.min(gridSize, centerX + halfView + 1);
+  const startY = Math.max(0, centerY - halfView);
+  const endY = Math.min(gridSize, centerY + halfView + 1);
+
+  viewport.style.gridTemplateColumns = `repeat(${endX - startX}, 20px)`;
+  viewport.style.gridTemplateRows = `repeat(${endY - startY}, 20px)`;
+
+  for (let y = startY; y < endY; y++) {
+    for (let x = startX; x < endX; x++) {
+      const cell = document.createElement("div");
+      cell.id = `cell-${x}-${y}`;
+      cell.className = "cell";
+      cell.style.background = "#c8f7c5"; // green background
       cell.textContent = grid[y][x];
+
+      viewport.appendChild(cell);
     }
   }
 
-
+  // 🐭 Players
   for (const name in players) {
     const p = players[name];
-   if (p.alive === false) continue;
-
+    if (p.alive === false) continue;
+    if (p.x < startX || p.x >= endX || p.y < startY || p.y >= endY) continue;
 
     const cell = document.getElementById(`cell-${p.x}-${p.y}`);
     cell.textContent = "🐭";
@@ -106,68 +166,75 @@ function renderGrid() {
     nameTag.textContent = name;
     cell.appendChild(nameTag);
   }
-  // 🔄 Update player status display
-const statusDiv = document.getElementById("playerStatus");
-statusDiv.innerHTML = ""; // clear previous
 
-for (const name in players) {
-  const p = players[name];
-  const statusSpan = document.createElement("span");
-  statusSpan.style.marginRight = "10px";
-  statusSpan.style.fontWeight = "bold";
-  statusSpan.style.color = (p.alive === false) ? "red" : "green";
-  statusSpan.textContent = `${name}: ${p.alive === false ? "DEAD" : "ALIVE"}`;
-  statusDiv.appendChild(statusSpan);
-}
-
+  // 🐞 Fleas
   for (let flea of fleas) {
-  const cell = document.getElementById(`cell-${flea.x}-${flea.y}`);
-  cell.textContent = "🐞";
-}
-  for (let rat of rats) {
-  if (rat.health <= 0) continue;
-  const cell = document.getElementById(`cell-${rat.x}-${rat.y}`);
-  cell.textContent = "🐀";
+    if (flea.x < startX || flea.x >= endX || flea.y < startY || flea.y >= endY) continue;
+    const cell = document.getElementById(`cell-${flea.x}-${flea.y}`);
+    cell.textContent = "🐞";
+  }
 
-  const healthTag = document.createElement("div");
-  healthTag.className = "name";
-  healthTag.style.color = "brown";
-  healthTag.textContent = `❤️${rat.health}`;
-  cell.appendChild(healthTag);
-}
-    // 🧱 Show wall and flea nest health
+  // 🐀 Rats with health
+  for (let rat of rats) {
+    if (rat.health <= 0) continue;
+    if (rat.x < startX || rat.x >= endX || rat.y < startY || rat.y >= endY) continue;
+
+    const cell = document.getElementById(`cell-${rat.x}-${rat.y}`);
+    cell.textContent = "🐀";
+
+    const healthTag = document.createElement("div");
+    healthTag.className = "name";
+    healthTag.style.color = "brown";
+    healthTag.textContent = `❤️${rat.health}`;
+    cell.appendChild(healthTag);
+  }
+
+  // 🧱 Wall and 🪳 Flea Nest Health Bars
   for (let key in structureHealth) {
     const [xStr, yStr] = key.split("_");
     const x = parseInt(xStr), y = parseInt(yStr);
+    if (x < startX || x >= endX || y < startY || y >= endY) continue;
+
     const symbol = grid[y][x];
     if (symbol === "🧱" || symbol === "🪳") {
       const cell = document.getElementById(`cell-${x}-${y}`);
-      const healthTag = document.createElement("div");
-      healthTag.className = "name";
-      healthTag.style.color = symbol === "🧱" ? "gray" : "purple";
-      healthTag.textContent = `❤️${structureHealth[key]}`;
-      cell.appendChild(healthTag);
+      const bar = document.createElement("div");
+      bar.className = "health-bar";
+      const hp = structureHealth[key];
+      bar.style.width = `${Math.max(10, Math.min(100, hp * 4))}%`;
+      bar.style.background = symbol === "🧱" ? "gray" : "purple";
+      bar.style.height = "3px";
+      bar.style.marginTop = "-10px";
+      cell.appendChild(bar);
     }
   }
 
+  // 🐱 Cat with health and level in one line
+  if (catPos.x >= startX && catPos.x < endX && catPos.y >= startY && catPos.y < endY) {
+    const catCell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
+    catCell.textContent = "🐱";
 
+    const infoTag = document.createElement("div");
+    infoTag.className = "name";
+    infoTag.style.color = "red";
+    infoTag.innerHTML = `❤️ ${catHealth} ⚡Lv.${catPower}`;
+    catCell.appendChild(infoTag);
+  }
 
-const catCell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
-catCell.textContent = "🐱";
-
-// Create a container to hold both health and power
-const catInfoContainer = document.createElement("div");
-catInfoContainer.style.position = "absolute";
-catInfoContainer.style.top = "-26px"; // raised higher above the cell
-catInfoContainer.style.left = "0";
-catInfoContainer.style.right = "0";
-catInfoContainer.style.fontSize = "10px";
-catInfoContainer.style.lineHeight = "1.2";
-catInfoContainer.style.textAlign = "center";
-catInfoContainer.innerHTML = `❤️ ${catHealth} <br>⚡ Lv. ${catPower}`;
-
-catCell.appendChild(catInfoContainer);
+  // 🧍 Player Status
+  const statusDiv = document.getElementById("playerStatus");
+  statusDiv.innerHTML = "";
+  for (const name in players) {
+    const p = players[name];
+    const statusSpan = document.createElement("span");
+    statusSpan.style.marginRight = "10px";
+    statusSpan.style.fontWeight = "bold";
+    statusSpan.style.color = (p.alive === false) ? "red" : "green";
+    statusSpan.textContent = `${name}: ${p.alive === false ? "DEAD" : "ALIVE"}`;
+    statusDiv.appendChild(statusSpan);
+  }
 }
+
 
 
 function movePlayer(dx, dy) {
@@ -791,25 +858,26 @@ setInterval(() => {
         flea.y = newY;
       }
 
-      // Attack logic
-      if (flea.x === target.x && flea.y === target.y) {
-        if (target.type === "cat") {
-          catHealth -= 1;
-          flea.lifetime = 0;
+     // 🐞 Flea attack logic
+if (flea.x === target.x && flea.y === target.y) {
+  if (target.type === "cat") {
+    catHealth -= 1;
+    flea.lifetime = 0;
 
-          updateDoc(doc(db, `games/${gameId}`), {
-            cat: { ...catPos, health: catHealth }
-          });
+    updateDoc(doc(db, `games/${gameId}`), {
+      cat: { ...catPos, health: catHealth }
+    });
 
-          if (catHealth <= 0) {
-            document.getElementById("status").textContent = "🎉 Mice win!";
-          }
-        } else if (target.type === "rat") {
-          target.rat.health = 0;
-          flea.lifetime = 0;
-        }
-      }
+    if (catHealth <= 0) {
+      document.getElementById("status").textContent = "🎉 Mice win!";
     }
+
+  } else if (target.type === "rat" && target.rat) {
+    target.rat.health = 0;   // Kill the rat
+    flea.lifetime = 0;       // Kill the flea
+  }
+}
+
 
     flea.lifetime--;
   }
