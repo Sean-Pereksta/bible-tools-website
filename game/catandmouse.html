@@ -695,54 +695,83 @@ setInterval(() => {
   }
 }, 5000);
 
-// 🐞 Flea Behavior Loop (chase cat, deal damage, die)
 setInterval(() => {
   for (let flea of fleas) {
-    let dx = 0, dy = 0;
-    const xDiff = catPos.x - flea.x;
-    const yDiff = catPos.y - flea.y;
+    let target = null;
+    let minDist = Infinity;
 
-    if (Math.abs(xDiff) > Math.abs(yDiff)) {
-      dx = Math.sign(xDiff);
-    } else {
-      dy = Math.sign(yDiff);
+    // Check distance to cat
+    const distToCat = Math.abs(catPos.x - flea.x) + Math.abs(catPos.y - flea.y);
+    if (distToCat < minDist) {
+      minDist = distToCat;
+      target = { x: catPos.x, y: catPos.y, type: "cat" };
     }
 
-    const newX = flea.x + dx;
-    const newY = flea.y + dy;
+    // Check distances to all rats
+    for (let rat of rats) {
+      const dist = Math.abs(rat.x - flea.x) + Math.abs(rat.y - flea.y);
+      if (dist < minDist && rat.health > 0) {
+        minDist = dist;
+        target = { x: rat.x, y: rat.y, type: "rat", rat };
+      }
+    }
 
-    if (
-      newX >= 0 && newX < gridSize &&
-      newY >= 0 && newY < gridSize &&
-      grid[newY][newX] !== "🧱" &&
-      grid[newY][newX] !== "🪳"
-    ) {
-      flea.x = newX;
-      flea.y = newY;
+    // Move toward the closest target
+    if (target) {
+      let dx = 0, dy = 0;
+      const xDiff = target.x - flea.x;
+      const yDiff = target.y - flea.y;
+
+      if (Math.abs(xDiff) > Math.abs(yDiff)) {
+        dx = Math.sign(xDiff);
+      } else {
+        dy = Math.sign(yDiff);
+      }
+
+      const newX = flea.x + dx;
+      const newY = flea.y + dy;
+
+      if (
+        newX >= 0 && newX < gridSize &&
+        newY >= 0 && newY < gridSize &&
+        grid[newY][newX] !== "🧱" &&
+        grid[newY][newX] !== "🪳"
+      ) {
+        flea.x = newX;
+        flea.y = newY;
+      }
+
+      // Attack logic
+      if (flea.x === target.x && flea.y === target.y) {
+        if (target.type === "cat") {
+          catHealth -= 1;
+          flea.lifetime = 0;
+
+          updateDoc(doc(db, `games/${gameId}`), {
+            cat: { ...catPos, health: catHealth }
+          });
+
+          if (catHealth <= 0) {
+            document.getElementById("status").textContent = "🎉 Mice win!";
+          }
+        } else if (target.type === "rat") {
+          target.rat.health = 0;
+          flea.lifetime = 0;
+        }
+      }
     }
 
     flea.lifetime--;
-
-    if (flea.x === catPos.x && flea.y === catPos.y) {
-      catHealth -= 1;
-      flea.lifetime = 0;
-
-      updateDoc(doc(db, `games/${gameId}`), {
-        cat: { ...catPos, health: catHealth }
-      });
-
-      if (catHealth <= 0) {
-        document.getElementById("status").textContent = "🎉 Mice win!";
-      }
-    }
   }
 
+  // Remove expired fleas
   for (let i = fleas.length - 1; i >= 0; i--) {
     if (fleas[i].lifetime <= 0) fleas.splice(i, 1);
   }
 
   renderGrid();
 }, 700);
+
 
 
 
