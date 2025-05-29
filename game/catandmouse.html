@@ -466,7 +466,7 @@ function catBehavior() {
   // 1. 👀 Chase mouse if within 8 spaces
   for (const [_, p] of aliveMice) {
     const dist = Math.abs(p.x - catPos.x) + Math.abs(p.y - catPos.y);
-    if (dist <= 8) {
+    if (dist <= 6) {
       target = { x: p.x, y: p.y, type: "mouse" };
       break;
     }
