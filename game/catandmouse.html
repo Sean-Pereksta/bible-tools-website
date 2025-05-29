@@ -858,37 +858,38 @@ setInterval(() => {
         flea.y = newY;
       }
 
-     // 🐞 Flea attack logic
-if (flea.x === target.x && flea.y === target.y) {
-  if (target.type === "cat") {
-    catHealth -= 1;
-    flea.lifetime = 0;
+      // 🐞 Flea attack logic
+      if (flea.x === target.x && flea.y === target.y) {
+        if (target.type === "cat") {
+          catHealth -= 1;
+          flea.lifetime = 0;
 
-    updateDoc(doc(db, `games/${gameId}`), {
-      cat: { ...catPos, health: catHealth }
-    });
+          updateDoc(doc(db, `games/${gameId}`), {
+            cat: { ...catPos, health: catHealth }
+          });
 
-    if (catHealth <= 0) {
-      document.getElementById("status").textContent = "🎉 Mice win!";
+          if (catHealth <= 0) {
+            document.getElementById("status").textContent = "🎉 Mice win!";
+          }
+        } else if (target.type === "rat" && target.rat) {
+          target.rat.health = 0;
+          flea.lifetime = 0;
+        }
+      }
     }
 
-  } else if (target.type === "rat" && target.rat) {
-    target.rat.health = 0;   // Kill the rat
-    flea.lifetime = 0;       // Kill the flea
-  }
-}
-
-
+    // 🕓 Decrement flea lifetime
     flea.lifetime--;
   }
 
-  // Remove expired fleas
+  // 🧹 Remove expired fleas
   for (let i = fleas.length - 1; i >= 0; i--) {
     if (fleas[i].lifetime <= 0) fleas.splice(i, 1);
   }
 
   renderGrid();
 }, 400);
+
 
 
 
