@@ -790,7 +790,7 @@ renderGrid();
 
 // Start cheese spawn and turret attack globally
 setInterval(spawnCheese, 10000);
-setInterval(turretAttack, 1000);
+setInterval(turretAttack, 750);
 
 setInterval(() => {
   for (let y = 0; y < gridSize; y++) {
@@ -810,7 +810,7 @@ setInterval(() => {
           if (p.alive !== false) {
             const dx = Math.abs(p.x - x);
             const dy = Math.abs(p.y - y);
-            if (dx + dy <= 6) { // Manhattan distance within 6
+            if (dx + dy <= 7) { // Manhattan distance within 6
               if (name === username.trim().toLowerCase()) {
                 cheeseCount += 1;
                 document.getElementById("cheeseCount").textContent = cheeseCount;
