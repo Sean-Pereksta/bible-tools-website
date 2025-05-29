@@ -528,20 +528,21 @@ function catBehavior() {
 
   // 💥 Attack one adjacent structure only
   let attacked = false;
-  for (let dy = -1; dy <= 1 && !attacked; dy++) {
-    for (let dx = -1; dx <= 1 && !attacked; dx++) {
-      const tx = catPos.x + dx;
-      const ty = catPos.y + dy;
-      if (
-        tx >= 0 && tx < gridSize &&
-        ty >= 0 && ty < gridSize &&
-        (grid[ty][tx] === "🧱" || grid[ty][tx] === "🔫" || grid[ty][tx] === "🪳")
-      ) {
-        damageStructure(tx, ty);
-        attacked = true;
-      }
+ for (let dy = -1; dy <= 1 && !attacked; dy++) {
+  for (let dx = -1; dx <= 1 && !attacked; dx++) {
+    const tx = catPos.x + dx;
+    const ty = catPos.y + dy;
+    if (
+      tx >= 0 && tx < gridSize &&
+      ty >= 0 && ty < gridSize &&
+      (grid[ty][tx] === "🧱" || grid[ty][tx] === "🔫" || grid[ty][tx] === "🪳")
+    ) {
+      damageStructure(tx, ty);
+      attacked = true;
     }
   }
+}
+
 
   // 💀 Kill any players on the cat’s tile
   for (const [name, p] of Object.entries(players)) {
