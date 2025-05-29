@@ -465,89 +465,93 @@ function catBehavior() {
   console.log("🐱 Cat behavior running");
 
   const aliveMice = Object.entries(players).filter(([_, p]) => p.alive);
-  const preferredTargets = [];
+  let target = null;
+  let path = null;
 
-  // 🐭 Check all mice for path and distance
-  let farthestMice = [];
-
+  // 1️⃣ Try to path to nearby mice (within 6-8 tiles)
   for (const [_, p] of aliveMice) {
-    const path = findPath(catPos.x, catPos.y, p.x, p.y);
-    if (path) {
-      const target = { x: p.x, y: p.y, type: "mouse", distance: path.length, near: path.length <= 8 };
-      if (target.near) {
-        preferredTargets.push(target); // 🥇 Always chase mouse within 8 steps
-      } else {
-        farthestMice.push(target); // 🐁 Save for fallback
-      }
-    }
-  }
-
-  // 🏰 Add turrets, flea nests, walls
-  for (let y = 0; y < gridSize; y++) {
-    for (let x = 0; x < gridSize; x++) {
-      const type = grid[y][x];
-      if (type === "🔫" || type === "🪳" || type === "🧱") {
-        const path = findPath(catPos.x, catPos.y, x, y);
-        if (path) {
-          preferredTargets.push({
-            x, y, type,
-            distance: path.length,
-            near: false
-          });
+    const dist = Math.abs(p.x - catPos.x) + Math.abs(p.y - catPos.y);
+    if (dist <= 6) {
+      const pPath = findPath(catPos.x, catPos.y, p.x, p.y);
+      if (pPath && (!path || pPath.length < path.length)) {
+        target = { x: p.x, y: p.y, type: "mouse" };
+        path = pPath;
+      } else if (!pPath) {
+        // 🧱 Mouse is blocked! Attack nearby wall
+        const directions = [
+          [1, 0], [-1, 0], [0, 1], [0, -1]
+        ];
+        for (const [dx, dy] of directions) {
+          const wx = p.x + dx;
+          const wy = p.y + dy;
+          if (
+            wx >= 0 && wx < gridSize &&
+            wy >= 0 && wy < gridSize &&
+            grid[wy][wx] === "🧱"
+          ) {
+            const wPath = findPath(catPos.x, catPos.y, wx, wy);
+            if (wPath && (!path || wPath.length < path.length)) {
+              target = { x: wx, y: wy, type: "wallToBreak" };
+              path = wPath;
+            }
+          }
         }
       }
     }
   }
 
-  // 🐭 Fallback: if no near mouse or structure, chase any mouse
-  if (preferredTargets.length === 0 && farthestMice.length > 0) {
-    preferredTargets.push(...farthestMice);
+  // 2️⃣ Structures (if no mouse target)
+  if (!target) {
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        const symbol = grid[y][x];
+        if (symbol === "🔫" || symbol === "🪳") {
+          const dist = Math.abs(x - catPos.x) + Math.abs(y - catPos.y);
+          if (dist <= 9) {
+            const sPath = findPath(catPos.x, catPos.y, x, y);
+            if (sPath && (!path || sPath.length < path.length)) {
+              target = { x, y, type: "structure" };
+              path = sPath;
+            }
+          }
+        }
+      }
+    }
   }
 
-  if (preferredTargets.length === 0) return;
+  // 3️⃣ Fallback: nearest anything
+  if (!target) {
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        const symbol = grid[y][x];
+        if (symbol === "🧱" || symbol === "🔫" || symbol === "🪳") {
+          const fPath = findPath(catPos.x, catPos.y, x, y);
+          if (fPath && (!path || fPath.length < path.length)) {
+            target = { x, y, type: "fallback" };
+            path = fPath;
+          }
+        }
+      }
+    }
 
-  // 🎯 Sort: near mouse > closer distance > type priority
-  preferredTargets.sort((a, b) => {
-    const score = (t) =>
-      t.type === "mouse" ? 1 :
-      t.type === "🔫" ? 2 :
-      t.type === "🪳" ? 3 : 4;
-
-    if (a.near && !b.near) return -1;
-    if (!a.near && b.near) return 1;
-
-    if (a.distance !== b.distance) return a.distance - b.distance;
-
-    return score(a) - score(b);
-  });
-
-  const target = preferredTargets[0];
-  const dx = target.x - catPos.x;
-  const dy = target.y - catPos.y;
-
-  let moveX = 0, moveY = 0;
-  if (Math.abs(dx) > Math.abs(dy)) {
-    moveX = Math.sign(dx);
-  } else {
-    moveY = Math.sign(dy);
+    for (const [_, p] of aliveMice) {
+      const fPath = findPath(catPos.x, catPos.y, p.x, p.y);
+      if (fPath && (!path || fPath.length < path.length)) {
+        target = { x: p.x, y: p.y, type: "fallbackMouse" };
+        path = fPath;
+      }
+    }
   }
 
-  const nextX = catPos.x + moveX;
-  const nextY = catPos.y + moveY;
-
-  if (
-    nextX >= 0 && nextX < gridSize &&
-    nextY >= 0 && nextY < gridSize &&
-    grid[nextY][nextX] !== "🧱"
-  ) {
-    catPos.x = nextX;
-    catPos.y = nextY;
-    console.log(`✅ Cat moved to (${catPos.x}, ${catPos.y})`);
-  } else {
-    console.log("🚫 Cat movement blocked.");
+  // 🐾 Move
+  if (target && path && path.length > 1) {
+    const next = path[1];
+    catPos.x = next.x;
+    catPos.y = next.y;
+    console.log(`✅ Cat moved to (${catPos.x}, ${catPos.y}) toward ${target.type}`);
   }
 
-  // 💥 Attack adjacent structures
+  // 💥 Attack one adjacent structure only
   let attacked = false;
   for (let dy = -1; dy <= 1 && !attacked; dy++) {
     for (let dx = -1; dx <= 1 && !attacked; dx++) {
@@ -564,12 +568,11 @@ function catBehavior() {
     }
   }
 
-  // ☠ Kill player standing on cat
+  // 💀 Kill any players on the cat’s tile
   for (const [name, p] of Object.entries(players)) {
-    if ((p.alive ?? true) && p.x === catPos.x && p.y === catPos.y) {
+    if ((p.alive ?? true) && catPos.x === p.x && catPos.y === p.y) {
       console.log(`💀 Cat killed ${name}`);
-      const playerRef = doc(db, `games/${gameId}/players/${name}`);
-      updateDoc(playerRef, { alive: false });
+      updateDoc(doc(db, `games/${gameId}/players/${name}`), { alive: false });
 
       if (name === username) {
         isAlive = false;
@@ -584,6 +587,7 @@ function catBehavior() {
 
   renderGrid();
 }
+
 
 
 
