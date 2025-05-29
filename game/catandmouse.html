@@ -427,8 +427,7 @@ function turretAttack() {
 
 
 
-// 🔁 BFS Pathfinding
-function findPath(startX, startY, targetX, targetY) {
+function findPath(startX, startY, targetX, targetY, allowTargetWall = false) {
   const queue = [[startX, startY, []]];
   const visited = new Set();
   visited.add(`${startX},${startY}`);
@@ -449,17 +448,23 @@ function findPath(startX, startY, targetX, targetY) {
       if (
         nx >= 0 && nx < gridSize &&
         ny >= 0 && ny < gridSize &&
-        !visited.has(key) &&
-        grid[ny][nx] !== "🧱"
+        !visited.has(key)
       ) {
-        visited.add(key);
-        queue.push([nx, ny, [...path, { x: nx, y: ny }]]);
+        const isTarget = nx === targetX && ny === targetY;
+        const cell = grid[ny][nx];
+        const isWalkable = cell !== "🧱" || (allowTargetWall && isTarget);
+
+        if (isWalkable) {
+          visited.add(key);
+          queue.push([nx, ny, [...path, { x: nx, y: ny }]]);
+        }
       }
     }
   }
 
   return null;
 }
+
 
 function catBehavior() {
   console.log("🐱 Cat behavior running");
@@ -468,64 +473,67 @@ function catBehavior() {
   let target = null;
   let path = null;
 
-  console.log("📌 Checking mice nearby...");
+  console.log("📌 Checking mice (any distance)...");
+  let mouseBlocked = true;
+
   for (const [_, p] of aliveMice) {
     const dist = Math.abs(p.x - catPos.x) + Math.abs(p.y - catPos.y);
     console.log(`➡️ Mouse at (${p.x}, ${p.y}) is ${dist} tiles away`);
 
-    if (dist <= 6) {
-      const pPath = findPath(catPos.x, catPos.y, p.x, p.y);
-      if (pPath) {
-        console.log(`✅ Found path to mouse (${pPath.length} steps)`);
-        if (!path || pPath.length < path.length) {
-          target = { x: p.x, y: p.y, type: "mouse" };
-          path = pPath;
-        }
-      } else {
-        console.log("🧱 Mouse is blocked! Looking for wall to break...");
-        const directions = [
-          [1, 0], [-1, 0], [0, 1], [0, -1]
-        ];
-        for (const [dx, dy] of directions) {
-          const wx = p.x + dx;
-          const wy = p.y + dy;
-          if (
-            wx >= 0 && wx < gridSize &&
-            wy >= 0 && wy < gridSize &&
-            grid[wy][wx] === "🧱"
-          ) {
-            const wPath = findPath(catPos.x, catPos.y, wx, wy);
-            if (wPath) {
-              console.log(`🔨 Found wall at (${wx}, ${wy}) to break through (${wPath.length} steps)`);
-              if (!path || wPath.length < path.length) {
-                target = { x: wx, y: wy, type: "wallToBreak" };
-                path = wPath;
-              }
-            } else {
-              console.log(`🚫 Cannot reach wall at (${wx}, ${wy})`);
+    const pPath = findPath(catPos.x, catPos.y, p.x, p.y, false);
+    if (pPath) {
+      console.log(`✅ Found path to mouse (${pPath.length} steps)`);
+      if (!path || pPath.length < path.length) {
+        target = { x: p.x, y: p.y, type: "mouse" };
+        path = pPath;
+      }
+      mouseBlocked = false;
+    }
+  }
+
+  // 🧱 Try breaking into a trapped mouse only if no reachable ones exist
+  if (!target && mouseBlocked) {
+    for (const [_, p] of aliveMice) {
+      console.log(`🧱 Mouse at (${p.x}, ${p.y}) is blocked. Searching for reachable wall...`);
+      const directions = [
+        [1, 0], [-1, 0], [0, 1], [0, -1]
+      ];
+      for (const [dx, dy] of directions) {
+        const wx = p.x + dx;
+        const wy = p.y + dy;
+        if (
+          wx >= 0 && wx < gridSize &&
+          wy >= 0 && wy < gridSize &&
+          grid[wy][wx] === "🧱"
+        ) {
+          const wPath = findPath(catPos.x, catPos.y, wx, wy, true); // allow wall targeting
+          if (wPath) {
+            console.log(`🔨 Found wall at (${wx}, ${wy}) to break through (${wPath.length} steps)`);
+            if (!path || wPath.length < path.length) {
+              target = { x: wx, y: wy, type: "wallToBreak" };
+              path = wPath;
             }
+          } else {
+            console.log(`🚫 Cannot reach wall at (${wx}, ${wy})`);
           }
         }
       }
     }
   }
 
-  // 2️⃣ Structures (if no mouse target)
+  // 🔫 Structures (if no mouse target or reachable wall)
   if (!target) {
     console.log("📌 Checking structures...");
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
         const symbol = grid[y][x];
         if (symbol === "🔫" || symbol === "🪳") {
-          const dist = Math.abs(x - catPos.x) + Math.abs(y - catPos.y);
-          if (dist <= 9) {
-            const sPath = findPath(catPos.x, catPos.y, x, y);
-            if (sPath) {
-              console.log(`🎯 Found structure (${symbol}) at (${x}, ${y}) - ${sPath.length} steps`);
-              if (!path || sPath.length < path.length) {
-                target = { x, y, type: "structure" };
-                path = sPath;
-              }
+          const sPath = findPath(catPos.x, catPos.y, x, y, false);
+          if (sPath) {
+            console.log(`🎯 Found structure (${symbol}) at (${x}, ${y}) - ${sPath.length} steps`);
+            if (!path || sPath.length < path.length) {
+              target = { x, y, type: "structure" };
+              path = sPath;
             }
           }
         }
@@ -533,16 +541,16 @@ function catBehavior() {
     }
   }
 
-  // 3️⃣ Fallback: nearest anything
+  // 🧱 Final fallback: any wall/turret/flea or even faraway mouse
   if (!target) {
-    console.log("📌 No mice or structures in range. Looking for fallback targets...");
+    console.log("📌 Final fallback search...");
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
         const symbol = grid[y][x];
         if (symbol === "🧱" || symbol === "🔫" || symbol === "🪳") {
-          const fPath = findPath(catPos.x, catPos.y, x, y);
+          const fPath = findPath(catPos.x, catPos.y, x, y, false);
           if (fPath) {
-            console.log(`⬅️ Fallback structure at (${x}, ${y}) - ${fPath.length} steps`);
+            console.log(`⬅️ Fallback target (${symbol}) at (${x}, ${y}) - ${fPath.length} steps`);
             if (!path || fPath.length < path.length) {
               target = { x, y, type: "fallback" };
               path = fPath;
@@ -553,7 +561,7 @@ function catBehavior() {
     }
 
     for (const [_, p] of aliveMice) {
-      const fPath = findPath(catPos.x, catPos.y, p.x, p.y);
+      const fPath = findPath(catPos.x, catPos.y, p.x, p.y, false);
       if (fPath) {
         console.log(`⬅️ Fallback mouse at (${p.x}, ${p.y}) - ${fPath.length} steps`);
         if (!path || fPath.length < path.length) {
@@ -578,7 +586,7 @@ function catBehavior() {
     console.log(`✅ Cat moved to (${catPos.x}, ${catPos.y}) toward ${target.type}`);
   }
 
-  // 💥 Attack one adjacent structure only
+  // 💥 Attack adjacent structure
   let attacked = false;
   for (let dy = -1; dy <= 1 && !attacked; dy++) {
     for (let dx = -1; dx <= 1 && !attacked; dx++) {
@@ -609,21 +617,12 @@ function catBehavior() {
     }
   }
 
-  // 🔄 Update grid + Firebase
   updateDoc(doc(db, `games/${gameId}`), {
     cat: { x: catPos.x, y: catPos.y, health: catHealth }
   });
 
   renderGrid();
 }
-
-
-
-
-
-
-
-
 async function listenToGame() {
 
   onSnapshot(collection(db, `games/${gameId}/structures`), (snap) => {
