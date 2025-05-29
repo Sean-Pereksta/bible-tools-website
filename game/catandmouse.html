@@ -769,32 +769,33 @@ setInterval(spawnCheese, 10000);
 setInterval(turretAttack, 1000);
 
   setInterval(() => {
+  const cleanUsername = username.trim().toLowerCase(); // normalize
+
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
-      if (grid[y][x] === "🏭") {
-        // Find the player closest to the generator
+      if (grid[y][x] === "🏭") { // ✅ only the factory emoji
+
         for (const [name, p] of Object.entries(players)) {
           if (p.alive !== false) {
             const dx = Math.abs(p.x - x);
             const dy = Math.abs(p.y - y);
-            if (dx <= 3 && dy <= 3 && name === username) {
-              // Only increase local player cheese
+            if (dx <= 3 && dy <= 3 && name === cleanUsername) {
               cheeseCount += 1;
               document.getElementById("cheeseCount").textContent = cheeseCount;
 
-              // Save to Firestore
-              updateDoc(doc(db, `games/${gameId}/players/${username}`), {
+              updateDoc(doc(db, `games/${gameId}/players/${cleanUsername}`), {
                 cheese: cheeseCount
               });
 
-              break; // one player per generator
+              console.log(`🏭 Generator at (${x},${y}) gave cheese to ${cleanUsername}`);
+              break;
             }
           }
         }
       }
     }
   }
-}, 10000); // Every 10 seconds
+}, 10000);
 
 
   // 🐀 Summon Rats every 2 minutes based on catPower
