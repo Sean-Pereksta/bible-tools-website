@@ -95,7 +95,7 @@ let gameStarted = false;
 let selectedBuild = null;
 let cheeseCount = 0;
 let isAlive = true;
-let catHealth = 100;
+let catHealth = 300;
 let players = {};
 let isHost = false;
   let canMove = true;
@@ -852,13 +852,13 @@ setInterval(() => {
       const newY = flea.y + dy;
 
       if (
-        newX >= 0 && newX < gridSize &&
-        newY >= 0 && newY < gridSize &&
-        grid[newY][newX] !== "🪳"
-      ) {
-        flea.x = newX;
-        flea.y = newY;
-      }
+  newX >= 0 && newX < gridSize &&
+  newY >= 0 && newY < gridSize
+) {
+  flea.x = newX;
+  flea.y = newY;
+}
+
 
       // 🐞 Flea attack logic
       if (flea.x === target.x && flea.y === target.y) {
@@ -922,7 +922,7 @@ setInterval(() => {
   setInterval(async () => {
     if (gameStarted) {
       catPower++;
-      catHealth += 10;
+      catHealth += 5;
       console.log(`🔋 Cat power increased to ${catPower}`);
 
       await updateDoc(doc(db, `games/${gameId}`), {
@@ -933,7 +933,7 @@ setInterval(() => {
       // Restart loop with updated speed
       startCatBehaviorLoop();
     }
-  }, 30000);
+  }, 20000);
 }
 })();
 
