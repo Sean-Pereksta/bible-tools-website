@@ -473,6 +473,10 @@ function findPath(startX, startY, targetX, targetY, allowTargetWall = false) {
 
   return null;
 }
+function triggerMoveCooldown() {
+  canMove = false;
+  setTimeout(() => canMove = true, moveCooldown);
+}
 
 
 function catBehavior() {
@@ -706,45 +710,47 @@ async function listenToGame() {
   });
 }
 window.addEventListener("keydown", (e) => {
-  if (!canMove || !isAlive) return; // ⛔ Block input if dead
+  if (!isAlive) return; // Still block input if dead
 
+  // Prevent arrow key scrolling
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
 
+  // Handle movement separately, with cooldown
+  if (canMove) {
+    switch (e.key) {
+      case "ArrowUp": movePlayer(0, -1); triggerMoveCooldown(); break;
+      case "ArrowDown": movePlayer(0, 1); triggerMoveCooldown(); break;
+      case "ArrowLeft": movePlayer(-1, 0); triggerMoveCooldown(); break;
+      case "ArrowRight": movePlayer(1, 0); triggerMoveCooldown(); break;
+    }
+  }
+
+  // Handle build type selection
   switch (e.key) {
-    case "ArrowUp": movePlayer(0, -1); break;
-    case "ArrowDown": movePlayer(0, 1); break;
-    case "ArrowLeft": movePlayer(-1, 0); break;
-    case "ArrowRight": movePlayer(1, 0); break;
     case "1":
-  selectedBuild = 1;
-  document.getElementById("buildType").textContent = "Wall 🧱 (Cost: 1)";
-  break;
-case "2":
-  selectedBuild = 2;
-  document.getElementById("buildType").textContent = "Turret 🔫 (Cost: 3)";
-  break;
-case "3":
-  selectedBuild = 3;
-  document.getElementById("buildType").textContent = "Flea Nest 🪳 (Cost: 5)";
-  break;
-  case "4":
-  selectedBuild = 4;
-  document.getElementById("buildType").textContent = "Cheese Generator 🧀🏭 (Cost: 4)";
-  break;
-
-
-
-    case "w":
-    case "a":
-    case "s":
-    case "d":
-      placeStructure(e.key);
+      selectedBuild = 1;
+      document.getElementById("buildType").textContent = "Wall 🧱 (Cost: 1)";
+      break;
+    case "2":
+      selectedBuild = 2;
+      document.getElementById("buildType").textContent = "Turret 🔫 (Cost: 3)";
+      break;
+    case "3":
+      selectedBuild = 3;
+      document.getElementById("buildType").textContent = "Flea Nest 🪳 (Cost: 5)";
+      break;
+    case "4":
+      selectedBuild = 4;
+      document.getElementById("buildType").textContent = "Cheese Generator 🧀🏭 (Cost: 4)";
       break;
   }
 
-  canMove = false;
-  setTimeout(() => canMove = true, moveCooldown);
+  // Handle building (no cooldown)
+  if (["w", "a", "s", "d"].includes(e.key)) {
+    placeStructure(e.key); // 🛠 Build without triggering cooldown
+  }
 });
+
 
 
 
