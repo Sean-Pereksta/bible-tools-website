@@ -104,7 +104,7 @@ let gameStarted = false;
 let selectedBuild = null;
 let cheeseCount = 0;
 let isAlive = true;
-let catHealth = 600;
+let catHealth = 1000;
 let players = {};
 let isHost = false;
   let canMove = true;
@@ -780,7 +780,7 @@ async function listenToGame() {
         const initialCat = {
           x: gridSize - 1,
           y: gridSize - 1,
-          health: 600
+          health: 1000
         };
         updateDoc(doc(db, `games/${gameId}`), { cat: initialCat });
       }
@@ -788,7 +788,7 @@ async function listenToGame() {
       const cat = data.cat || {};
       catPower = data.catPower || 0;
       catPos = { x: cat.x || 15, y: cat.y || 15 };
-      catHealth = cat.health || 600;
+      catHealth = cat.health || 1000;
       renderGrid();
     }
   });
@@ -1051,7 +1051,7 @@ setInterval(() => {
       oy >= 0 && oy < gridSize &&
       !rats.some(r => r.x === ox && r.y === oy) // no overlap
     ) {
-      rats.push({ x: ox, y: oy, health: ratPower * 5 });
+      rats.push({ x: ox, y: oy, health: ratPower * 8 });
 
       spawned++;
     }
