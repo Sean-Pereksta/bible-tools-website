@@ -728,12 +728,20 @@ function catBehavior() {
   }
 
   // 🐾 Move
-  if (target && path && path.length > 1) {
-    const next = path[1];
+if (target && path && path.length > 1) {
+  const next = path[1];
+  const symbol = grid[next.y][next.x];
+  const isBlocked = ["🧱", "💎"].includes(symbol);
+
+  if (!isBlocked) {
     catPos.x = next.x;
     catPos.y = next.y;
     console.log(`✅ Cat moved to (${catPos.x}, ${catPos.y}) toward ${target.type}`);
+  } else {
+    console.log(`🚫 Cat blocked at (${next.x}, ${next.y}) by ${symbol}`);
   }
+}
+
 
   // 💥 Attack nearby
   let attacked = false;
