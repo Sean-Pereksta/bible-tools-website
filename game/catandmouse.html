@@ -93,28 +93,9 @@ let username = urlParams.get("username");
 
 const gridSize = 30;
 const gridElement = document.getElementById("grid");
-let grid = []; // initialize empty grid array
-
-// Create the actual 2D grid structure first
-for (let y = 0; y < gridSize; y++) {
-  grid[y] = [];
-  for (let x = 0; x < gridSize; x++) {
-    const cell = document.createElement("div");
-    cell.className = "cell";
-    cell.id = `cell-${x}-${y}`;
-    gridElement.appendChild(cell);
-    grid[y][x] = ""; // init each cell
-  }
-}
-
-// 🟥 NOW set revive tile after grid is built
-const reviveX = Math.floor(gridSize / 2);
-const reviveY = Math.floor(gridSize / 2);
-grid[reviveY][reviveX] = "❤️"; // Set revive heart
-
-// Other game state
+let grid = [];
 let playerPos = { x: 1, y: 1 };
-let catPos = { x: 25, y: 25 }; // not dead center anymore
+let catPos = { x: 15, y: 15 };
 let gameStarted = false;
 let selectedBuild = null;
 let cheeseCount = 0;
@@ -122,17 +103,36 @@ let isAlive = true;
 let catHealth = 600;
 let players = {};
 let isHost = false;
-let canMove = true;
-const moveCooldown = 225;
-let catPower = 0;
-let catMoveInterval = null;
-let ratPower = 1;
-let structureHealth = {};
+  let canMove = true;
+const moveCooldown = 225; // in milliseconds
+  let catPower = 0;
+  let catMoveInterval = null;
+  let ratPower = 1;
 
+
+
+
+
+
+let structureHealth = {}; // key: "x_y", value: health
 const fleas = [];
-const rats = [];
-const termites = [];
+  const rats = []; // 🐀
+  const termites = []; // 🐛
 
+
+
+
+
+for (let y = 0; y < gridSize; y++) {
+  grid[y] = [];
+  for (let x = 0; x < gridSize; x++) {
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    cell.id = `cell-${x}-${y}`;
+    gridElement.appendChild(cell);
+    grid[y][x] = "";
+  }
+}
 
 function renderGrid() {
   const viewSize = 20;
@@ -209,10 +209,6 @@ for (let y = 0; y < gridSize; y++) {
     const cell = document.getElementById(`cell-${flea.x}-${flea.y}`);
     cell.textContent = "🐞";
   }
-if (x === reviveX && y === reviveY) {
-  cell.style.background = "#ffcccc"; // Light red background
-  cell.textContent = "❤️";
-}
 
   // 🐀 Rats with health
   for (let rat of rats) {
@@ -296,26 +292,13 @@ if (catPos.x >= startX && catPos.x < endX && catPos.y >= startY && catPos.y < en
 }
 
 
+
 function movePlayer(dx, dy) {
   if (!gameStarted || !isAlive) return;
-
   const newX = Math.max(0, Math.min(gridSize - 1, playerPos.x + dx));
   const newY = Math.max(0, Math.min(gridSize - 1, playerPos.y + dy));
   playerPos = { x: newX, y: newY };
-
   console.log("Trying to move. isAlive =", isAlive);
-
-  // ✅ Only check if current player stepped on revive spot
-  if (playerPos.x === reviveX && playerPos.y === reviveY) {
-    for (const [deadName, deadPlayer] of Object.entries(players)) {
-      if (!deadPlayer.alive) {
-        const playerRef = doc(db, `games/${gameId}/players/${deadName}`);
-        updateDoc(playerRef, { alive: true });
-        console.log(`🩺 Revived ${deadName}`);
-      }
-    }
-  }
-
   savePosition();
   checkCheese();
   renderGrid();
@@ -1193,4 +1176,5 @@ setInterval(() => {
 </script>
 </body>
 </html>
+
 
