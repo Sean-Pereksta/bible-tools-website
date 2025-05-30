@@ -172,6 +172,26 @@ function renderGrid() {
       }
     }
   }
+  const beaconBoosted = new Set();
+for (let y = 0; y < gridSize; y++) {
+  for (let x = 0; x < gridSize; x++) {
+    if (grid[y][x] === "🗼") {
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const tx = x + dx;
+          const ty = y + dy;
+          if (tx >= 0 && tx < gridSize && ty >= 0 && ty < gridSize) {
+            const tSymbol = grid[ty][tx];
+            if (tSymbol === "🔫" || tSymbol === "🏭") {
+              beaconBoosted.add(`${tx}_${ty}`);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 
   for (let y = startY; y < endY; y++) {
     for (let x = startX; x < endX; x++) {
@@ -182,12 +202,13 @@ function renderGrid() {
       const key = `${x}_${y}`;
       const symbol = grid[y][x];
 
-      // Background logic
-      if (generatorTriggers.has(key)) {
-        cell.style.background = "#fff977";
-      } else {
-        cell.style.background = "#c8f7c5";
-      }
+    if (beaconBoosted.has(key)) {
+  cell.style.background = "#ff8a8a"; // 🔴 boosted red
+} else if (generatorTriggers.has(key)) {
+  cell.style.background = "#fff977"; // 🧀 yellow
+} else {
+  cell.style.background = "#c8f7c5"; // 🌿 default green
+}
 
       // Cheese beacon display
       if (symbol === "🗼") {
@@ -963,7 +984,7 @@ setInterval(() => {
 }, 60000);
   setInterval(() => {
   for (let i = termites.length - 1; i >= 0; i--) {
-    const termite = termites[i];
+    let termite = termites[i];
     let closestWall = null;
     let minDist = Infinity;
 
