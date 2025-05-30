@@ -1053,14 +1053,14 @@ setInterval(() => {
     let target = null;
     let minDist = Infinity;
 
-    // Check distance to cat
+    // 🔍 Check distance to cat
     const distToCat = Math.abs(catPos.x - flea.x) + Math.abs(catPos.y - flea.y);
     if (distToCat < minDist) {
       minDist = distToCat;
       target = { x: catPos.x, y: catPos.y, type: "cat" };
     }
 
-    // Check distances to all rats
+    // 🔍 Check distances to all rats
     for (let rat of rats) {
       const dist = Math.abs(rat.x - flea.x) + Math.abs(rat.y - flea.y);
       if (dist < minDist && rat.health > 0) {
@@ -1069,7 +1069,7 @@ setInterval(() => {
       }
     }
 
-    // Move toward the closest target
+    // 🚶 Move toward the closest target
     if (target) {
       let dx = 0, dy = 0;
       const xDiff = target.x - flea.x;
@@ -1084,42 +1084,38 @@ setInterval(() => {
       const newX = flea.x + dx;
       const newY = flea.y + dy;
 
-      if (
-  newX >= 0 && newX < gridSize &&
-  newY >= 0 && newY < gridSize
-) {
-  flea.x = newX;
-  flea.y = newY;
-}
+      if (newX >= 0 && newX < gridSize && newY >= 0 && newY < gridSize) {
+        flea.x = newX;
+        flea.y = newY;
+      }
 
+      // 💥 Flea attack logic
+      if (flea.x === target.x && flea.y === target.y) {
+        if (target.type === "cat") {
+          catHealth -= 1;
+          flea.lifetime = 0;
 
-      // 🐞 Flea attack logic
-if (flea.x === target.x && flea.y === target.y) {
-  if (target.type === "cat") {
-    catHealth -= 1;
-    flea.lifetime = 0;
+          updateDoc(doc(db, `games/${gameId}`), {
+            cat: { ...catPos, health: catHealth }
+          });
 
-    updateDoc(doc(db, `games/${gameId}`), {
-      cat: { ...catPos, health: catHealth }
-    });
+          if (catHealth <= 0) {
+            document.getElementById("status").textContent = "🎉 Mice win!";
+          }
 
-    if (catHealth <= 0) {
-      document.getElementById("status").textContent = "🎉 Mice win!";
+        } else if (target.type === "rat" && target.rat) {
+          target.rat.health -= 5; // 🐞 Deal 5 damage
+          flea.lifetime = 0;
+
+          if (target.rat.health <= 0) {
+            const index = rats.indexOf(target.rat);
+            if (index !== -1) rats.splice(index, 1);
+          }
+        }
+      }
     }
 
-  } else if (target.type === "rat" && target.rat) {
-    target.rat.health -= 5; // 💥 Deal 5 damage
-    flea.lifetime = 0;
-
-    if (target.rat.health <= 0) {
-      // Remove the rat from the game
-      const index = rats.indexOf(target.rat);
-      if (index !== -1) rats.splice(index, 1);
-    }
-  }
-}
-
-    // 🕓 Decrement flea lifetime
+    // ⏳ Decrement flea lifetime
     flea.lifetime--;
   }
 
@@ -1130,7 +1126,6 @@ if (flea.x === target.x && flea.y === target.y) {
 
   renderGrid();
 }, 400);
-
 
 
 
