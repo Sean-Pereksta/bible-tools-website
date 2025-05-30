@@ -100,13 +100,15 @@ let gameStarted = false;
 let selectedBuild = null;
 let cheeseCount = 0;
 let isAlive = true;
-let catHealth = 400;
+let catHealth = 600;
 let players = {};
 let isHost = false;
   let canMove = true;
 const moveCooldown = 225; // in milliseconds
   let catPower = 0;
   let catMoveInterval = null;
+  let ratPower = 1;
+
 
 
 
@@ -241,17 +243,28 @@ for (let y = 0; y < gridSize; y++) {
     }
   }
 
-  // 🐱 Cat with health and level in one line
-  if (catPos.x >= startX && catPos.x < endX && catPos.y >= startY && catPos.y < endY) {
-    const catCell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
-    catCell.textContent = "🐱";
+ // 🐱 Cat with health bar and level
+if (catPos.x >= startX && catPos.x < endX && catPos.y >= startY && catPos.y < endY) {
+  const catCell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
+  catCell.textContent = "🐱";
 
-    const infoTag = document.createElement("div");
-    infoTag.className = "name";
-    infoTag.style.color = "red";
-    infoTag.innerHTML = `❤️ ${catHealth} ⚡Lv.${catPower}`;
-    catCell.appendChild(infoTag);
-  }
+  // Level display
+  const levelTag = document.createElement("div");
+  levelTag.className = "name";
+  levelTag.style.color = "red";
+  levelTag.innerHTML = `⚡Lv.${catPower}`;
+  catCell.appendChild(levelTag);
+
+  // Health bar
+  const bar = document.createElement("div");
+  bar.className = "health-bar";
+  const barWidth = Math.max(10, Math.min(100, (catHealth / (catPower * 10)) * 100)); // Assuming max health scales with catPower
+  bar.style.width = `${barWidth}%`;
+  bar.style.background = "red";
+  bar.style.height = "3px";
+  bar.style.marginTop = "-10px";
+  catCell.appendChild(bar);
+}
 
   // 🧍 Player Status
   const statusDiv = document.getElementById("playerStatus");
@@ -339,17 +352,17 @@ else if (selectedBuild === 4) cost = 4; // ✅ New
 
   if (selectedBuild === 1) {
     symbol = "🧱";
-    health = 30;
+    health = 15;
   } else if (selectedBuild === 2) {
     symbol = "🔫";
     health = 5;
   } else if (selectedBuild === 3) {
     symbol = "🪳"; // flea nest
-    health = 20;
+    health = 10;
   }
   else if (selectedBuild === 4) {
   symbol = "🏭";
-  health = 10;
+  health = 5;
   cost = 4;  // Add this if you're doing cost inline instead of above
 }
 
@@ -687,7 +700,7 @@ async function listenToGame() {
         const initialCat = {
           x: gridSize - 1,
           y: gridSize - 1,
-          health: 400
+          health: 600
         };
         updateDoc(doc(db, `games/${gameId}`), { cat: initialCat });
       }
@@ -695,7 +708,7 @@ async function listenToGame() {
       const cat = data.cat || {};
       catPower = data.catPower || 0;
       catPos = { x: cat.x || 15, y: cat.y || 15 };
-      catHealth = cat.health || 400;
+      catHealth = cat.health || 600;
       renderGrid();
     }
   });
@@ -792,6 +805,12 @@ renderGrid();
 setInterval(spawnCheese, 10000);
 setInterval(turretAttack, 1000);
 
+  setInterval(() => {
+  ratPower++;
+  console.log(`🐀 Rat Power increased! New base health: ${ratPower}`);
+}, 120000); // 2 minutes = 120,000 ms
+
+
 setInterval(() => {
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
@@ -852,7 +871,8 @@ setInterval(() => {
       oy >= 0 && oy < gridSize &&
       !rats.some(r => r.x === ox && r.y === oy) // no overlap
     ) {
-      rats.push({ x: ox, y: oy, health: 5 });
+      rats.push({ x: ox, y: oy, health: ratPower * 5 });
+
       spawned++;
     }
   }
@@ -990,24 +1010,30 @@ setInterval(() => {
 
 
       // 🐞 Flea attack logic
-      if (flea.x === target.x && flea.y === target.y) {
-        if (target.type === "cat") {
-          catHealth -= 1;
-          flea.lifetime = 0;
+if (flea.x === target.x && flea.y === target.y) {
+  if (target.type === "cat") {
+    catHealth -= 1;
+    flea.lifetime = 0;
 
-          updateDoc(doc(db, `games/${gameId}`), {
-            cat: { ...catPos, health: catHealth }
-          });
+    updateDoc(doc(db, `games/${gameId}`), {
+      cat: { ...catPos, health: catHealth }
+    });
 
-          if (catHealth <= 0) {
-            document.getElementById("status").textContent = "🎉 Mice win!";
-          }
-        } else if (target.type === "rat" && target.rat) {
-          target.rat.health = 0;
-          flea.lifetime = 0;
-        }
-      }
+    if (catHealth <= 0) {
+      document.getElementById("status").textContent = "🎉 Mice win!";
     }
+
+  } else if (target.type === "rat" && target.rat) {
+    target.rat.health -= 5; // 💥 Deal 5 damage
+    flea.lifetime = 0;
+
+    if (target.rat.health <= 0) {
+      // Remove the rat from the game
+      const index = rats.indexOf(target.rat);
+      if (index !== -1) rats.splice(index, 1);
+    }
+  }
+}
 
     // 🕓 Decrement flea lifetime
     flea.lifetime--;
@@ -1051,7 +1077,7 @@ setInterval(() => {
   setInterval(async () => {
     if (gameStarted) {
       catPower++;
-      catHealth += 5;
+      catHealth += 15;
       console.log(`🔋 Cat power increased to ${catPower}`);
 
       await updateDoc(doc(db, `games/${gameId}`), {
