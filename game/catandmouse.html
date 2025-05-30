@@ -439,7 +439,7 @@ function turretAttack() {
             const dxRat = Math.abs(rat.x - x);
             const dyRat = Math.abs(rat.y - y);
             if (dxRat <= 5 && dyRat <= 5) {
-              rat.health -= 3;
+              rat.health -= 2;
               console.log(`💥 Turret hit rat at (${rat.x}, ${rat.y}) → HP: ${rat.health}`);
               attacked = true;
               break; // stop after hitting one rat
