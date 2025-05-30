@@ -297,7 +297,7 @@ function startCatBehaviorLoop() {
   if (catMoveInterval) clearInterval(catMoveInterval);
 
   // 🕒 Speed = faster interval as power increases
-  const speed = Math.max(150, 1100 - catPower * 55); // e.g. power 10 = 500ms
+  const speed = Math.max(150, 1300 - catPower * 55); // e.g. power 10 = 500ms
   catMoveInterval = setInterval(() => {
     if (gameStarted) catBehavior();
   }, speed);
