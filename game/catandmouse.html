@@ -867,7 +867,7 @@ setInterval(() => {
     let closestTarget = null;
     let minDist = Infinity;
 
-    // 🧠 Find closest player
+    // 🔍 Find closest player
     for (const [name, p] of Object.entries(players)) {
       if (p.alive !== false) {
         const dist = Math.abs(p.x - rat.x) + Math.abs(p.y - rat.y);
@@ -878,7 +878,7 @@ setInterval(() => {
       }
     }
 
-    // 🧠 Find closest structure
+    // 🔍 Find closest structure
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
         if (["🧱", "🔫", "🪳", "🏭"].includes(grid[y][x])) {
@@ -891,24 +891,25 @@ setInterval(() => {
       }
     }
 
+    // 🧭 Pathfind toward target, avoiding other rats
     if (closestTarget) {
       const path = findPath(rat.x, rat.y, closestTarget.x, closestTarget.y, (x, y) => {
         const isBlocked = ["🧱", "🏭"].includes(grid[y][x]);
-        const isCenterReviveTile = x === Math.floor(gridSize / 2) && y === Math.floor(gridSize / 2);
-        const isOccupied = rats.some(r => r !== rat && r.x === x && r.y === y);
-        return !isBlocked && !isCenterReviveTile && !isOccupied;
+        const isReviveCenter = x === Math.floor(gridSize / 2) && y === Math.floor(gridSize / 2);
+        const ratOccupied = rats.some(r => r !== rat && r.x === x && r.y === y);
+        return !isBlocked && !isReviveCenter && !ratOccupied;
       });
 
       if (path.length > 0) {
         const next = path[0];
-        const isOccupied = rats.some(r => r !== rat && r.x === next.x && r.y === next.y);
-        if (!isOccupied) {
+        const ratInTheWay = rats.some(r => r !== rat && r.x === next.x && r.y === next.y);
+        if (!ratInTheWay) {
           rat.x = next.x;
           rat.y = next.y;
         }
       }
 
-      // 💥 Attack if reached
+      // 💥 Attack logic
       if (rat.x === closestTarget.x && rat.y === closestTarget.y) {
         if (closestTarget.type === "structure") {
           damageStructure(rat.x, rat.y, 1);
@@ -924,13 +925,12 @@ setInterval(() => {
     }
   }
 
-  // 🧹 Clean up dead rats
-  for (let i = rats.length - 1; i >= 0; i--) {
-    if (rats[i].health <= 0) rats.splice(i, 1);
-  }
+  // 🧹 Cleanup dead rats
+  rats = rats.filter(r => r.health > 0);
 
   renderGrid();
 }, 400);
+
 
 
 // 🪳 Flea Spawning Every 5 Seconds from Nests
