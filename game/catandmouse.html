@@ -93,7 +93,26 @@ let username = urlParams.get("username");
 
 const gridSize = 30;
 const gridElement = document.getElementById("grid");
-let grid = [];
+let grid = []; // initialize empty grid array
+
+// Create the actual 2D grid structure first
+for (let y = 0; y < gridSize; y++) {
+  grid[y] = [];
+  for (let x = 0; x < gridSize; x++) {
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    cell.id = `cell-${x}-${y}`;
+    gridElement.appendChild(cell);
+    grid[y][x] = ""; // init each cell
+  }
+}
+
+// 🟥 NOW set revive tile after grid is built
+const reviveX = Math.floor(gridSize / 2);
+const reviveY = Math.floor(gridSize / 2);
+grid[reviveY][reviveX] = "❤️"; // Set revive heart
+
+// Other game state
 let playerPos = { x: 1, y: 1 };
 let catPos = { x: 15, y: 15 };
 let gameStarted = false;
@@ -103,37 +122,17 @@ let isAlive = true;
 let catHealth = 600;
 let players = {};
 let isHost = false;
-  let canMove = true;
-const moveCooldown = 225; // in milliseconds
-  let catPower = 0;
-  let catMoveInterval = null;
-  let ratPower = 1;
-
-let structureHealth = {}; // key: "x_y", value: health
+let canMove = true;
+const moveCooldown = 225;
+let catPower = 0;
+let catMoveInterval = null;
+let ratPower = 1;
+let structureHealth = {};
 
 const fleas = [];
-const rats = [];      // 🐀
-const termites = [];  // 🐛
+const rats = [];
+const termites = [];
 
-const reviveX = Math.floor(gridSize / 2);
-const reviveY = Math.floor(gridSize / 2);
-grid[reviveY][reviveX] = "❤️"; // Display heart emoji for revive spot
-
-
-
-
-
-
-for (let y = 0; y < gridSize; y++) {
-  grid[y] = [];
-  for (let x = 0; x < gridSize; x++) {
-    const cell = document.createElement("div");
-    cell.className = "cell";
-    cell.id = `cell-${x}-${y}`;
-    gridElement.appendChild(cell);
-    grid[y][x] = "";
-  }
-}
 
 function renderGrid() {
   const viewSize = 20;
