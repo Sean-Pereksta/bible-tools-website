@@ -1119,13 +1119,14 @@ setInterval(() => {
       });
 
       if (path.length > 0) {
-        const next = path[0];
-        const ratInTheWay = rats.some(r => r !== rat && r.x === next.x && r.y === next.y);
-        if (!ratInTheWay) {
-          rat.x = next.x;
-          rat.y = next.y;
-        }
-      }
+  let next = path[0];
+  const ratInTheWay = rats.some(r => r !== rat && r.x === next.x && r.y === next.y);
+  if (!ratInTheWay) {
+    rat.x = next.x;
+    rat.y = next.y;
+  }
+}
+
 
       // 💥 Attack logic
       if (rat.x === closestTarget.x && rat.y === closestTarget.y) {
