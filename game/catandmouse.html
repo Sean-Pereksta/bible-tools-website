@@ -695,7 +695,7 @@ async function listenToGame() {
       const cat = data.cat || {};
       catPower = data.catPower || 0;
       catPos = { x: cat.x || 15, y: cat.y || 15 };
-      catHealth = cat.health || 300;
+      catHealth = cat.health || 400;
       renderGrid();
     }
   });
@@ -858,7 +858,7 @@ setInterval(() => {
   }
 
   console.log(`🐀 ${spawned} rats spawned (Power Level: ${catPower})`);
-}, 60000);
+}, 40000);
 
 setInterval(() => {
   for (let rat of rats) {
