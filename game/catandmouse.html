@@ -134,9 +134,11 @@ function renderGrid() {
   const viewSize = 20;
   const halfView = Math.floor(viewSize / 2);
   const viewport = document.getElementById("grid");
-  viewport.innerHTML = ""; // Clear old cells
+  viewport.innerHTML = "";
 
-  // Center around player
+  const gridCenterX = Math.floor(gridSize / 2);
+  const gridCenterY = Math.floor(gridSize / 2);
+
   const centerX = playerPos.x;
   const centerY = playerPos.y;
 
@@ -147,39 +149,43 @@ function renderGrid() {
 
   viewport.style.gridTemplateColumns = `repeat(${endX - startX}, 20px)`;
   viewport.style.gridTemplateRows = `repeat(${endY - startY}, 20px)`;
-const generatorTriggers = new Set();
 
-for (let y = 0; y < gridSize; y++) {
-  for (let x = 0; x < gridSize; x++) {
-    if (grid[y][x] === "🏭") {
-      for (const p of Object.values(players)) {
-        if (p.alive !== false) {
-          const dx = Math.abs(p.x - x);
-          const dy = Math.abs(p.y - y);
-          if (dx + dy <= 6) {
-            generatorTriggers.add(`${x}_${y}`);
-            break;
+  // 🔄 Determine which generators are active (near a player)
+  const generatorTriggers = new Set();
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      if (grid[y][x] === "🏭") {
+        for (const p of Object.values(players)) {
+          if (p.alive !== false) {
+            const dx = Math.abs(p.x - x);
+            const dy = Math.abs(p.y - y);
+            if (dx + dy <= 6) {
+              generatorTriggers.add(`${x}_${y}`);
+              break;
+            }
           }
         }
       }
     }
   }
-}
 
+  // 🧱 Render visible grid cells
   for (let y = startY; y < endY; y++) {
     for (let x = startX; x < endX; x++) {
       const cell = document.createElement("div");
       cell.id = `cell-${x}-${y}`;
       cell.className = "cell";
-     const key = `${x}_${y}`;
-      if (generatorTriggers.has(key)) {
-        cell.style.background = "#fff977"; // glowing yellow if near a player
+
+      const key = `${x}_${y}`;
+      if (x === gridCenterX && y === gridCenterY) {
+        cell.style.background = "red"; // 🔴 Center of the map
+      } else if (generatorTriggers.has(key)) {
+        cell.style.background = "#fff977"; // 🟡 Generator glow
       } else {
-        cell.style.background = "#c8f7c5"; // normal grass
+        cell.style.background = "#c8f7c5"; // 🟩 Default grass
       }
 
       cell.textContent = grid[y][x];
-
       viewport.appendChild(cell);
     }
   }
@@ -229,7 +235,7 @@ for (let y = 0; y < gridSize; y++) {
 
     const symbol = grid[y][x];
     if (symbol === "🧱" || symbol === "🪳") {
-      const cell = document.getElementById(`cell-${x}-${y}`);
+      const cell = document.getElementById(`cell-${x}_${y}`);
       const bar = document.createElement("div");
       bar.className = "health-bar";
       const hp = structureHealth[key];
@@ -241,7 +247,7 @@ for (let y = 0; y < gridSize; y++) {
     }
   }
 
-  // 🐱 Cat with health and level in one line
+  // 🐱 Cat
   if (catPos.x >= startX && catPos.x < endX && catPos.y >= startY && catPos.y < endY) {
     const catCell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
     catCell.textContent = "🐱";
@@ -266,7 +272,6 @@ for (let y = 0; y < gridSize; y++) {
     statusDiv.appendChild(statusSpan);
   }
 }
-
 
 
 function movePlayer(dx, dy) {
@@ -695,7 +700,7 @@ async function listenToGame() {
       const cat = data.cat || {};
       catPower = data.catPower || 0;
       catPos = { x: cat.x || 15, y: cat.y || 15 };
-      catHealth = cat.health || 300;
+      catHealth = cat.health || 400;
       renderGrid();
     }
   });
@@ -830,19 +835,21 @@ setInterval(() => {
 
 
 
-  // 🐀 Summon Rats every 2 minutes based on catPower
+// 🐀 Summon Rats every 2 minutes based on catPower
 setInterval(() => {
   if (!gameStarted || catPower <= 0) return;
 
   let spawned = 0;
   const maxRats = catPower;
+
   const offsets = [
     { x: 0, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 },
     { x: 0, y: 1 }, { x: 0, y: -1 }, { x: 1, y: 1 },
     { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 },
     { x: 2, y: 0 }, { x: 0, y: 2 }, { x: -2, y: 0 }, { x: 0, y: -2 }
-  ]; // Spacing options
+  ]; // spawn ring
 
+  // 🔷 Spawn near cat
   for (let i = 0; i < offsets.length && spawned < maxRats; i++) {
     const ox = catPos.x + offsets[i].x;
     const oy = catPos.y + offsets[i].y;
@@ -850,15 +857,35 @@ setInterval(() => {
     if (
       ox >= 0 && ox < gridSize &&
       oy >= 0 && oy < gridSize &&
-      !rats.some(r => r.x === ox && r.y === oy) // no overlap
+      !rats.some(r => r.x === ox && r.y === oy)
     ) {
       rats.push({ x: ox, y: oy, health: 5 });
       spawned++;
     }
   }
 
-  console.log(`🐀 ${spawned} rats spawned (Power Level: ${catPower})`);
-}, 60000);
+  // 🔷 Spawn near center of map
+  let midSpawned = 0;
+  const centerX = Math.floor(gridSize / 2);
+  const centerY = Math.floor(gridSize / 2);
+
+  for (let i = 0; i < offsets.length && midSpawned < maxRats; i++) {
+    const ox = centerX + offsets[i].x;
+    const oy = centerY + offsets[i].y;
+
+    if (
+      ox >= 0 && ox < gridSize &&
+      oy >= 0 && oy < gridSize &&
+      !rats.some(r => r.x === ox && r.y === oy)
+    ) {
+      rats.push({ x: ox, y: oy, health: 5 });
+      midSpawned++;
+    }
+  }
+
+  console.log(`🐀 Spawned ${spawned} rats near cat, ${midSpawned} rats in center (Power Level: ${catPower})`);
+}, 60000); // Every 60 seconds
+
 
 setInterval(() => {
   for (let rat of rats) {
