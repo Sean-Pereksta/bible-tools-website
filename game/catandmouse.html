@@ -341,15 +341,18 @@ function movePlayer(dx, dy) {
   checkCheese();
   renderGrid();
 }
-  function updateCatHealthBar() {
+function updateCatHealthBar() {
   const bar = document.getElementById("catHealthFill");
   const text = document.getElementById("catHealthText");
-  const maxHealth = catPower * 10;
-  const percent = Math.max(0, (catHealth / maxHealth) * 100);
+
+  const maxHealth = 1000;
+  const clampedHealth = Math.max(0, Math.min(catHealth, maxHealth));
+  const percent = (clampedHealth / maxHealth) * 100;
 
   bar.style.width = percent + "%";
-  text.textContent = `❤️ ${catHealth} / ${maxHealth}`;
+  text.textContent = `❤️ ${clampedHealth} / ${maxHealth}`;
 }
+
 
 
 function savePosition() {
