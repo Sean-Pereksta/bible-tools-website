@@ -1143,7 +1143,7 @@ setInterval(() => {
       // 💥 Attack logic
       if (rat.x === closestTarget.x && rat.y === closestTarget.y) {
         if (closestTarget.type === "structure") {
-          damageStructure(rat.x, rat.y, 1);
+          damageStructure(rat.x, rat.y, ratPower); 
         } else if (closestTarget.type === "mouse") {
           const playerRef = doc(db, `games/${gameId}/players/${closestTarget.name}`);
           updateDoc(playerRef, { alive: false });
