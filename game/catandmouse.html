@@ -790,7 +790,7 @@ renderGrid();
 
 // Start cheese spawn and turret attack globally
 setInterval(spawnCheese, 10000);
-setInterval(turretAttack, 750);
+setInterval(turretAttack, 1000);
 
 setInterval(() => {
   for (let y = 0; y < gridSize; y++) {
@@ -867,6 +867,7 @@ setInterval(() => {
     let closestTarget = null;
     let minDist = Infinity;
 
+    // 🧠 Find closest player
     for (const [name, p] of Object.entries(players)) {
       if (p.alive !== false) {
         const dist = Math.abs(p.x - rat.x) + Math.abs(p.y - rat.y);
@@ -877,9 +878,10 @@ setInterval(() => {
       }
     }
 
+    // 🧠 Find closest structure
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
-    if (["🧱", "🔫", "🪳", "🏭"].includes(grid[y][x])) {
+        if (["🧱", "🔫", "🪳", "🏭"].includes(grid[y][x])) {
           const dist = Math.abs(x - rat.x) + Math.abs(y - rat.y);
           if (dist < minDist) {
             minDist = dist;
@@ -891,16 +893,22 @@ setInterval(() => {
 
     if (closestTarget) {
       const path = findPath(rat.x, rat.y, closestTarget.x, closestTarget.y, (x, y) => {
-       return !["🧱", "🏭"].includes(grid[y][x]); // 🧱 and 🏭 block path
+        const isBlocked = ["🧱", "🏭"].includes(grid[y][x]);
+        const isCenterReviveTile = x === Math.floor(gridSize / 2) && y === Math.floor(gridSize / 2);
+        const isOccupied = rats.some(r => r !== rat && r.x === x && r.y === y);
+        return !isBlocked && !isCenterReviveTile && !isOccupied;
       });
 
       if (path.length > 0) {
         const next = path[0];
-        rat.x = next.x;
-        rat.y = next.y;
+        const isOccupied = rats.some(r => r !== rat && r.x === next.x && r.y === next.y);
+        if (!isOccupied) {
+          rat.x = next.x;
+          rat.y = next.y;
+        }
       }
 
-      // Attack if reached
+      // 💥 Attack if reached
       if (rat.x === closestTarget.x && rat.y === closestTarget.y) {
         if (closestTarget.type === "structure") {
           damageStructure(rat.x, rat.y, 1);
@@ -916,12 +924,14 @@ setInterval(() => {
     }
   }
 
+  // 🧹 Clean up dead rats
   for (let i = rats.length - 1; i >= 0; i--) {
     if (rats[i].health <= 0) rats.splice(i, 1);
   }
 
   renderGrid();
 }, 400);
+
 
 // 🪳 Flea Spawning Every 5 Seconds from Nests
 setInterval(() => {
