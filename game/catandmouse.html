@@ -64,7 +64,7 @@
 🪳 Flea Nest (Click 3, Cost: 🧀5) &nbsp; | &nbsp;
 🏭 Cheese Generator (Click 4, Cost: 🧀4) &nbsp; | &nbsp;
 💎 Super Wall (Click 5, Cost: 🧀8) &nbsp; | &nbsp;
-🗼 Cheese Beacon (Click 6, Cost: 🧀20)
+🗼 Cheese Beacon (Click 6, Cost: 🧀24)
 
 </p>
   <p id="status"></p>
@@ -400,7 +400,7 @@ else if (selectedBuild === 2) cost = 3;
 else if (selectedBuild === 3) cost = 5;
 else if (selectedBuild === 4) cost = 4; 
   else if (selectedBuild === 5) cost = 8;
-   else if (selectedBuild === 6) cost = 20;// ✅ New
+   else if (selectedBuild === 6) cost = 24;// ✅ New
 
 
   if (cheeseCount < cost) return;
@@ -438,7 +438,7 @@ else if (selectedBuild === 4) cost = 4;
   else if (selectedBuild === 6) {
   symbol = "🗼"; // Cheese Beacon
   health = 25;
-  cost = 20;
+  cost = 24;
 }
 
 
@@ -896,7 +896,7 @@ window.addEventListener("keydown", (e) => {
   break;
       case "6":
   selectedBuild = 6;
-  document.getElementById("buildType").textContent = "Cheese Beacon 🗼 (Cost: 12)";
+  document.getElementById("buildType").textContent = "Cheese Beacon 🗼 (Cost: 24)";
   break;
 
   }
@@ -927,7 +927,7 @@ setInterval(turretAttack, 1000);
   setInterval(() => {
   ratPower++;
   console.log(`🐀 Rat Power increased! New base health: ${ratPower}`);
-}, 120000); // 2 minutes = 120,000 ms
+}, 80000); // 2 minutes = 120,000 ms
 
 
 setInterval(() => {
