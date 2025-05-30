@@ -519,7 +519,9 @@ function findPath(startX, startY, targetX, targetY, allowTargetWall = false) {
       ) {
         const isTarget = nx === targetX && ny === targetY;
         const cell = grid[ny][nx];
-        const isWalkable = cell !== "🧱" || (allowTargetWall && isTarget);
+
+        const isWall = cell === "🧱" || cell === "💎";
+        const isWalkable = !isWall || (allowTargetWall && isTarget);
 
         if (isWalkable) {
           visited.add(key);
@@ -531,6 +533,7 @@ function findPath(startX, startY, targetX, targetY, allowTargetWall = false) {
 
   return null;
 }
+
 function triggerMoveCooldown() {
   canMove = false;
   setTimeout(() => canMove = true, moveCooldown);
