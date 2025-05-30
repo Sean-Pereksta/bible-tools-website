@@ -109,15 +109,16 @@ const moveCooldown = 225; // in milliseconds
   let catMoveInterval = null;
   let ratPower = 1;
 
-
-
-
-
-
 let structureHealth = {}; // key: "x_y", value: health
+
 const fleas = [];
-  const rats = []; // 🐀
-  const termites = []; // 🐛
+const rats = [];      // 🐀
+const termites = [];  // 🐛
+
+const reviveX = Math.floor(gridSize / 2);
+const reviveY = Math.floor(gridSize / 2);
+grid[reviveY][reviveX] = "❤️"; // Display heart emoji for revive spot
+
 
 
 
@@ -209,6 +210,10 @@ for (let y = 0; y < gridSize; y++) {
     const cell = document.getElementById(`cell-${flea.x}-${flea.y}`);
     cell.textContent = "🐞";
   }
+if (x === reviveX && y === reviveY) {
+  cell.style.background = "#ffcccc"; // Light red background
+  cell.textContent = "❤️";
+}
 
   // 🐀 Rats with health
   for (let rat of rats) {
@@ -292,13 +297,26 @@ if (catPos.x >= startX && catPos.x < endX && catPos.y >= startY && catPos.y < en
 }
 
 
-
 function movePlayer(dx, dy) {
   if (!gameStarted || !isAlive) return;
+
   const newX = Math.max(0, Math.min(gridSize - 1, playerPos.x + dx));
   const newY = Math.max(0, Math.min(gridSize - 1, playerPos.y + dy));
   playerPos = { x: newX, y: newY };
+
   console.log("Trying to move. isAlive =", isAlive);
+
+  // ✅ Only check if current player stepped on revive spot
+  if (playerPos.x === reviveX && playerPos.y === reviveY) {
+    for (const [deadName, deadPlayer] of Object.entries(players)) {
+      if (!deadPlayer.alive) {
+        const playerRef = doc(db, `games/${gameId}/players/${deadName}`);
+        updateDoc(playerRef, { alive: true });
+        console.log(`🩺 Revived ${deadName}`);
+      }
+    }
+  }
+
   savePosition();
   checkCheese();
   renderGrid();
