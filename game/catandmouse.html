@@ -72,6 +72,13 @@
   <p>Selected Build: <span id="buildType">None</span></p>
   <p>Cheese Collected: <span id="cheeseCount">0</span></p>
 </div>
+  <div id="catHealthContainer" style="margin-top: 10px;">
+  <div id="catHealthBar" style="height: 20px; width: 300px; background: lightgray; position: relative; margin: 0 auto; border-radius: 8px;">
+    <div id="catHealthFill" style="height: 100%; width: 100%; background: red; border-radius: 8px;"></div>
+    <div id="catHealthText" style="position: absolute; width: 100%; top: 0; text-align: center; font-weight: bold;">❤️ 100 / 100</div>
+  </div>
+</div>
+
 
 <div id="grid"></div> <!-- ⬅️ Now it's below the UI elements -->
 
@@ -334,6 +341,16 @@ function movePlayer(dx, dy) {
   checkCheese();
   renderGrid();
 }
+  function updateCatHealthBar() {
+  const bar = document.getElementById("catHealthFill");
+  const text = document.getElementById("catHealthText");
+  const maxHealth = catPower * 10;
+  const percent = Math.max(0, (catHealth / maxHealth) * 100);
+
+  bar.style.width = percent + "%";
+  text.textContent = `❤️ ${catHealth} / ${maxHealth}`;
+}
+
 
 function savePosition() {
   const cleanUsername = username.trim().toLowerCase();
@@ -748,6 +765,7 @@ function catBehavior() {
   updateDoc(doc(db, `games/${gameId}`), {
     cat: { x: catPos.x, y: catPos.y, health: catHealth }
   });
+updateCatHealthBar();
 
   renderGrid();
 }
