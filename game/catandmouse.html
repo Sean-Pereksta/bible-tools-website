@@ -59,11 +59,13 @@
   🎮 Arrow keys to move | A/W/S/D to build | 1/2/3 to select building
 </p>
   <p style="margin: 10px 0; font-size: 13px; font-weight: bold; color: #333;">
-  🧱 Wall (Click 1, Cost: 🧀1) &nbsp; | &nbsp;
-  🔫 Turret (Click 2, Cost: 🧀3) &nbsp; | &nbsp;
-  🪳 Flea Nest (Click 3, Cost: 🧀5) &nbsp; | &nbsp;
-  🏭 Cheese Generator (Click 4, Cost: 🧀4) &nbsp; | &nbsp;
-  💎 Super Wall (Click 5, Cost: 🧀8)
+🧱 Wall (Click 1, Cost: 🧀1) &nbsp; | &nbsp;
+🔫 Turret (Click 2, Cost: 🧀3) &nbsp; | &nbsp;
+🪳 Flea Nest (Click 3, Cost: 🧀5) &nbsp; | &nbsp;
+🏭 Cheese Generator (Click 4, Cost: 🧀4) &nbsp; | &nbsp;
+💎 Super Wall (Click 5, Cost: 🧀8) &nbsp; | &nbsp;
+🗼 Cheese Beacon (Click 6, Cost: 🧀12)
+
 </p>
   <p id="status"></p>
   <div id="playerStatus" style="margin-top: 10px;"></div>
@@ -211,6 +213,9 @@ for (let y = 0; y < gridSize; y++) {
     const cell = document.getElementById(`cell-${flea.x}-${flea.y}`);
     cell.textContent = "🐞";
   }
+if (symbol === "🗼") {
+  cell.textContent = "🗼";
+}
 
   // 🐀 Rats with health
   for (let rat of rats) {
@@ -350,7 +355,8 @@ function placeStructure(dir) {
 else if (selectedBuild === 2) cost = 3;
 else if (selectedBuild === 3) cost = 5;
 else if (selectedBuild === 4) cost = 4; 
-  else if (selectedBuild === 5) cost = 8;// ✅ New
+  else if (selectedBuild === 5) cost = 8;
+   else if (selectedBuild === 6) cost = 12;// ✅ New
 
 
   if (cheeseCount < cost) return;
@@ -384,6 +390,11 @@ else if (selectedBuild === 4) cost = 4;
   symbol = "💎";
   health = 75;
   cost = 8;
+}
+  else if (selectedBuild === 6) {
+  symbol = "🗼"; // Cheese Beacon
+  health = 25;
+  cost = 12;
 }
 
 
@@ -451,11 +462,30 @@ function turretAttack() {
       if (grid[y][x] === "🔫") {
         let attacked = false;
 
-        // 🔫 First check if cat is within 3 tiles
+        // 🔋 Count nearby cheese beacons (within 2 tiles)
+        let bonusDamage = 0;
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (
+              nx >= 0 && nx < gridSize &&
+              ny >= 0 && ny < gridSize &&
+              grid[ny][nx] === "🗼"
+            ) {
+              bonusDamage++;
+            }
+          }
+        }
+
+        // 💥 Base turret damage is 2
+        const damage = 2 + bonusDamage;
+
+        // 🔫 First check if cat is within 5 tiles
         const dxCat = Math.abs(catPos.x - x);
         const dyCat = Math.abs(catPos.y - y);
         if (dxCat <= 5 && dyCat <= 5) {
-          catHealth--;
+          catHealth -= damage;
           updateDoc(doc(db, `games/${gameId}`), {
             cat: { x: catPos.x, y: catPos.y, health: catHealth }
           });
@@ -473,10 +503,10 @@ function turretAttack() {
             const dxRat = Math.abs(rat.x - x);
             const dyRat = Math.abs(rat.y - y);
             if (dxRat <= 5 && dyRat <= 5) {
-              rat.health -= 2;
+              rat.health -= damage;
               console.log(`💥 Turret hit rat at (${rat.x}, ${rat.y}) → HP: ${rat.health}`);
               attacked = true;
-              break; // stop after hitting one rat
+              break;
             }
           }
         }
@@ -491,6 +521,7 @@ function turretAttack() {
 
   renderGrid();
 }
+
 
 
 
@@ -578,7 +609,7 @@ function catBehavior() {
         if (
           wx >= 0 && wx < gridSize &&
           wy >= 0 && wy < gridSize &&
-          ["🧱", "🏭", "💎"].includes(grid[wy][wx])
+          ["🧱", "🏭", "💎", "🗼"].includes(grid[wy][wx])
         ) {
           const wPath = findPath(catPos.x, catPos.y, wx, wy, true);
           if (wPath) {
@@ -595,13 +626,13 @@ function catBehavior() {
     }
   }
 
-  // 🔫 Structures (if no mouse target or reachable wall)
+  // 🔫 Structures
   if (!target) {
     console.log("📌 Checking structures...");
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
         const symbol = grid[y][x];
-        if (symbol === "🔫" || symbol === "🪳") {
+        if (["🔫", "🪳", "🗼"].includes(symbol)) {
           const sPath = findPath(catPos.x, catPos.y, x, y, false);
           if (sPath) {
             console.log(`🎯 Found structure (${symbol}) at (${x}, ${y}) - ${sPath.length} steps`);
@@ -621,7 +652,7 @@ function catBehavior() {
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
         const symbol = grid[y][x];
-        if (["🧱", "🔫", "🪳", "🏭", "💎"].includes(symbol)) {
+        if (["🧱", "🔫", "🪳", "🏭", "💎", "🗼"].includes(symbol)) {
           const fPath = findPath(catPos.x, catPos.y, x, y, false);
           if (fPath) {
             console.log(`⬅️ Fallback target (${symbol}) at (${x}, ${y}) - ${fPath.length} steps`);
@@ -669,7 +700,7 @@ function catBehavior() {
       if (
         tx >= 0 && tx < gridSize &&
         ty >= 0 && ty < gridSize &&
-        ["🧱", "🔫", "🪳", "🏭", "💎"].includes(grid[ty][tx])
+        ["🧱", "🔫", "🪳", "🏭", "💎", "🗼"].includes(grid[ty][tx])
       ) {
         console.log(`💥 Cat attacked ${grid[ty][tx]} at (${tx}, ${ty})`);
         damageStructure(tx, ty);
@@ -697,6 +728,7 @@ function catBehavior() {
 
   renderGrid();
 }
+
 
 async function listenToGame() {
 
@@ -809,6 +841,10 @@ window.addEventListener("keydown", (e) => {
   selectedBuild = 5;
   document.getElementById("buildType").textContent = "Super Wall 💎 (Cost: 8)";
   break;
+      case "6":
+  selectedBuild = 6;
+  document.getElementById("buildType").textContent = "Cheese Beacon 🗼 (Cost: 12)";
+  break;
 
   }
 
@@ -845,28 +881,45 @@ setInterval(() => {
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
       if (grid[y][x] === "🏭") {
-        // Highlight the generator for visual effect
+        // 🌟 Visual flash
         const cell = document.getElementById(`cell-${x}-${y}`);
         if (cell) {
-          cell.style.backgroundColor = "#fff977"; // yellow flash
+          cell.style.backgroundColor = "#fff977";
           setTimeout(() => {
-            cell.style.backgroundColor = "#c8f7c5"; // reset to grass
+            cell.style.backgroundColor = "#c8f7c5";
           }, 300);
         }
 
-        // Reward each alive player nearby
+        // 🔋 Count nearby beacons within 2 tiles
+        let bonusCheese = 0;
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (
+              nx >= 0 && nx < gridSize &&
+              ny >= 0 && ny < gridSize &&
+              grid[ny][nx] === "🗼"
+            ) {
+              bonusCheese++;
+            }
+          }
+        }
+
+        // 🧀 Reward each alive player nearby
         for (const [name, p] of Object.entries(players)) {
           if (p.alive !== false) {
             const dx = Math.abs(p.x - x);
             const dy = Math.abs(p.y - y);
-            if (dx + dy <= 9) { // Manhattan distance within 6
+            if (dx + dy <= 9) {
               if (name === username.trim().toLowerCase()) {
-                cheeseCount += 1;
+                const totalCheese = 1 + bonusCheese;
+                cheeseCount += totalCheese;
                 document.getElementById("cheeseCount").textContent = cheeseCount;
                 updateDoc(doc(db, `games/${gameId}/players/${name}`), {
                   cheese: cheeseCount
                 });
-                console.log(`💰 Generator at (${x},${y}) gave cheese to ${name}`);
+                console.log(`💰 Generator at (${x},${y}) gave ${totalCheese} cheese to ${name}`);
               }
             }
           }
@@ -874,7 +927,8 @@ setInterval(() => {
       }
     }
   }
-}, 10000); // Every 10 seconds
+}, 10000); // ⏲ Every 10 seconds
+
 
 setInterval(() => {
   if (!gameStarted || catPower <= 0) return;
@@ -1001,10 +1055,10 @@ setInterval(() => {
       }
     }
 
-    // 🔍 Find closest structure
+    // 🔍 Find closest structure including 🗼 beacon
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
-        if (["🧱", "🔫", "🪳", "🏭", "💎"].includes(grid[y][x])) {
+        if (["🧱", "🔫", "🪳", "🏭", "💎", "🗼"].includes(grid[y][x])) {
           const dist = Math.abs(x - rat.x) + Math.abs(y - rat.y);
           if (dist < minDist) {
             minDist = dist;
@@ -1017,7 +1071,7 @@ setInterval(() => {
     // 🧭 Pathfind toward target, avoiding other rats
     if (closestTarget) {
       const path = findPath(rat.x, rat.y, closestTarget.x, closestTarget.y, (x, y) => {
-        const isBlocked = ["🧱", "🏭", "💎"].includes(grid[y][x]);
+        const isBlocked = ["🧱", "🏭", "💎", "🗼"].includes(grid[y][x]);
         const isReviveCenter = x === Math.floor(gridSize / 2) && y === Math.floor(gridSize / 2);
         const ratOccupied = rats.some(r => r !== rat && r.x === x && r.y === y);
         return !isBlocked && !isReviveCenter && !ratOccupied;
