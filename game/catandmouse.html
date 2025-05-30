@@ -100,7 +100,7 @@ let gameStarted = false;
 let selectedBuild = null;
 let cheeseCount = 0;
 let isAlive = true;
-let catHealth = 300;
+let catHealth = 400;
 let players = {};
 let isHost = false;
   let canMove = true;
@@ -297,7 +297,7 @@ function startCatBehaviorLoop() {
   if (catMoveInterval) clearInterval(catMoveInterval);
 
   // 🕒 Speed = faster interval as power increases
-  const speed = Math.max(150, 1200 - catPower * 55); // e.g. power 10 = 500ms
+  const speed = Math.max(150, 1100 - catPower * 55); // e.g. power 10 = 500ms
   catMoveInterval = setInterval(() => {
     if (gameStarted) catBehavior();
   }, speed);
@@ -307,7 +307,7 @@ function startCatBehaviorLoop() {
 function checkCheese() {
   if (grid[playerPos.y][playerPos.x] === "🧀") {
     grid[playerPos.y][playerPos.x] = "";
-    cheeseCount += 4;
+    cheeseCount += 3;
     document.getElementById("cheeseCount").textContent = cheeseCount;
     savePosition();
     renderGrid();
@@ -687,7 +687,7 @@ async function listenToGame() {
         const initialCat = {
           x: gridSize - 1,
           y: gridSize - 1,
-          health: 300
+          health: 400
         };
         updateDoc(doc(db, `games/${gameId}`), { cat: initialCat });
       }
