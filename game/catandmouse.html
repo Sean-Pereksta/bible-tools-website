@@ -117,6 +117,8 @@ const moveCooldown = 225; // in milliseconds
 let structureHealth = {}; // key: "x_y", value: health
 const fleas = [];
   const rats = []; // 🐀
+  const termites = []; // 🐛
+
 
 
 
@@ -222,6 +224,15 @@ for (let y = 0; y < gridSize; y++) {
     healthTag.textContent = `❤️${rat.health}`;
     cell.appendChild(healthTag);
   }
+
+  // 🐛 Termites
+for (let termite of termites) {
+  if (termite.x >= startX && termite.x < endX && termite.y >= startY && termite.y < endY) {
+    const cell = document.getElementById(`cell-${termite.x}-${termite.y}`);
+    cell.textContent = "🐛";
+  }
+}
+
 
   // 🧱 Wall and 🪳 Flea Nest Health Bars
   for (let key in structureHealth) {
@@ -846,6 +857,79 @@ setInterval(() => {
   }
 }, 10000); // Every 10 seconds
 
+setInterval(() => {
+  if (!gameStarted || catPower <= 0) return;
+
+  const centerX = Math.floor(gridSize / 2);
+  const centerY = Math.floor(gridSize / 2);
+  const numToSpawn = Math.ceil(catPower / 2);
+  const offsets = [
+    { x: 0, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 },
+    { x: 0, y: 1 }, { x: 0, y: -1 }, { x: 1, y: 1 },
+    { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }
+  ];
+
+  let spawned = 0;
+  for (let i = 0; i < offsets.length && spawned < numToSpawn; i++) {
+    const ox = centerX + offsets[i].x;
+    const oy = centerY + offsets[i].y;
+
+    if (
+      ox >= 0 && ox < gridSize &&
+      oy >= 0 && oy < gridSize &&
+      !termites.some(t => t.x === ox && t.y === oy)
+    ) {
+      termites.push({ x: ox, y: oy });
+      spawned++;
+    }
+  }
+
+  console.log(`🐛 Spawned ${spawned} termites in center`);
+}, 60000);
+  setInterval(() => {
+  for (let i = termites.length - 1; i >= 0; i--) {
+    const termite = termites[i];
+    let closestWall = null;
+    let minDist = Infinity;
+
+    // 🔍 Find closest wall
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        if (grid[y][x] === "🧱") {
+          const dist = Math.abs(termite.x - x) + Math.abs(termite.y - y);
+          if (dist < minDist) {
+            minDist = dist;
+            closestWall = { x, y };
+          }
+        }
+      }
+    }
+
+    if (closestWall) {
+      const path = findPath(termite.x, termite.y, closestWall.x, closestWall.y, (x, y) => {
+        return !["🧱", "🔫", "🪳", "🏭"].includes(grid[y][x]);
+      });
+
+      if (path.length > 0) {
+        const next = path[0];
+        termite.x = next.x;
+        termite.y = next.y;
+      }
+
+      // 💥 Destroy wall on impact and remove termite
+      if (termite.x === closestWall.x && termite.y === closestWall.y) {
+        const key = `${termite.x}_${termite.y}`;
+        grid[termite.y][termite.x] = "";
+        delete structureHealth[key];
+        setDoc(doc(db, `games/${gameId}/structures/${key}`), {});
+        termites.splice(i, 1); // Remove termite
+        console.log("💥 Termite destroyed a wall and died");
+      }
+    }
+  }
+
+  renderGrid();
+}, 400);
 
 
 
