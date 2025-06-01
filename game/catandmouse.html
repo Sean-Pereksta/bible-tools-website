@@ -1451,22 +1451,24 @@ setInterval(() => {
   // Start initial cat behavior loop
   startCatBehaviorLoop();
 
-  // Increase power every 30 seconds
   setInterval(async () => {
-    if (gameStarted) {
-      catPower++;
-      catHealth += 15;
-      console.log(`🔋 Cat power increased to ${catPower}`);
+  if (gameStarted) {
+    catPower++;
 
-      await updateDoc(doc(db, `games/${gameId}`), {
-        catPower,
-        cat: { ...catPos, health: catHealth }
-      });
+    const playerCount = Object.keys(players).length;
+    catHealth += 15 * playerCount;
 
-      // Restart loop with updated speed
-      startCatBehaviorLoop();
-    }
-  }, 20000);
+    console.log(`🔋 Cat power increased to ${catPower} | Health +${15 * playerCount} → ${catHealth}`);
+
+    await updateDoc(doc(db, `games/${gameId}`), {
+      catPower,
+      cat: { ...catPos, health: catHealth }
+    });
+
+    startCatBehaviorLoop();
+  }
+}, 20000);
+
 }
 })();
 
