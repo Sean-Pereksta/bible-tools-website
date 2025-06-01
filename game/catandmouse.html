@@ -53,52 +53,61 @@
 </style>
 
 <body>
-<h1>🐱 Cat vs 🐭 Mouse</h1>
+<h1 style="text-align: center;">🐱 Cat vs 🐭 Mouse</h1>
 
-<div id="info">
+<!-- 🧰 Build Options & Controls -->
+<div style="text-align: center; margin-bottom: 10px;">
   <p style="margin: 5px 0; font-size: 14px; color: #444;">
-  🎮 Arrow keys to move | A/W/S/D to build | 1/2/3 to select building | Press Space to open Upgrade Menu
-</p>
-<p style="margin: 10px 0; font-size: 13px; font-weight: bold; color: #333;">
-🧱 Wall (Click 1, Cost: 🧀1) &nbsp; | &nbsp;
-🔫 Turret (Click 2, Cost: 🧀3) &nbsp; | &nbsp;
-🪳 Flea Nest (Click 3, Cost: 🧀5) &nbsp; | &nbsp;
-🏭 Cheese Generator (Click 4, Cost: 🧀4) &nbsp; | &nbsp;
-💎 Super Wall (Click 5, Cost: 🧀6) &nbsp; | &nbsp;
-🗼 Cheese Beacon (Click 6, Cost: 🧀24) &nbsp; | &nbsp;
-🐦‍🔥 Phoenix Cheese (Click 7, Cost: 🧀40)
-</p>
-
-<!-- ✅ Place Advancement UI here, outside of <p> -->
-<p>Advancement Points: <span id="advPoints">0</span></p>
-
-<div id="upgradeMenu" style="display:none; background:#eee; border:2px solid #888; padding:10px; margin:10px auto; width:320px;">
-  <h3>🔧 Upgrade Menu</h3>
-  <p><b>1</b> – 🏃 <strong>Speedster</strong><br>
-     <b>2</b> – 🧀 <strong>Scavenger</strong><br>
-     <b>3</b> – 🐞 <strong>Flea Master</strong><br>
-     <b>4</b> – 🧱 <strong>Wall Master</strong></p>
-  <p>Chosen: <span id="chosenUpgrades"></span></p>
+    🎮 Arrow keys to move | A/W/S/D to build | 1–7 to select building | Space = Upgrade Menu
+  </p>
+  <p style="margin: 10px 0; font-size: 13px; font-weight: bold; color: #333;">
+    🧱 Wall (1, 🧀1) &nbsp; | &nbsp;
+    🔫 Turret (2, 🧀3) &nbsp; | &nbsp;
+    🪳 Flea Nest (3, 🧀5) &nbsp; | &nbsp;
+    🏭 Generator (4, 🧀4) &nbsp; | &nbsp;
+    💎 Super Wall (5, 🧀6) &nbsp; | &nbsp;
+    🗼 Beacon (6, 🧀24) &nbsp; | &nbsp;
+    🐦‍🔥 Phoenix Cheese (7, 🧀40)
+  </p>
 </div>
 
+<!-- 🔲 Main Game + Sidebar Layout -->
+<div style="display: flex; justify-content: center; align-items: flex-start; gap: 20px;">
 
-<p id="status"></p>
-<div id="playerStatus" style="margin-top: 10px;"></div>
-<p>Selected Build: <span id="buildType">None</span></p>
-<p>Cheese Collected: <span id="cheeseCount">0</span></p>
+  <!-- 📊 Left Sidebar -->
+  <div style="width: 200px; font-size: 14px;">
+    <p><strong>🧀 Cheese:</strong> <span id="cheeseCount">0</span></p>
+    <p><strong>⚡ Advancement Points:</strong> <span id="advPoints">0</span></p>
+    <p><strong>🔨 Selected Build:</strong> <span id="buildType">None</span></p>
+    <p id="status"></p>
+    <div id="playerStatus" style="margin-top: 10px;"></div>
+
+    <!-- 🔧 Upgrade Menu (Toggles on Space) -->
+    <div id="upgradeMenu" style="display:none; background:#eee; border:2px solid #888; padding:10px; margin-top:10px;">
+      <h3>🔧 Upgrade Menu</h3>
+      <p><b>1</b> – 🏃 <strong>Speedster</strong><br>
+         <b>2</b> – 🧀 <strong>Scavenger</strong><br>
+         <b>3</b> – 🐞 <strong>Flea Master</strong><br>
+         <b>4</b> – 🧱 <strong>Wall Master</strong></p>
+      <p>Chosen: <span id="chosenUpgrades"></span></p>
+    </div>
+  </div>
+
+  <!-- 🎮 Game Grid -->
+  <div>
+    <div id="grid"></div>
+
+    <!-- ❤️ Cat Health Bar (centered under grid) -->
+    <div id="catHealthContainer" style="margin-top: 10px;">
+      <div id="catHealthBar" style="height: 20px; width: 300px; background: lightgray; position: relative; margin: 0 auto; border-radius: 8px;">
+        <div id="catHealthFill" style="height: 100%; width: 100%; background: red; border-radius: 8px;"></div>
+        <div id="catHealthText" style="position: absolute; width: 100%; top: 0; text-align: center; font-weight: bold;">❤️ 1000 / 1000</div>
+      </div>
+    </div>
+  </div>
 
 </div>
-  <div id="catHealthContainer" style="margin-top: 10px;">
- <div id="catHealthBar" style="height: 20px; width: 300px; background: lightgray; position: relative; margin: 0 auto; border-radius: 8px;">
-  <div id="catHealthFill" style="height: 100%; width: 100%; background: red; border-radius: 8px;"></div>
-  <div id="catHealthText" style="position: absolute; width: 100%; top: 0; text-align: center; font-weight: bold;">❤️ 1000 / 1000</div>
-</div>
 
-</div>
-
-
-
-<div id="grid"></div> <!-- ⬅️ Now it's below the UI elements -->
 
 
 <script type="module">
