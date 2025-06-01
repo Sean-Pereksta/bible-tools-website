@@ -132,18 +132,18 @@ let isAlive = true;
 let catHealth = 1000;
 let players = {};
 let isHost = false;
-  let canMove = true;
-const moveCooldown = 225; // in milliseconds
-  let catPower = 0;
-  let catMoveInterval = null;
-  let ratPower = 1;
-  let advancementPoints = 0;
+let canMove = true;
+const moveCooldown = 225;
+let catPower = 0;
+let catMoveInterval = null;
+let ratPower = 1;
+
+let advancementPoints = 0;
 let upgradeMenuOpen = false;
-let selectedUpgrades = []; // Track upgrade paths
-  let selectedUpgrades = [];
-let fleaSpawnCooldown = 8000; // for Flea Master
+let selectedUpgrades = []; // ✅ Only one declaration
+let fleaSpawnCooldown = 8000;
 let fleaMasterActive = false;
-  let cheesePickupBonus = 0;
+let cheesePickupBonus = 0;
 let wallMasterActive = false;
 
 
