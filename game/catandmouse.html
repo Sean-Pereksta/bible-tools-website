@@ -45,6 +45,7 @@
     background-color: red;
     border-radius: 1px;
   }
+  
 
   #info {
     margin-top: 10px;
@@ -56,9 +57,9 @@
 
 <div id="info">
   <p style="margin: 5px 0; font-size: 14px; color: #444;">
-  🎮 Arrow keys to move | A/W/S/D to build | 1/2/3 to select building
+  🎮 Arrow keys to move | A/W/S/D to build | 1/2/3 to select building | Press Space to open Upgrade Menu
 </p>
-  <p style="margin: 10px 0; font-size: 13px; font-weight: bold; color: #333;">
+<p style="margin: 10px 0; font-size: 13px; font-weight: bold; color: #333;">
 🧱 Wall (Click 1, Cost: 🧀1) &nbsp; | &nbsp;
 🔫 Turret (Click 2, Cost: 🧀3) &nbsp; | &nbsp;
 🪳 Flea Nest (Click 3, Cost: 🧀5) &nbsp; | &nbsp;
@@ -66,13 +67,26 @@
 💎 Super Wall (Click 5, Cost: 🧀6) &nbsp; | &nbsp;
 🗼 Cheese Beacon (Click 6, Cost: 🧀24) &nbsp; | &nbsp;
 🐦‍🔥 Phoenix Cheese (Click 7, Cost: 🧀40)
-
-
 </p>
-  <p id="status"></p>
-  <div id="playerStatus" style="margin-top: 10px;"></div>
-  <p>Selected Build: <span id="buildType">None</span></p>
-  <p>Cheese Collected: <span id="cheeseCount">0</span></p>
+
+<!-- ✅ Place Advancement UI here, outside of <p> -->
+<p>Advancement Points: <span id="advPoints">0</span></p>
+
+<div id="upgradeMenu" style="display:none; background:#eee; border:2px solid #888; padding:10px; margin:10px auto; width:320px;">
+  <h3>🔧 Upgrade Menu</h3>
+  <p><b>1</b> – 🏃 <strong>Speedster</strong><br>
+     <b>2</b> – 🧀 <strong>Scavenger</strong><br>
+     <b>3</b> – 🐞 <strong>Flea Master</strong><br>
+     <b>4</b> – 🧱 <strong>Wall Master</strong></p>
+  <p>Chosen: <span id="chosenUpgrades"></span></p>
+</div>
+
+
+<p id="status"></p>
+<div id="playerStatus" style="margin-top: 10px;"></div>
+<p>Selected Build: <span id="buildType">None</span></p>
+<p>Cheese Collected: <span id="cheeseCount">0</span></p>
+
 </div>
   <div id="catHealthContainer" style="margin-top: 10px;">
  <div id="catHealthBar" style="height: 20px; width: 300px; background: lightgray; position: relative; margin: 0 auto; border-radius: 8px;">
@@ -81,6 +95,7 @@
 </div>
 
 </div>
+
 
 
 <div id="grid"></div> <!-- ⬅️ Now it's below the UI elements -->
@@ -122,6 +137,17 @@ const moveCooldown = 225; // in milliseconds
   let catPower = 0;
   let catMoveInterval = null;
   let ratPower = 1;
+  let advancementPoints = 0;
+let upgradeMenuOpen = false;
+let selectedUpgrades = []; // Track upgrade paths
+  let selectedUpgrades = [];
+let fleaSpawnCooldown = 8000; // for Flea Master
+let fleaMasterActive = false;
+  let cheesePickupBonus = 0;
+let wallMasterActive = false;
+
+
+
 
 
 
@@ -387,7 +413,7 @@ function startCatBehaviorLoop() {
 function checkCheese() {
   if (grid[playerPos.y][playerPos.x] === "🧀") {
     grid[playerPos.y][playerPos.x] = "";
-    cheeseCount += 3;
+    cheeseCount += 3 + cheesePickupBonus;
     document.getElementById("cheeseCount").textContent = cheeseCount;
     savePosition();
     renderGrid();
@@ -870,12 +896,58 @@ async function listenToGame() {
   });
 }
 window.addEventListener("keydown", (e) => {
-  if (!isAlive) return; // Still block input if dead
+  if (!isAlive) return;
 
   // Prevent arrow key scrolling
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
 
-  // Handle movement separately, with cooldown
+  // SPACE toggles upgrade menu
+  if (e.key === " ") {
+    upgradeMenuOpen = !upgradeMenuOpen;
+    document.getElementById("upgradeMenu").style.display = upgradeMenuOpen ? "block" : "none";
+    return;
+  }
+
+  // If upgrade menu is open, use number keys for upgrades instead of building
+  if (upgradeMenuOpen) {
+  if (["1", "2", "3", "4"].includes(e.key) && advancementPoints > 0) {
+    let upgrade = "";
+    if (e.key === "1") upgrade = "Speedster";
+    else if (e.key === "2") upgrade = "Scavenger";
+    else if (e.key === "3") upgrade = "Flea Master";
+    else if (e.key === "4") upgrade = "Wall Master";
+
+    if (!selectedUpgrades.includes(upgrade)) {
+      selectedUpgrades.push(upgrade);
+      advancementPoints--;
+
+      document.getElementById("advPoints").textContent = advancementPoints;
+      document.getElementById("chosenUpgrades").textContent = selectedUpgrades.join(", ");
+      console.log(`🆙 Chose upgrade: ${upgrade}`);
+
+      // Apply effects
+      if (upgrade === "Speedster") {
+        moveCooldown = 120;
+      }
+
+      if (upgrade === "Scavenger") {
+        cheesePickupBonus = 5; // add to cheese per pickup
+      }
+
+      if (upgrade === "Flea Master") {
+        fleaMasterActive = true;
+      }
+
+      if (upgrade === "Wall Master") {
+        wallMasterActive = true; // implement later if needed
+      }
+    }
+  }
+  return;
+}
+
+
+  // Movement (only if menu is not open)
   if (canMove) {
     switch (e.key) {
       case "ArrowUp": movePlayer(0, -1); triggerMoveCooldown(); break;
@@ -885,43 +957,20 @@ window.addEventListener("keydown", (e) => {
     }
   }
 
-  // Handle build type selection
+  // Build selection (if menu is not open)
   switch (e.key) {
-    case "1":
-      selectedBuild = 1;
-      document.getElementById("buildType").textContent = "Wall 🧱 (Cost: 1)";
-      break;
-    case "2":
-      selectedBuild = 2;
-      document.getElementById("buildType").textContent = "Turret 🔫 (Cost: 3)";
-      break;
-    case "3":
-      selectedBuild = 3;
-      document.getElementById("buildType").textContent = "Flea Nest 🪳 (Cost: 5)";
-      break;
-    case "4":
-      selectedBuild = 4;
-      document.getElementById("buildType").textContent = "Cheese Generator 🏭 (Cost: 4)";
-      break;
-      case "5":
-  selectedBuild = 5;
-  document.getElementById("buildType").textContent = "Super Wall 💎 (Cost: 8)";
-  break;
-      case "6":
-  selectedBuild = 6;
-  document.getElementById("buildType").textContent = "Cheese Beacon 🗼 (Cost: 24)";
-  break;
-      case "7":
-  selectedBuild = 7;
-  document.getElementById("buildType").textContent = "Phoenix Cheese 🐦‍🔥 (Cost: 40)";
-  break;
-
-
+    case "1": selectedBuild = 1; document.getElementById("buildType").textContent = "Wall 🧱 (Cost: 1)"; break;
+    case "2": selectedBuild = 2; document.getElementById("buildType").textContent = "Turret 🔫 (Cost: 3)"; break;
+    case "3": selectedBuild = 3; document.getElementById("buildType").textContent = "Flea Nest 🪳 (Cost: 5)"; break;
+    case "4": selectedBuild = 4; document.getElementById("buildType").textContent = "Cheese Generator 🏭 (Cost: 4)"; break;
+    case "5": selectedBuild = 5; document.getElementById("buildType").textContent = "Super Wall 💎 (Cost: 6)"; break;
+    case "6": selectedBuild = 6; document.getElementById("buildType").textContent = "Cheese Beacon 🗼 (Cost: 24)"; break;
+    case "7": selectedBuild = 7; document.getElementById("buildType").textContent = "Phoenix Cheese 🐦‍🔥 (Cost: 40)"; break;
   }
 
-  // Handle building (no cooldown)
+  // Build direction
   if (["w", "a", "s", "d"].includes(e.key)) {
-    placeStructure(e.key); // 🛠 Build without triggering cooldown
+    placeStructure(e.key);
   }
 });
 
@@ -1080,6 +1129,12 @@ setInterval(() => {
   }
 }, 15000); // ⏲ Every 10 seconds
 
+  setInterval(() => {
+  if (!gameStarted || !isAlive) return;
+  advancementPoints++;
+  document.getElementById("advPoints").textContent = advancementPoints;
+}, 180000); // every 3 minutes
+
 
 setInterval(() => {
   if (!gameStarted || catPower <= 0) return;
@@ -1155,6 +1210,31 @@ setInterval(() => {
   renderGrid();
 }, 400);
 
+setInterval(() => {
+  if (!fleaMasterActive || !isAlive) return;
+
+  // 🐞 Spawn a flea near the player
+  const offsets = [
+    { dx: 0, dy: 0 }, { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
+    { dx: 0, dy: 1 }, { dx: 0, dy: -1 }
+  ];
+
+  for (let offset of offsets) {
+    const fx = playerPos.x + offset.dx;
+    const fy = playerPos.y + offset.dy;
+
+    if (
+      fx >= 0 && fx < gridSize &&
+      fy >= 0 && fy < gridSize &&
+      !fleas.some(f => f.x === fx && f.y === fy)
+    ) {
+      fleas.push({ x: fx, y: fy, lifetime: 15 });
+      break;
+    }
+  }
+
+  renderGrid();
+}, fleaSpawnCooldown);
 
 
   // 🐀 Summon Rats every 2 minutes based on catPower
@@ -1259,6 +1339,30 @@ setInterval(() => {
 
   renderGrid();
 }, 400);
+
+  setInterval(() => {
+  if (!wallMasterActive || !isAlive) return;
+
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const tx = playerPos.x + dx;
+      const ty = playerPos.y + dy;
+      const key = `${tx}_${ty}`;
+      if (
+        tx >= 0 && tx < gridSize &&
+        ty >= 0 && ty < gridSize &&
+        (grid[ty][tx] === "🧱" || grid[ty][tx] === "💎") &&
+        structureHealth[key] < 75
+      ) {
+        structureHealth[key] += 1;
+        updateDoc(doc(db, `games/${gameId}/structures/${key}`), {
+          health: structureHealth[key]
+        });
+      }
+    }
+  }
+}, 1000);
+
 
 
 
