@@ -336,58 +336,14 @@ for (let y = 0; y < gridSize; y++) {
 
 function movePlayer(dx, dy) {
   if (!gameStarted || !isAlive) return;
-
   const newX = Math.max(0, Math.min(gridSize - 1, playerPos.x + dx));
   const newY = Math.max(0, Math.min(gridSize - 1, playerPos.y + dy));
   playerPos = { x: newX, y: newY };
-
   console.log("Trying to move. isAlive =", isAlive);
-
-  // 🐦‍🔥 Phoenix Cheese global revival
-  if (grid[newY][newX] === "🐦‍🔥") {
-    for (const [name, p] of Object.entries(players)) {
-      if (p.alive === false) {
-        console.log(`🔥 Phoenix Cheese revived and summoned ${name} to (${newX}, ${newY})`);
-
-        // Revive the player and move them to this Phoenix spot
-        updateDoc(doc(db, `games/${gameId}/players/${name}`), {
-          alive: true,
-          x: newX,
-          y: newY
-        });
-
-        // Destroy the Phoenix building
-        const key = `${newX}_${newY}`;
-        grid[newY][newX] = "";
-        delete structureHealth[key];
-        setDoc(doc(db, `games/${gameId}/structures/${key}`), {}); // Clear in Firestore
-
-        // Flash effect
-        const cell = document.getElementById(`cell-${newX}-${newY}`);
-        if (cell) {
-          cell.style.backgroundColor = "#ff4d4d";
-          setTimeout(() => {
-            cell.style.backgroundColor = "#c8f7c5";
-          }, 300);
-        }
-
-        // If YOU were the revived one, update your local status
-        if (name === username) {
-          isAlive = true;
-          playerPos = { x: newX, y: newY }; // move you here
-          document.getElementById("status").textContent = "";
-        }
-
-        break; // Only revive one person
-      }
-    }
-  }
-
   savePosition();
   checkCheese();
   renderGrid();
 }
-
 
 function updateCatHealthBar() {
   const bar = document.getElementById("catHealthFill");
@@ -988,6 +944,55 @@ setInterval(turretAttack, 1500);
   console.log(`🐀 Rat Power increased! New base health: ${ratPower}`);
 }, 120000); // 2 minutes = 120,000 ms
 
+setInterval(() => {
+  if (!gameStarted) return;
+
+  // 🔍 Find a Phoenix Cheese tile
+  let phoenixSpot = null;
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      if (grid[y][x] === "🐦‍🔥") {
+        phoenixSpot = { x, y };
+        break;
+      }
+    }
+    if (phoenixSpot) break;
+  }
+
+  if (!phoenixSpot) return; // No Phoenix Cheese exists
+
+  // 🔍 Find a dead player
+  for (const [name, p] of Object.entries(players)) {
+    if (p.alive === false) {
+      console.log(`🔥 Phoenix Cheese revived ${name} at (${phoenixSpot.x}, ${phoenixSpot.y})`);
+
+      // Revive the player and move them to the Phoenix
+      updateDoc(doc(db, `games/${gameId}/players/${name}`), {
+        alive: true,
+        x: phoenixSpot.x,
+        y: phoenixSpot.y
+      });
+
+      // Destroy the Phoenix Cheese
+      const key = `${phoenixSpot.x}_${phoenixSpot.y}`;
+      grid[phoenixSpot.y][phoenixSpot.x] = "";
+      delete structureHealth[key];
+      setDoc(doc(db, `games/${gameId}/structures/${key}`), {}); // clear in Firestore
+
+      // Visual flash
+      const cell = document.getElementById(`cell-${phoenixSpot.x}-${phoenixSpot.y}`);
+      if (cell) {
+        cell.style.backgroundColor = "#ff4d4d";
+        setTimeout(() => {
+          cell.style.backgroundColor = "#c8f7c5";
+        }, 300);
+      }
+
+      renderGrid();
+      break; // Only revive one player per check
+    }
+  }
+}, 2000); // Check every 2 seconds
 
 setInterval(() => {
   for (let y = 0; y < gridSize; y++) {
