@@ -998,14 +998,18 @@ grid[25][16] = "🧱";
 renderGrid();
 
 // Start cheese spawn and turret attack globally
+  if (isHost) {
 setInterval(spawnCheese, 10000);
 setInterval(turretAttack, 1500);
-
+  }
+if (isHost) {
   setInterval(() => {
   ratPower++;
   console.log(`🐀 Rat Power increased! New base health: ${ratPower}`);
-}, 120000); // 2 minutes = 120,000 ms
+}, 120000); // 2 minutes = 120,000 ms 
+}
 
+  if (isHost) {
 setInterval(() => {
   if (!gameStarted) return;
 
@@ -1055,6 +1059,7 @@ setInterval(() => {
     }
   }
 }, 2000); // Check every 2 seconds
+  }
 
   setInterval(() => {
   if (!gameStarted) return;
@@ -1155,7 +1160,7 @@ setInterval(() => {
 }, 180000); // every 3 minutes
 
 
-
+if (isHost) {
 setInterval(() => {
   if (!gameStarted || catPower <= 0) return;
 
@@ -1184,7 +1189,8 @@ setInterval(() => {
   }
 
   console.log(`🐛 Spawned ${spawned} termites in center`);
-}, 60000);
+}, 60000); }
+  if (isHost) {
   setInterval(() => {
   for (let i = termites.length - 1; i >= 0; i--) {
     let termite = termites[i];
@@ -1228,7 +1234,7 @@ setInterval(() => {
   }
 
   renderGrid();
-}, 400);
+}, 400); }
 
 setInterval(() => {
   if (!fleaMasterActive || !isAlive) return;
@@ -1261,7 +1267,7 @@ setInterval(() => {
 
 
 
-  // 🐀 Summon Rats every 2 minutes based on catPower
+if (isHost) {  // 🐀 Summon Rats every 2 minutes based on catPower
 setInterval(() => {
   if (!gameStarted || catPower <= 0) return;
 
@@ -1290,9 +1296,10 @@ setInterval(() => {
   }
 
   console.log(`🐀 ${spawned} rats spawned (Power Level: ${catPower})`);
-}, 40000);
+}, 40000); }
 
-setInterval(() => {
+if (isHost) {
+  setInterval(() => {
   for (let rat of rats) {
     if (rat.health <= 0) continue;
 
@@ -1362,8 +1369,9 @@ setInterval(() => {
   rats = rats.filter(r => r.health > 0);
 
   renderGrid();
-}, 400);
+}, 400); }
 
+  if (isHost) {
   setInterval(() => {
   if (!wallMasterActive || !isAlive) return;
 
@@ -1385,12 +1393,12 @@ setInterval(() => {
       }
     }
   }
-}, 1000);
+}, 1000);}
 
 
 
 
-
+if (isHost) {
 setInterval(() => {
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
@@ -1443,9 +1451,9 @@ setInterval(() => {
       }
     }
   }
-}, 4000);
+}, 4000);}
 
-
+if (isHost) {
 setInterval(() => {
   for (let flea of fleas) {
     let target = null;
@@ -1523,7 +1531,7 @@ setInterval(() => {
   }
 
   renderGrid();
-}, 400);
+}, 400); }
 
 
 
