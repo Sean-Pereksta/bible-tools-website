@@ -817,14 +817,22 @@ async function listenToGame() {
     if (docSnap.exists()) {
       const data = docSnap.data();
 
-      if (isHost && (!data.cat || typeof data.cat.x !== "number" || typeof data.cat.y !== "number")) {
-        const initialCat = {
-          x: gridSize - 1,
-          y: gridSize - 1,
-          health: 1000
-        };
-        updateDoc(doc(db, `games/${gameId}`), { cat: initialCat });
-      }
+     if (isHost && (!data.cat || typeof data.cat.x !== "number" || typeof data.cat.y !== "number")) {
+  // Count players
+  getDocs(collection(db, `games/${gameId}/players`)).then((snap) => {
+    const playerCount = snap.size;
+    const startingHealth = 600 * playerCount;
+
+    const initialCat = {
+      x: gridSize - 1,
+      y: gridSize - 1,
+      health: startingHealth
+    };
+
+    updateDoc(doc(db, `games/${gameId}`), { cat: initialCat });
+  });
+}
+
 
       const cat = data.cat || {};
       catPower = data.catPower || 0;
