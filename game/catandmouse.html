@@ -830,9 +830,8 @@ onSnapshot(doc(db, `games/${gameId}`), (docSnap) => {
           const catDoc = await getDoc(doc(db, `games/${gameId}`));
           const current = catDoc.data().cat;
 
-          const needsReset = !current || current.health !== startingHealth;
-
-          if (needsReset) {
+          // ✅ Only initialize if missing
+          if (!current) {
             await updateDoc(doc(db, `games/${gameId}`), {
               cat: {
                 x: gridSize - 1,
@@ -840,9 +839,9 @@ onSnapshot(doc(db, `games/${gameId}`), (docSnap) => {
                 health: startingHealth
               }
             });
-            console.log("✅ Cat health reset to", startingHealth);
+            console.log("✅ Cat initialized with health:", startingHealth);
           } else {
-            console.log("🟢 Cat health already correct:", current.health);
+            console.log("🟢 Cat already exists, skipping reset. Health:", current.health);
           }
         } else {
           console.log("⏳ Waiting for players...");
@@ -850,7 +849,7 @@ onSnapshot(doc(db, `games/${gameId}`), (docSnap) => {
         }
       };
 
-      trySetCat(); // ⬅️ Launch it
+      trySetCat(); // ✅ Don't forget to call it here!
     }
 
     const cat = data.cat || {};
@@ -860,9 +859,10 @@ onSnapshot(doc(db, `games/${gameId}`), (docSnap) => {
       catHealth = cat.health;
     }
 
-    renderGrid();
+    renderGrid(); // ✅ Should be outside the `if (isHost)` block
   }
 });
+
 
 
   onSnapshot(collection(db, `games/${gameId}/players`), (snap) => {
