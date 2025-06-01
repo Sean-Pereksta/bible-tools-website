@@ -334,14 +334,53 @@ for (let y = 0; y < gridSize; y++) {
 
 function movePlayer(dx, dy) {
   if (!gameStarted || !isAlive) return;
+
   const newX = Math.max(0, Math.min(gridSize - 1, playerPos.x + dx));
   const newY = Math.max(0, Math.min(gridSize - 1, playerPos.y + dy));
   playerPos = { x: newX, y: newY };
+
   console.log("Trying to move. isAlive =", isAlive);
+
+  // 🐦‍🔥 Phoenix Cheese revival logic
+  if (grid[newY][newX] === "🐦‍🔥") {
+    for (const [name, p] of Object.entries(players)) {
+      if (p.alive === false && p.x === newX && p.y === newY) {
+        console.log(`🔥 Phoenix Cheese revived ${name}!`);
+
+        // Revive the player in Firestore
+        updateDoc(doc(db, `games/${gameId}/players/${name}`), { alive: true });
+
+        // Destroy the phoenix cheese
+        const key = `${newX}_${newY}`;
+        grid[newY][newX] = "";
+        delete structureHealth[key];
+        setDoc(doc(db, `games/${gameId}/structures/${key}`), {}); // Clear in Firestore
+
+        // Flash visual effect
+        const cell = document.getElementById(`cell-${newX}-${newY}`);
+        if (cell) {
+          cell.style.backgroundColor = "#ff4d4d";
+          setTimeout(() => {
+            cell.style.backgroundColor = "#c8f7c5";
+          }, 300);
+        }
+
+        // If it's you, update local state
+        if (name === username) {
+          isAlive = true;
+          document.getElementById("status").textContent = "";
+        }
+
+        break; // Only revive one player
+      }
+    }
+  }
+
   savePosition();
   checkCheese();
   renderGrid();
 }
+
 function updateCatHealthBar() {
   const bar = document.getElementById("catHealthFill");
   const text = document.getElementById("catHealthText");
@@ -401,6 +440,7 @@ else if (selectedBuild === 3) cost = 5;
 else if (selectedBuild === 4) cost = 4; 
   else if (selectedBuild === 5) cost = 8;
    else if (selectedBuild === 6) cost = 24;// ✅ New
+   else if (selectedBuild === 7) cost = 40;// ✅ New
 
 
   if (cheeseCount < cost) return;
@@ -440,6 +480,12 @@ else if (selectedBuild === 4) cost = 4;
   health = 25;
   cost = 24;
 }
+  else if (selectedBuild === 7) {
+  symbol = "🐦‍🔥"; // Fiery phoenix emoji
+  health = 20;
+  cost = 40;
+}
+
 
 
 
@@ -898,6 +944,11 @@ window.addEventListener("keydown", (e) => {
   selectedBuild = 6;
   document.getElementById("buildType").textContent = "Cheese Beacon 🗼 (Cost: 24)";
   break;
+      case "7":
+  selectedBuild = 7;
+  document.getElementById("buildType").textContent = "Phoenix Cheese 🐦‍🔥 (Cost: 40)";
+  break;
+
 
   }
 
