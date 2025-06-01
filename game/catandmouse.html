@@ -1233,11 +1233,13 @@ setInterval(() => {
 setInterval(() => {
   if (!fleaMasterActive || !isAlive) return;
 
-  // 🐞 Spawn a flea near the player
+  // 🐞 Spawn up to 2 fleas near the player
   const offsets = [
     { dx: 0, dy: 0 }, { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
     { dx: 0, dy: 1 }, { dx: 0, dy: -1 }
   ];
+
+  let spawned = 0;
 
   for (let offset of offsets) {
     const fx = playerPos.x + offset.dx;
@@ -1249,12 +1251,14 @@ setInterval(() => {
       !fleas.some(f => f.x === fx && f.y === fy)
     ) {
       fleas.push({ x: fx, y: fy, lifetime: 15 });
-      break;
+      spawned++;
+      if (spawned >= 2) break; // 🛑 Stop after 2 fleas
     }
   }
 
   renderGrid();
 }, fleaSpawnCooldown);
+
 
 
   // 🐀 Summon Rats every 2 minutes based on catPower
