@@ -813,55 +813,26 @@ async function listenToGame() {
     renderGrid();
   });
 
-onSnapshot(doc(db, `games/${gameId}`), (docSnap) => {
-  if (docSnap.exists()) {
-    const data = docSnap.data();
+  onSnapshot(doc(db, `games/${gameId}`), (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
 
-    if (isHost) {
-      const playersRef = collection(db, `games/${gameId}/players`);
+      if (isHost && (!data.cat || typeof data.cat.x !== "number" || typeof data.cat.y !== "number")) {
+        const initialCat = {
+          x: gridSize - 1,
+          y: gridSize - 1,
+          health: 1000
+        };
+        updateDoc(doc(db, `games/${gameId}`), { cat: initialCat });
+      }
 
-      const trySetCat = async () => {
-        const snap = await getDocs(playersRef);
-        const playerCount = snap.size;
-
-        if (playerCount > 0) {
-          const startingHealth = 600 * playerCount;
-
-          const catDoc = await getDoc(doc(db, `games/${gameId}`));
-          const current = catDoc.data().cat;
-
-          // ✅ Only initialize if missing
-          if (!current) {
-            await updateDoc(doc(db, `games/${gameId}`), {
-              cat: {
-                x: gridSize - 1,
-                y: gridSize - 1,
-                health: startingHealth
-              }
-            });
-            console.log("✅ Cat initialized with health:", startingHealth);
-          } else {
-            console.log("🟢 Cat already exists, skipping reset. Health:", current.health);
-          }
-        } else {
-          console.log("⏳ Waiting for players...");
-          setTimeout(trySetCat, 1000);
-        }
-      };
-
-      trySetCat(); // ✅ Don't forget to call it here!
+      const cat = data.cat || {};
+      catPower = data.catPower || 0;
+      catPos = { x: cat.x || 15, y: cat.y || 15 };
+      catHealth = cat.health || 1000;
+      renderGrid();
     }
-
-    const cat = data.cat || {};
-    catPower = data.catPower || 0;
-    catPos = { x: cat.x || 15, y: cat.y || 15 };
-    if (typeof cat.health === "number") {
-      catHealth = cat.health;
-    }
-
-    renderGrid(); // ✅ Should be outside the `if (isHost)` block
-  }
-});
+  });
 
 
 
