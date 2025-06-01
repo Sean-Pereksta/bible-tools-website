@@ -64,7 +64,9 @@
 🪳 Flea Nest (Click 3, Cost: 🧀5) &nbsp; | &nbsp;
 🏭 Cheese Generator (Click 4, Cost: 🧀4) &nbsp; | &nbsp;
 💎 Super Wall (Click 5, Cost: 🧀8) &nbsp; | &nbsp;
-🗼 Cheese Beacon (Click 6, Cost: 🧀24)
+🗼 Cheese Beacon (Click 6, Cost: 🧀24) &nbsp; | &nbsp;
+🐦‍🔥 Phoenix Cheese (Click 7, Cost: 🧀25)
+
 
 </p>
   <p id="status"></p>
@@ -190,7 +192,7 @@ for (let y = 0; y < gridSize; y++) {
           const ty = y + dy;
           if (tx >= 0 && tx < gridSize && ty >= 0 && ty < gridSize) {
             const tSymbol = grid[ty][tx];
-            if (tSymbol === "🔫" || tSymbol === "🏭") {
+            if (tSymbol === "🔫" || tSymbol === "🏭" || tSymbol === "🪳") {
               beaconBoosted.add(`${tx}_${ty}`);
             }
           }
