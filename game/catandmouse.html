@@ -995,6 +995,37 @@ setInterval(() => {
   }
 }, 2000); // Check every 2 seconds
 
+  setInterval(() => {
+  if (!gameStarted) return;
+
+  // 1. Check if any players are alive
+  const anyAlive = Object.values(players).some(p => p.alive !== false);
+
+  // 2. Check if any Phoenix Cheese exists on the board
+  let phoenixExists = false;
+  for (let y = 0; y < gridSize && !phoenixExists; y++) {
+    for (let x = 0; x < gridSize && !phoenixExists; x++) {
+      if (grid[y][x] === "🐦‍🔥") {
+        phoenixExists = true;
+      }
+    }
+  }
+
+  // 3. If no players and no phoenixes → Game Over
+  if (!anyAlive && !phoenixExists) {
+    document.getElementById("status").textContent = "💀 All mice are dead. Game Over!";
+    document.getElementById("status").style.color = "red";
+    document.getElementById("status").style.fontSize = "24px";
+    document.getElementById("status").style.fontWeight = "bold";
+    document.getElementById("status").style.background = "#fff0f0";
+    document.getElementById("status").style.padding = "10px";
+    document.getElementById("status").style.border = "2px solid red";
+    document.getElementById("status").style.marginTop = "10px";
+
+    gameStarted = false; // Optionally stop the game logic
+  }
+}, 1000);
+
 setInterval(() => {
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
