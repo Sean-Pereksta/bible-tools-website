@@ -837,7 +837,10 @@ async function listenToGame() {
       const cat = data.cat || {};
       catPower = data.catPower || 0;
       catPos = { x: cat.x || 15, y: cat.y || 15 };
-      catHealth = cat.health || 1000;
+      if (typeof cat.health === "number") {
+  catHealth = cat.health;
+}
+
       renderGrid();
     }
   });
