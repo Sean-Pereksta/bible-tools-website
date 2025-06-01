@@ -937,11 +937,11 @@ window.addEventListener("keydown", (e) => {
 
       // Apply effects
       if (upgrade === "Speedster") {
-        moveCooldown = 120;
+        moveCooldown = 50;
       }
 
       if (upgrade === "Scavenger") {
-        cheesePickupBonus = 5; // add to cheese per pickup
+        cheesePickupBonus = 7; // add to cheese per pickup
       }
 
       if (upgrade === "Flea Master") {
@@ -1372,7 +1372,7 @@ setInterval(() => {
         tx >= 0 && tx < gridSize &&
         ty >= 0 && ty < gridSize &&
         (grid[ty][tx] === "🧱" || grid[ty][tx] === "💎") &&
-        structureHealth[key] < 75
+        structureHealth[key] < 100
       ) {
         structureHealth[key] += 15;
         updateDoc(doc(db, `games/${gameId}/structures/${key}`), {
