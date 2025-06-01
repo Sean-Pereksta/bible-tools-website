@@ -813,37 +813,57 @@ async function listenToGame() {
     renderGrid();
   });
 
-  onSnapshot(doc(db, `games/${gameId}`), (docSnap) => {
-    if (docSnap.exists()) {
-      const data = docSnap.data();
+onSnapshot(doc(db, `games/${gameId}`), (docSnap) => {
+  if (docSnap.exists()) {
+    const data = docSnap.data();
 
-     if (isHost && (!data.cat || typeof data.cat.x !== "number" || typeof data.cat.y !== "number")) {
-  // Count players
-  getDocs(collection(db, `games/${gameId}/players`)).then((snap) => {
-    const playerCount = snap.size;
-    const startingHealth = 600 * playerCount;
+    if (isHost) {
+      const playersRef = collection(db, `games/${gameId}/players`);
 
-    const initialCat = {
-      x: gridSize - 1,
-      y: gridSize - 1,
-      health: startingHealth
-    };
+      const trySetCat = async () => {
+        const snap = await getDocs(playersRef);
+        const playerCount = snap.size;
 
-    updateDoc(doc(db, `games/${gameId}`), { cat: initialCat });
-  });
-}
+        if (playerCount > 0) {
+          const startingHealth = 600 * playerCount;
 
+          const catDoc = await getDoc(doc(db, `games/${gameId}`));
+          const current = catDoc.data().cat;
 
-      const cat = data.cat || {};
-      catPower = data.catPower || 0;
-      catPos = { x: cat.x || 15, y: cat.y || 15 };
-      if (typeof cat.health === "number") {
-  catHealth = cat.health;
-}
+          const needsReset = !current || current.health !== startingHealth;
 
-      renderGrid();
+          if (needsReset) {
+            await updateDoc(doc(db, `games/${gameId}`), {
+              cat: {
+                x: gridSize - 1,
+                y: gridSize - 1,
+                health: startingHealth
+              }
+            });
+            console.log("✅ Cat health reset to", startingHealth);
+          } else {
+            console.log("🟢 Cat health already correct:", current.health);
+          }
+        } else {
+          console.log("⏳ Waiting for players...");
+          setTimeout(trySetCat, 1000);
+        }
+      };
+
+      trySetCat(); // ⬅️ Launch it
     }
-  });
+
+    const cat = data.cat || {};
+    catPower = data.catPower || 0;
+    catPos = { x: cat.x || 15, y: cat.y || 15 };
+    if (typeof cat.health === "number") {
+      catHealth = cat.health;
+    }
+
+    renderGrid();
+  }
+});
+
 
   onSnapshot(collection(db, `games/${gameId}/players`), (snap) => {
   players = {};
