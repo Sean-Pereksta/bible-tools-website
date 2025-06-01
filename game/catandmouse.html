@@ -69,6 +69,7 @@
     🗼 Beacon (6, 🧀24) &nbsp; | &nbsp;
     🐦‍🔥 Phoenix Cheese (7, 🧀40)
   </p>
+  <p id="advPointMessage" style="color: green; font-weight: bold; display: none; margin: 5px 0;">🟢 You gained an advancement point!</p>
 </div>
 
 <!-- 🔲 Main Game + Sidebar Layout -->
@@ -1138,11 +1139,21 @@ setInterval(() => {
   }
 }, 15000); // ⏲ Every 10 seconds
 
-  setInterval(() => {
+setInterval(() => {
   if (!gameStarted || !isAlive) return;
+
   advancementPoints++;
   document.getElementById("advPoints").textContent = advancementPoints;
+
+  const msg = document.getElementById("advPointMessage");
+  msg.textContent = "🟢 You gained an advancement point!";
+  msg.style.display = "block";
+
+  setTimeout(() => {
+    msg.style.display = "none";
+  }, 2500); // Hide after 2.5 seconds
 }, 180000); // every 3 minutes
+
 
 
 setInterval(() => {
