@@ -151,7 +151,7 @@ let ratPower = 1;
 let advancementPoints = 0;
 let upgradeMenuOpen = false;
 let selectedUpgrades = []; // ✅ Only one declaration
-let fleaSpawnCooldown = 8000;
+let fleaSpawnCooldown = 1500;
 let fleaMasterActive = false;
 let cheesePickupBonus = 0;
 let wallMasterActive = false;
@@ -1374,7 +1374,7 @@ setInterval(() => {
         (grid[ty][tx] === "🧱" || grid[ty][tx] === "💎") &&
         structureHealth[key] < 75
       ) {
-        structureHealth[key] += 1;
+        structureHealth[key] += 15;
         updateDoc(doc(db, `games/${gameId}/structures/${key}`), {
           health: structureHealth[key]
         });
