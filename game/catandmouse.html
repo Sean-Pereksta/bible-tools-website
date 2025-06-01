@@ -349,13 +349,13 @@ function updateCatHealthBar() {
   const bar = document.getElementById("catHealthFill");
   const text = document.getElementById("catHealthText");
 
-  const maxHealth = 1000;
-  const clampedHealth = Math.max(0, Math.min(catHealth, maxHealth));
-  const percent = (clampedHealth / maxHealth) * 100;
+  // Set a constant visual bar width (e.g., 300px) and fill percentage capped at 100%
+  const percent = Math.min(100, (catHealth / 1000) * 100); // Optional visual scale
 
   bar.style.width = percent + "%";
-  text.textContent = `❤️ ${clampedHealth}`;
+  text.textContent = `❤️ ${catHealth}`; // Just show current value
 }
+
 
 
 
