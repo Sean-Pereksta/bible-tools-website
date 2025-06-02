@@ -155,7 +155,7 @@ let fleaSpawnCooldown = 1500;
 let fleaMasterActive = false;
 let cheesePickupBonus = 0;
 let wallMasterActive = false;
-
+let hostInitialized = false;
 
 
 
@@ -1143,7 +1143,9 @@ setInterval(() => {
   const updatedSnap = await getDoc(gameRef);
   const host = updatedSnap.data().host;
 
- if (host === cleanUsername) {
+ if (host === cleanUsername && !hostInitialized) {
+  hostInitialized = true;
+  console.log("👑 Confirmed host. Starting rat/termite spawning once.");
   isHost = true;
   console.log("👑 You are host. Starting cat AI.");
   gameStarted = true;
