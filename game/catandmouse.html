@@ -686,39 +686,33 @@ function triggerMoveCooldown() {
 }
 
 
-function catBehavior() {
+async function catBehavior() {
   console.log("🐱 Cat behavior running");
-for (let trap of traps) {
-  if (trap.x === catPos.x && trap.y === catPos.y) {
-    console.log("🪤 Cat stepped on a trap!");
+  for (let trap of traps) {
+    if (trap.x === catPos.x && trap.y === catPos.y) {
+      console.log("🪤 Cat stepped on a trap!");
 
-    // ⏹ Stop cat movement
-    clearInterval(catMoveInterval);
+      clearInterval(catMoveInterval);
 
-    // 🕒 Restart movement after 5 seconds
-    setTimeout(() => {
-      startCatBehaviorLoop();
-    }, 5000);
-
-    // 🧹 Remove trap from Firestore
-    const trapKey = `${catPos.x}_${catPos.y}`;
-    await deleteDoc(doc(db, `games/${gameId}/traps/${trapKey}`));
-
-    // 🎨 Optional visual flash
-    const cell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
-    if (cell) {
-      cell.style.backgroundColor = "#ffaaaa";
       setTimeout(() => {
-        cell.style.backgroundColor = "#c8f7c5";
-      }, 300);
+        startCatBehaviorLoop();
+      }, 5000);
+
+      const trapKey = `${catPos.x}_${catPos.y}`;
+      await deleteDoc(doc(db, `games/${gameId}/traps/${trapKey}`));
+
+      const cell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
+      if (cell) {
+        cell.style.backgroundColor = "#ffaaaa";
+        setTimeout(() => {
+          cell.style.backgroundColor = "#c8f7c5";
+        }, 300);
+      }
+
+      renderGrid();
+      return;
     }
-
-    renderGrid();
-    return; // Stop cat behavior this tick
   }
-}
-
-
 
   const aliveMice = Object.entries(players).filter(([_, p]) => p.alive);
   let target = null;
