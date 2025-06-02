@@ -115,7 +115,19 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, getDocs, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc, // 👈 ADD THIS
+  onSnapshot,
+  collection,
+  getDocs,
+  increment
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyB7twY7z31ucB6pGA8JC_HrVMZhA8lNaJA",
@@ -679,16 +691,33 @@ function catBehavior() {
 for (let trap of traps) {
   if (trap.x === catPos.x && trap.y === catPos.y) {
     console.log("🪤 Cat stepped on a trap!");
-    clearInterval(catMoveInterval); // stop first
+
+    // ⏹ Stop cat movement
+    clearInterval(catMoveInterval);
+
+    // 🕒 Restart movement after 5 seconds
     setTimeout(() => {
-      startCatBehaviorLoop(); // restart after 5s
+      startCatBehaviorLoop();
     }, 5000);
-    traps = traps.filter(t => !(t.x === catPos.x && t.y === catPos.y));
-    grid[catPos.y][catPos.x] = "";
+
+    // 🧹 Remove trap from Firestore
+    const trapKey = `${catPos.x}_${catPos.y}`;
+    await deleteDoc(doc(db, `games/${gameId}/traps/${trapKey}`));
+
+    // 🎨 Optional visual flash
+    const cell = document.getElementById(`cell-${catPos.x}-${catPos.y}`);
+    if (cell) {
+      cell.style.backgroundColor = "#ffaaaa";
+      setTimeout(() => {
+        cell.style.backgroundColor = "#c8f7c5";
+      }, 300);
+    }
+
     renderGrid();
-    return;
+    return; // Stop cat behavior this tick
   }
 }
+
 
 
   const aliveMice = Object.entries(players).filter(([_, p]) => p.alive);
@@ -896,6 +925,15 @@ async function listenToGame() {
     }
   });
 
+onSnapshot(collection(db, `games/${gameId}/traps`), (snap) => {
+  traps = []; // clear and rebuild the traps list
+  for (let docSnap of snap.docs) {
+    const data = docSnap.data();
+    traps.push({ x: data.x, y: data.y, placedAt: data.placedAt });
+    grid[data.y][data.x] = "🪤";
+  }
+  renderGrid();
+});
 
 
   onSnapshot(collection(db, `games/${gameId}/players`), (snap) => {
@@ -1071,14 +1109,21 @@ if (blinkActive && e.key.toLowerCase() === "b") {
   if (["w", "a", "s", "d"].includes(e.key)) {
     placeStructure(e.key);
   }
-  if (trapmasterActive && e.key.toLowerCase() === 't') {
+if (trapmasterActive && e.key.toLowerCase() === 't') {
   const now = Date.now();
   if (now - lastTrapTime >= 20000) {
     const { x, y } = playerPos;
+    const trapKey = `${x}_${y}`;
     if (grid[y][x] === "") {
       grid[y][x] = "🪤";
-      traps.push({ x, y, placedAt: now });
       lastTrapTime = now;
+
+      await setDoc(doc(db, `games/${gameId}/traps/${trapKey}`), {
+        x,
+        y,
+        placedAt: now
+      });
+
       renderGrid();
     }
   }
@@ -1574,14 +1619,12 @@ setInterval(() => {
 
   console.log(`🐀 ${spawned} rats spawned (Power Level: ${catPower})`);
 }, 40000); 
-  setInterval(() => {
+ setInterval(async () => {
   for (let rat of rats) {
     if (rat.health <= 0) continue;
 
-    // ⏱ Check if trapped
-    if (rat.trappedUntil && Date.now() < rat.trappedUntil) {
-      continue; // skip this tick
-    }
+    // ⏱ Skip if currently trapped
+    if (rat.trappedUntil && Date.now() < rat.trappedUntil) continue;
 
     // 🪤 Check if stepped on a trap
     for (let trap of traps) {
@@ -1589,11 +1632,11 @@ setInterval(() => {
         console.log("🪤 Rat trapped!");
         rat.trappedUntil = Date.now() + 3000;
 
-        // Remove trap from grid and list
-        traps = traps.filter(t => !(t.x === rat.x && t.y === rat.y));
-        grid[rat.y][rat.x] = "";
+        // 🧹 Remove trap from Firestore
+        const trapKey = `${rat.x}_${rat.y}`;
+        await deleteDoc(doc(db, `games/${gameId}/traps/${trapKey}`));
 
-        // Optional flash
+        // 🎨 Optional trap visual flash
         const cell = document.getElementById(`cell-${rat.x}-${rat.y}`);
         if (cell) {
           cell.style.backgroundColor = "#ffcccc";
@@ -1603,7 +1646,7 @@ setInterval(() => {
         }
 
         renderGrid();
-        continue; // skip movement/attack this frame
+        continue; // Skip movement this cycle
       }
     }
 
@@ -1668,7 +1711,7 @@ setInterval(() => {
     }
   }
 
-  // 🧹 Cleanup dead rats
+  // 🧹 Remove dead rats
   rats = rats.filter(r => r.health > 0);
 
   renderGrid();
