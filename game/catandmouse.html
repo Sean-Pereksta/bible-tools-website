@@ -87,9 +87,11 @@
     <div id="upgradeMenu" style="display:none; background:#eee; border:2px solid #888; padding:10px; margin-top:10px;">
       <h3>🔧 Upgrade Menu</h3>
       <p><b>1</b> – 🏃 <strong>Speedster</strong><br>
-         <b>2</b> – 🧀 <strong>Scavenger</strong><br>
-         <b>3</b> – 🐞 <strong>Flea Master</strong><br>
-         <b>4</b> – 🧱 <strong>Wall Master</strong></p>
+       <b>2</b> – 🧀 <strong>Scavenger</strong><br>
+       <b>3</b> – 🐞 <strong>Flea Master</strong><br>
+       <b>4</b> – 🧱 <strong>Wall Master</strong><br>
+       <b>5</b> – 🪤 <strong>Trapmaster</strong><br>
+       <b>6</b> – 🌀 <strong>Blink</strong></p>
       <p>Chosen: <span id="chosenUpgrades"></span></p>
     </div>
   </div>
@@ -156,6 +158,14 @@ let fleaMasterActive = false;
 let cheesePickupBonus = 0;
 let wallMasterActive = false;
 let hostInitialized = false;
+  let trapmasterActive = false;
+let lastTrapTime = 0;
+
+let blinkActive = false;
+let lastBlinkTime = 0;
+let lastDirection = { dx: 0, dy: 0 }; // Tracks arrow key direction
+
+
 
 
 
@@ -168,6 +178,8 @@ let structureHealth = {}; // key: "x_y", value: health
 let fleas = [];
   let rats = []; // 🐀
   let termites = []; // 🐛
+  let traps = []; // Each: {x, y, placedAt}
+
 
 
 
@@ -664,6 +676,20 @@ function triggerMoveCooldown() {
 
 function catBehavior() {
   console.log("🐱 Cat behavior running");
+for (let trap of traps) {
+  if (trap.x === catPos.x && trap.y === catPos.y) {
+    console.log("🪤 Cat stepped on a trap!");
+    clearInterval(catMoveInterval); // stop first
+    setTimeout(() => {
+      startCatBehaviorLoop(); // restart after 5s
+    }, 5000);
+    traps = traps.filter(t => !(t.x === catPos.x && t.y === catPos.y));
+    grid[catPos.y][catPos.x] = "";
+    renderGrid();
+    return;
+  }
+}
+
 
   const aliveMice = Object.entries(players).filter(([_, p]) => p.alive);
   let target = null;
@@ -926,6 +952,9 @@ window.addEventListener("keydown", (e) => {
     else if (e.key === "2") upgrade = "Scavenger";
     else if (e.key === "3") upgrade = "Flea Master";
     else if (e.key === "4") upgrade = "Wall Master";
+    else if (e.key === "5") upgrade = "Trapmaster";
+    else if (e.key === "6") upgrade = "Blink";
+
 
     if (!selectedUpgrades.includes(upgrade)) {
       selectedUpgrades.push(upgrade);
@@ -951,6 +980,13 @@ window.addEventListener("keydown", (e) => {
       if (upgrade === "Wall Master") {
         wallMasterActive = true; // implement later if needed
       }
+      if (upgrade === "Trapmaster") {
+        trapmasterActive = true;
+      }
+      if (upgrade === "Blink") {
+        blinkActive = true;
+      }
+
     }
   }
   return;
@@ -958,14 +994,67 @@ window.addEventListener("keydown", (e) => {
 
 
   // Movement (only if menu is not open)
-  if (canMove) {
-    switch (e.key) {
-      case "ArrowUp": movePlayer(0, -1); triggerMoveCooldown(); break;
-      case "ArrowDown": movePlayer(0, 1); triggerMoveCooldown(); break;
-      case "ArrowLeft": movePlayer(-1, 0); triggerMoveCooldown(); break;
-      case "ArrowRight": movePlayer(1, 0); triggerMoveCooldown(); break;
-    }
+ if (canMove) {
+  switch (e.key) {
+    case "ArrowUp":
+      lastDirection = { dx: 0, dy: -1 };
+      movePlayer(0, -1);
+      triggerMoveCooldown();
+      break;
+    case "ArrowDown":
+      lastDirection = { dx: 0, dy: 1 };
+      movePlayer(0, 1);
+      triggerMoveCooldown();
+      break;
+    case "ArrowLeft":
+      lastDirection = { dx: -1, dy: 0 };
+      movePlayer(-1, 0);
+      triggerMoveCooldown();
+      break;
+    case "ArrowRight":
+      lastDirection = { dx: 1, dy: 0 };
+      movePlayer(1, 0);
+      triggerMoveCooldown();
+      break;
   }
+}
+
+// 🌀 Blink (press B to teleport 3 tiles in last direction)
+if (blinkActive && e.key.toLowerCase() === "b") {
+  const now = Date.now();
+  if (now - lastBlinkTime >= 8000) {
+    const dx = lastDirection.dx;
+    const dy = lastDirection.dy;
+    const nx = playerPos.x + dx * 5;
+    const ny = playerPos.y + dy * 5;
+
+    if (
+      nx >= 0 && nx < gridSize &&
+      ny >= 0 && ny < gridSize &&
+      grid[ny][nx] === ""
+    ) {
+      playerPos = { x: nx, y: ny };
+      lastBlinkTime = now;
+      console.log("🌀 Blink activated!");
+      savePosition();
+      renderGrid();
+
+      // Optional flash effect
+      const cell = document.getElementById(`cell-${nx}-${ny}`);
+      if (cell) {
+        cell.style.backgroundColor = "#b3f0ff";
+        setTimeout(() => {
+          cell.style.backgroundColor = "#c8f7c5";
+        }, 300);
+      }
+    } else {
+      console.log("🚫 Blink failed – target tile blocked or out of bounds.");
+    }
+  } else {
+    console.log("⌛ Blink on cooldown");
+  }
+}
+
 
   // Build selection (if menu is not open)
   switch (e.key) {
@@ -982,6 +1071,19 @@ window.addEventListener("keydown", (e) => {
   if (["w", "a", "s", "d"].includes(e.key)) {
     placeStructure(e.key);
   }
+  if (trapmasterActive && e.key.toLowerCase() === 't') {
+  const now = Date.now();
+  if (now - lastTrapTime >= 20000) {
+    const { x, y } = playerPos;
+    if (grid[y][x] === "") {
+      grid[y][x] = "🪤";
+      traps.push({ x, y, placedAt: now });
+      lastTrapTime = now;
+      renderGrid();
+    }
+  }
+}
+
 });
 
 
@@ -1476,6 +1578,35 @@ setInterval(() => {
   for (let rat of rats) {
     if (rat.health <= 0) continue;
 
+    // ⏱ Check if trapped
+    if (rat.trappedUntil && Date.now() < rat.trappedUntil) {
+      continue; // skip this tick
+    }
+
+    // 🪤 Check if stepped on a trap
+    for (let trap of traps) {
+      if (trap.x === rat.x && trap.y === rat.y) {
+        console.log("🪤 Rat trapped!");
+        rat.trappedUntil = Date.now() + 3000;
+
+        // Remove trap from grid and list
+        traps = traps.filter(t => !(t.x === rat.x && t.y === rat.y));
+        grid[rat.y][rat.x] = "";
+
+        // Optional flash
+        const cell = document.getElementById(`cell-${rat.x}-${rat.y}`);
+        if (cell) {
+          cell.style.backgroundColor = "#ffcccc";
+          setTimeout(() => {
+            cell.style.backgroundColor = "#c8f7c5";
+          }, 300);
+        }
+
+        renderGrid();
+        continue; // skip movement/attack this frame
+      }
+    }
+
     let closestTarget = null;
     let minDist = Infinity;
 
@@ -1503,7 +1634,7 @@ setInterval(() => {
       }
     }
 
-    // 🧭 Pathfind toward target, avoiding other rats
+    // 🧭 Pathfind toward target
     if (closestTarget) {
       const path = findPath(rat.x, rat.y, closestTarget.x, closestTarget.y, (x, y) => {
         const isBlocked = ["🧱", "🏭", "💎", "🗼"].includes(grid[y][x]);
@@ -1513,19 +1644,18 @@ setInterval(() => {
       });
 
       if (path.length > 0) {
-  let next = path[0];
-  const ratInTheWay = rats.some(r => r !== rat && r.x === next.x && r.y === next.y);
-  if (!ratInTheWay) {
-    rat.x = next.x;
-    rat.y = next.y;
-  }
-}
-
+        const next = path[0];
+        const ratInTheWay = rats.some(r => r !== rat && r.x === next.x && r.y === next.y);
+        if (!ratInTheWay) {
+          rat.x = next.x;
+          rat.y = next.y;
+        }
+      }
 
       // 💥 Attack logic
       if (rat.x === closestTarget.x && rat.y === closestTarget.y) {
         if (closestTarget.type === "structure") {
-          damageStructure(rat.x, rat.y, ratPower); 
+          damageStructure(rat.x, rat.y, ratPower);
         } else if (closestTarget.type === "mouse") {
           const playerRef = doc(db, `games/${gameId}/players/${closestTarget.name}`);
           updateDoc(playerRef, { alive: false });
@@ -1542,7 +1672,7 @@ setInterval(() => {
   rats = rats.filter(r => r.health > 0);
 
   renderGrid();
-}, 400); 
+}, 400);
 }
 })();
 
