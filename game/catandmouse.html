@@ -437,7 +437,7 @@ function startCatBehaviorLoop() {
   if (catMoveInterval) clearInterval(catMoveInterval);
 
   // 🕒 Speed = faster interval as power increases
-  const speed = Math.max(150, 1300 - catPower * 55); // e.g. power 10 = 500ms
+  const speed = Math.max(200, 1300 - catPower * 40); // e.g. power 10 = 500ms
   catMoveInterval = setInterval(() => {
     if (gameStarted) catBehavior();
   }, speed);
@@ -998,7 +998,7 @@ window.addEventListener("keydown", (e) => {
 
   // If upgrade menu is open, use number keys for upgrades instead of building
   if (upgradeMenuOpen) {
-  if (["1", "2", "3", "4"].includes(e.key) && advancementPoints > 0) {
+  if (["1", "2", "3", "4", "5", "6"].includes(e.key) && advancementPoints > 0) {
     let upgrade = "";
     if (e.key === "1") upgrade = "Speedster";
     else if (e.key === "2") upgrade = "Scavenger";
