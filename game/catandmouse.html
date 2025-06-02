@@ -685,6 +685,26 @@ function triggerMoveCooldown() {
   setTimeout(() => canMove = true, moveCooldown);
 }
 
+  async function placeTrap() {
+  const now = Date.now();
+  if (now - lastTrapTime >= 20000) {
+    const { x, y } = playerPos;
+    const trapKey = `${x}_${y}`;
+    if (grid[y][x] === "") {
+      grid[y][x] = "🪤";
+      lastTrapTime = now;
+
+      await setDoc(doc(db, `games/${gameId}/traps/${trapKey}`), {
+        x,
+        y,
+        placedAt: now
+      });
+
+      renderGrid();
+    }
+  }
+}
+
 
 async function catBehavior() {
   console.log("🐱 Cat behavior running");
@@ -1104,24 +1124,9 @@ if (blinkActive && e.key.toLowerCase() === "b") {
     placeStructure(e.key);
   }
 if (trapmasterActive && e.key.toLowerCase() === 't') {
-  const now = Date.now();
-  if (now - lastTrapTime >= 20000) {
-    const { x, y } = playerPos;
-    const trapKey = `${x}_${y}`;
-    if (grid[y][x] === "") {
-      grid[y][x] = "🪤";
-      lastTrapTime = now;
-
-      await setDoc(doc(db, `games/${gameId}/traps/${trapKey}`), {
-        x,
-        y,
-        placedAt: now
-      });
-
-      renderGrid();
-    }
-  }
+  placeTrap();
 }
+
 
 });
 
