@@ -998,68 +998,6 @@ grid[25][16] = "🧱";
 renderGrid();
 
 // Start cheese spawn and turret attack globally
-  if (isHost) {
-setInterval(spawnCheese, 10000);
-setInterval(turretAttack, 1500);
-  }
-if (isHost) {
-  setInterval(() => {
-  ratPower++;
-  console.log(`🐀 Rat Power increased! New base health: ${ratPower}`);
-}, 120000); // 2 minutes = 120,000 ms 
-}
-
-  if (isHost) {
-setInterval(() => {
-  if (!gameStarted) return;
-
-  // 🔍 Find a Phoenix Cheese tile
-  let phoenixSpot = null;
-  for (let y = 0; y < gridSize; y++) {
-    for (let x = 0; x < gridSize; x++) {
-      if (grid[y][x] === "🐦‍🔥") {
-        phoenixSpot = { x, y };
-        break;
-      }
-    }
-    if (phoenixSpot) break;
-  }
-
-  if (!phoenixSpot) return; // No Phoenix Cheese exists
-
-  // 🔍 Find a dead player
-  for (const [name, p] of Object.entries(players)) {
-    if (p.alive === false) {
-      console.log(`🔥 Phoenix Cheese revived ${name} at (${phoenixSpot.x}, ${phoenixSpot.y})`);
-
-      // Revive the player and move them to the Phoenix
-      updateDoc(doc(db, `games/${gameId}/players/${name}`), {
-        alive: true,
-        x: phoenixSpot.x,
-        y: phoenixSpot.y
-      });
-
-      // Destroy the Phoenix Cheese
-      const key = `${phoenixSpot.x}_${phoenixSpot.y}`;
-      grid[phoenixSpot.y][phoenixSpot.x] = "";
-      delete structureHealth[key];
-      setDoc(doc(db, `games/${gameId}/structures/${key}`), {}); // clear in Firestore
-
-      // Visual flash
-      const cell = document.getElementById(`cell-${phoenixSpot.x}-${phoenixSpot.y}`);
-      if (cell) {
-        cell.style.backgroundColor = "#ff4d4d";
-        setTimeout(() => {
-          cell.style.backgroundColor = "#c8f7c5";
-        }, 300);
-      }
-
-      renderGrid();
-      break; // Only revive one player per check
-    }
-  }
-}, 2000); // Check every 2 seconds
-  }
 
   setInterval(() => {
   if (!gameStarted) return;
@@ -1160,37 +1098,97 @@ setInterval(() => {
 }, 180000); // every 3 minutes
 
 
-if (isHost) {
 setInterval(() => {
-  if (!gameStarted || catPower <= 0) return;
+  if (!fleaMasterActive || !isAlive) return;
 
-  const centerX = Math.floor(gridSize / 2);
-  const centerY = Math.floor(gridSize / 2);
-  const numToSpawn = Math.ceil(catPower / 2);
+  // 🐞 Spawn up to 2 fleas near the player
   const offsets = [
-    { x: 0, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 },
-    { x: 0, y: 1 }, { x: 0, y: -1 }, { x: 1, y: 1 },
-    { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }
+    { dx: 0, dy: 0 }, { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
+    { dx: 0, dy: 1 }, { dx: 0, dy: -1 }
   ];
 
   let spawned = 0;
-  for (let i = 0; i < offsets.length && spawned < numToSpawn; i++) {
-    const ox = centerX + offsets[i].x;
-    const oy = centerY + offsets[i].y;
+
+  for (let offset of offsets) {
+    const fx = playerPos.x + offset.dx;
+    const fy = playerPos.y + offset.dy;
 
     if (
-      ox >= 0 && ox < gridSize &&
-      oy >= 0 && oy < gridSize &&
-      !termites.some(t => t.x === ox && t.y === oy)
+      fx >= 0 && fx < gridSize &&
+      fy >= 0 && fy < gridSize &&
+      !fleas.some(f => f.x === fx && f.y === fy)
     ) {
-      termites.push({ x: ox, y: oy });
+      fleas.push({ x: fx, y: fy, lifetime: 15 });
       spawned++;
+      if (spawned >= 2) break; // 🛑 Stop after 2 fleas
     }
   }
 
-  console.log(`🐛 Spawned ${spawned} termites in center`);
-}, 60000); }
-  if (isHost) {
+  renderGrid();
+}, fleaSpawnCooldown);
+
+
+// ✅ Wrap host logic in an async function
+(async () => {
+  const cleanUsername = username.trim().toLowerCase();
+  const gameRef = doc(db, `games/${gameId}`);
+
+  const docSnap = await getDoc(gameRef);
+  const data = docSnap.exists() ? docSnap.data() : {};
+  if (!data.host) {
+    await setDoc(gameRef, { host: cleanUsername }, { merge: true });
+  }
+
+  const updatedSnap = await getDoc(gameRef);
+  const host = updatedSnap.data().host;
+
+ if (host === cleanUsername) {
+  isHost = true;
+  console.log("👑 You are host. Starting cat AI.");
+  gameStarted = true;
+
+  // Start initial cat behavior loop
+  startCatBehaviorLoop();
+
+  setInterval(async () => {
+  if (gameStarted) {
+    catPower++;
+
+    const playerCount = Object.keys(players).length;
+    catHealth += 15 * playerCount;
+
+    console.log(`🔋 Cat power increased to ${catPower} | Health +${15 * playerCount} → ${catHealth}`);
+
+    await updateDoc(doc(db, `games/${gameId}`), {
+      catPower,
+      cat: { ...catPos, health: catHealth }
+    });
+
+    startCatBehaviorLoop();
+  }
+}, 20000);
+  setInterval(() => {
+  if (!wallMasterActive || !isAlive) return;
+
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const tx = playerPos.x + dx;
+      const ty = playerPos.y + dy;
+      const key = `${tx}_${ty}`;
+      if (
+        tx >= 0 && tx < gridSize &&
+        ty >= 0 && ty < gridSize &&
+        (grid[ty][tx] === "🧱" || grid[ty][tx] === "💎") &&
+        structureHealth[key] < 100
+      ) {
+        structureHealth[key] += 15;
+        updateDoc(doc(db, `games/${gameId}/structures/${key}`), {
+          health: structureHealth[key]
+        });
+      }
+    }
+  }
+}, 1000);
   setInterval(() => {
   for (let i = termites.length - 1; i >= 0; i--) {
     let termite = termites[i];
@@ -1234,40 +1232,91 @@ setInterval(() => {
   }
 
   renderGrid();
-}, 400); }
-
+}, 400); 
 setInterval(() => {
-  if (!fleaMasterActive || !isAlive) return;
+  if (!gameStarted) return;
 
-  // 🐞 Spawn up to 2 fleas near the player
+  // 🔍 Find a Phoenix Cheese tile
+  let phoenixSpot = null;
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      if (grid[y][x] === "🐦‍🔥") {
+        phoenixSpot = { x, y };
+        break;
+      }
+    }
+    if (phoenixSpot) break;
+  }
+
+  if (!phoenixSpot) return; // No Phoenix Cheese exists
+
+  // 🔍 Find a dead player
+  for (const [name, p] of Object.entries(players)) {
+    if (p.alive === false) {
+      console.log(`🔥 Phoenix Cheese revived ${name} at (${phoenixSpot.x}, ${phoenixSpot.y})`);
+
+      // Revive the player and move them to the Phoenix
+      updateDoc(doc(db, `games/${gameId}/players/${name}`), {
+        alive: true,
+        x: phoenixSpot.x,
+        y: phoenixSpot.y
+      });
+
+      // Destroy the Phoenix Cheese
+      const key = `${phoenixSpot.x}_${phoenixSpot.y}`;
+      grid[phoenixSpot.y][phoenixSpot.x] = "";
+      delete structureHealth[key];
+      setDoc(doc(db, `games/${gameId}/structures/${key}`), {}); // clear in Firestore
+
+      // Visual flash
+      const cell = document.getElementById(`cell-${phoenixSpot.x}-${phoenixSpot.y}`);
+      if (cell) {
+        cell.style.backgroundColor = "#ff4d4d";
+        setTimeout(() => {
+          cell.style.backgroundColor = "#c8f7c5";
+        }, 300);
+      }
+
+      renderGrid();
+      break; // Only revive one player per check
+    }
+  }
+}, 2000); // Check every 2 seconds
+setInterval(spawnCheese, 10000);
+setInterval(turretAttack, 1500);
+  setInterval(() => {
+  ratPower++;
+  console.log(`🐀 Rat Power increased! New base health: ${ratPower}`);
+}, 120000); // 2 minutes = 120,000 ms 
+setInterval(() => {
+  if (!gameStarted || catPower <= 0) return;
+
+  const centerX = Math.floor(gridSize / 2);
+  const centerY = Math.floor(gridSize / 2);
+  const numToSpawn = Math.ceil(catPower / 2);
   const offsets = [
-    { dx: 0, dy: 0 }, { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
-    { dx: 0, dy: 1 }, { dx: 0, dy: -1 }
+    { x: 0, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 },
+    { x: 0, y: 1 }, { x: 0, y: -1 }, { x: 1, y: 1 },
+    { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }
   ];
 
   let spawned = 0;
-
-  for (let offset of offsets) {
-    const fx = playerPos.x + offset.dx;
-    const fy = playerPos.y + offset.dy;
+  for (let i = 0; i < offsets.length && spawned < numToSpawn; i++) {
+    const ox = centerX + offsets[i].x;
+    const oy = centerY + offsets[i].y;
 
     if (
-      fx >= 0 && fx < gridSize &&
-      fy >= 0 && fy < gridSize &&
-      !fleas.some(f => f.x === fx && f.y === fy)
+      ox >= 0 && ox < gridSize &&
+      oy >= 0 && oy < gridSize &&
+      !termites.some(t => t.x === ox && t.y === oy)
     ) {
-      fleas.push({ x: fx, y: fy, lifetime: 15 });
+      termites.push({ x: ox, y: oy });
       spawned++;
-      if (spawned >= 2) break; // 🛑 Stop after 2 fleas
     }
   }
 
-  renderGrid();
-}, fleaSpawnCooldown);
-
-
-
-if (isHost) {  // 🐀 Summon Rats every 2 minutes based on catPower
+  console.log(`🐛 Spawned ${spawned} termites in center`);
+}, 60000); 
 setInterval(() => {
   if (!gameStarted || catPower <= 0) return;
 
@@ -1296,9 +1345,7 @@ setInterval(() => {
   }
 
   console.log(`🐀 ${spawned} rats spawned (Power Level: ${catPower})`);
-}, 40000); }
-
-if (isHost) {
+}, 40000); 
   setInterval(() => {
   for (let rat of rats) {
     if (rat.health <= 0) continue;
@@ -1369,36 +1416,7 @@ if (isHost) {
   rats = rats.filter(r => r.health > 0);
 
   renderGrid();
-}, 400); }
-
-  if (isHost) {
-  setInterval(() => {
-  if (!wallMasterActive || !isAlive) return;
-
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      const tx = playerPos.x + dx;
-      const ty = playerPos.y + dy;
-      const key = `${tx}_${ty}`;
-      if (
-        tx >= 0 && tx < gridSize &&
-        ty >= 0 && ty < gridSize &&
-        (grid[ty][tx] === "🧱" || grid[ty][tx] === "💎") &&
-        structureHealth[key] < 100
-      ) {
-        structureHealth[key] += 15;
-        updateDoc(doc(db, `games/${gameId}/structures/${key}`), {
-          health: structureHealth[key]
-        });
-      }
-    }
-  }
-}, 1000);}
-
-
-
-
-if (isHost) {
+}, 400); 
 setInterval(() => {
   for (let y = 0; y < gridSize; y++) {
     for (let x = 0; x < gridSize; x++) {
@@ -1451,131 +1469,7 @@ setInterval(() => {
       }
     }
   }
-}, 4000);}
-
-if (isHost) {
-setInterval(() => {
-  for (let flea of fleas) {
-    let target = null;
-    let minDist = Infinity;
-
-    // 🔍 Check distance to cat
-    const distToCat = Math.abs(catPos.x - flea.x) + Math.abs(catPos.y - flea.y);
-    if (distToCat < minDist) {
-      minDist = distToCat;
-      target = { x: catPos.x, y: catPos.y, type: "cat" };
-    }
-
-    // 🔍 Check distances to all rats
-    for (let rat of rats) {
-      const dist = Math.abs(rat.x - flea.x) + Math.abs(rat.y - flea.y);
-      if (dist < minDist && rat.health > 0) {
-        minDist = dist;
-        target = { x: rat.x, y: rat.y, type: "rat", rat };
-      }
-    }
-
-    // 🚶 Move toward the closest target
-    if (target) {
-      let dx = 0, dy = 0;
-      const xDiff = target.x - flea.x;
-      const yDiff = target.y - flea.y;
-
-      if (Math.abs(xDiff) > Math.abs(yDiff)) {
-        dx = Math.sign(xDiff);
-      } else {
-        dy = Math.sign(yDiff);
-      }
-
-      const newX = flea.x + dx;
-      const newY = flea.y + dy;
-
-      if (newX >= 0 && newX < gridSize && newY >= 0 && newY < gridSize) {
-        flea.x = newX;
-        flea.y = newY;
-      }
-
-      // 💥 Flea attack logic
-      if (flea.x === target.x && flea.y === target.y) {
-        if (target.type === "cat") {
-          catHealth -= 1;
-          flea.lifetime = 0;
-
-          updateDoc(doc(db, `games/${gameId}`), {
-            cat: { ...catPos, health: catHealth }
-          });
-
-          if (catHealth <= 0) {
-            document.getElementById("status").textContent = "🎉 Mice win!";
-          }
-
-        } else if (target.type === "rat" && target.rat) {
-          target.rat.health -= 5; // 🐞 Deal 5 damage
-          flea.lifetime = 0;
-
-          if (target.rat.health <= 0) {
-            const index = rats.indexOf(target.rat);
-            if (index !== -1) rats.splice(index, 1);
-          }
-        }
-      }
-    }
-
-    // ⏳ Decrement flea lifetime
-    flea.lifetime--;
-  }
-
-  // 🧹 Remove expired fleas
-  for (let i = fleas.length - 1; i >= 0; i--) {
-    if (fleas[i].lifetime <= 0) fleas.splice(i, 1);
-  }
-
-  renderGrid();
-}, 400); }
-
-
-
-
-// ✅ Wrap host logic in an async function
-(async () => {
-  const cleanUsername = username.trim().toLowerCase();
-  const gameRef = doc(db, `games/${gameId}`);
-
-  const docSnap = await getDoc(gameRef);
-  const data = docSnap.exists() ? docSnap.data() : {};
-  if (!data.host) {
-    await setDoc(gameRef, { host: cleanUsername }, { merge: true });
-  }
-
-  const updatedSnap = await getDoc(gameRef);
-  const host = updatedSnap.data().host;
-
- if (host === cleanUsername) {
-  isHost = true;
-  console.log("👑 You are host. Starting cat AI.");
-  gameStarted = true;
-
-  // Start initial cat behavior loop
-  startCatBehaviorLoop();
-
-  setInterval(async () => {
-  if (gameStarted) {
-    catPower++;
-
-    const playerCount = Object.keys(players).length;
-    catHealth += 15 * playerCount;
-
-    console.log(`🔋 Cat power increased to ${catPower} | Health +${15 * playerCount} → ${catHealth}`);
-
-    await updateDoc(doc(db, `games/${gameId}`), {
-      catPower,
-      cat: { ...catPos, health: catHealth }
-    });
-
-    startCatBehaviorLoop();
-  }
-}, 20000);
-
+}, 4000);
 }
 })();
 
