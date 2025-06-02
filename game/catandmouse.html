@@ -1168,6 +1168,59 @@ setInterval(() => {
   }
 }, 20000);
    setInterval(() => {
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      if (grid[y][x] === "🪳") {
+        // 🔍 Count nearby cheese beacons
+        let beaconBonus = 0;
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (
+              nx >= 0 && nx < gridSize &&
+              ny >= 0 && ny < gridSize &&
+              grid[ny][nx] === "🗼"
+            ) {
+              beaconBonus++;
+            }
+          }
+        }
+
+        // 💥 Total fleas to spawn
+        const spawnCount = 1 + beaconBonus;
+
+        for (let i = 0; i < spawnCount; i++) {
+          // 🌀 Try to spawn in a random nearby offset from the nest
+          const offsets = [
+            { dx: 0, dy: 0 },
+            { dx: 1, dy: 0 },
+            { dx: -1, dy: 0 },
+            { dx: 0, dy: 1 },
+            { dx: 0, dy: -1 },
+            { dx: 1, dy: 1 },
+            { dx: -1, dy: -1 },
+            { dx: 1, dy: -1 },
+            { dx: -1, dy: 1 }
+          ];
+
+          const offset = offsets[Math.floor(Math.random() * offsets.length)];
+          const fx = x + offset.dx;
+          const fy = y + offset.dy;
+
+          if (
+            fx >= 0 && fx < gridSize &&
+            fy >= 0 && fy < gridSize &&
+            !fleas.some(f => f.x === fx && f.y === fy) // no overlap
+          ) {
+            fleas.push({ x: fx, y: fy, lifetime: 15 });
+          }
+        }
+      }
+    }
+  }
+}, 4000);
+   setInterval(() => {
   for (let flea of fleas) {
     let target = null;
     let minDist = Infinity;
@@ -1488,59 +1541,6 @@ setInterval(() => {
 
   renderGrid();
 }, 400); 
-setInterval(() => {
-  for (let y = 0; y < gridSize; y++) {
-    for (let x = 0; x < gridSize; x++) {
-      if (grid[y][x] === "🪳") {
-        // 🔍 Count nearby cheese beacons
-        let beaconBonus = 0;
-        for (let dy = -2; dy <= 2; dy++) {
-          for (let dx = -2; dx <= 2; dx++) {
-            const nx = x + dx;
-            const ny = y + dy;
-            if (
-              nx >= 0 && nx < gridSize &&
-              ny >= 0 && ny < gridSize &&
-              grid[ny][nx] === "🗼"
-            ) {
-              beaconBonus++;
-            }
-          }
-        }
-
-        // 💥 Total fleas to spawn
-        const spawnCount = 1 + beaconBonus;
-
-        for (let i = 0; i < spawnCount; i++) {
-          // 🌀 Try to spawn in a random nearby offset from the nest
-          const offsets = [
-            { dx: 0, dy: 0 },
-            { dx: 1, dy: 0 },
-            { dx: -1, dy: 0 },
-            { dx: 0, dy: 1 },
-            { dx: 0, dy: -1 },
-            { dx: 1, dy: 1 },
-            { dx: -1, dy: -1 },
-            { dx: 1, dy: -1 },
-            { dx: -1, dy: 1 }
-          ];
-
-          const offset = offsets[Math.floor(Math.random() * offsets.length)];
-          const fx = x + offset.dx;
-          const fy = y + offset.dy;
-
-          if (
-            fx >= 0 && fx < gridSize &&
-            fy >= 0 && fy < gridSize &&
-            !fleas.some(f => f.x === fx && f.y === fy) // no overlap
-          ) {
-            fleas.push({ x: fx, y: fy, lifetime: 15 });
-          }
-        }
-      }
-    }
-  }
-}, 4000);
 }
 })();
 
