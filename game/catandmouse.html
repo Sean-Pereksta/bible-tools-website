@@ -1126,6 +1126,7 @@ setInterval(() => {
 
   renderGrid();
 }, fleaSpawnCooldown);
+  setInterval(spawnCheese, 10000);
 
 
 // ✅ Wrap host logic in an async function
@@ -1406,7 +1407,6 @@ setInterval(() => {
     }
   }
 }, 2000); // Check every 2 seconds
-setInterval(spawnCheese, 10000);
 setInterval(turretAttack, 1500);
   setInterval(() => {
   ratPower++;
