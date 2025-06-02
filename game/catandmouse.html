@@ -1167,6 +1167,77 @@ setInterval(() => {
     startCatBehaviorLoop();
   }
 }, 20000);
+   setInterval(() => {
+  for (let flea of fleas) {
+    let target = null;
+    let minDist = Infinity;
+
+    // 🔍 Find nearest target: Cat or Rat
+    const distToCat = Math.abs(catPos.x - flea.x) + Math.abs(catPos.y - flea.y);
+    if (distToCat < minDist) {
+      minDist = distToCat;
+      target = { x: catPos.x, y: catPos.y, type: "cat" };
+    }
+
+    for (let rat of rats) {
+      const dist = Math.abs(rat.x - flea.x) + Math.abs(rat.y - flea.y);
+      if (dist < minDist && rat.health > 0) {
+        minDist = dist;
+        target = { x: rat.x, y: rat.y, type: "rat", rat };
+      }
+    }
+
+    // 🚶 Move toward the target
+    if (target) {
+      let dx = 0, dy = 0;
+      const xDiff = target.x - flea.x;
+      const yDiff = target.y - flea.y;
+
+      if (Math.abs(xDiff) > Math.abs(yDiff)) {
+        dx = Math.sign(xDiff);
+      } else {
+        dy = Math.sign(yDiff);
+      }
+
+      const newX = flea.x + dx;
+      const newY = flea.y + dy;
+
+      if (newX >= 0 && newX < gridSize && newY >= 0 && newY < gridSize) {
+        flea.x = newX;
+        flea.y = newY;
+      }
+
+      // 💥 Attack
+      if (flea.x === target.x && flea.y === target.y) {
+        if (target.type === "cat") {
+          catHealth -= 1;
+          flea.lifetime = 0;
+          updateDoc(doc(db, `games/${gameId}`), {
+            cat: { ...catPos, health: catHealth }
+          });
+        } else if (target.type === "rat" && target.rat) {
+          target.rat.health -= 5;
+          flea.lifetime = 0;
+
+          if (target.rat.health <= 0) {
+            const index = rats.indexOf(target.rat);
+            if (index !== -1) rats.splice(index, 1);
+          }
+        }
+      }
+    }
+
+    flea.lifetime--;
+  }
+
+  // 🧹 Clean up dead fleas
+  for (let i = fleas.length - 1; i >= 0; i--) {
+    if (fleas[i].lifetime <= 0) fleas.splice(i, 1);
+  }
+
+  renderGrid();
+}, 400);
+
   setInterval(() => {
   if (!wallMasterActive || !isAlive) return;
 
