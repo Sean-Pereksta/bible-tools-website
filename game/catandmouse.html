@@ -1306,9 +1306,9 @@ setInterval(() => {
         tx >= 0 && tx < gridSize &&
         ty >= 0 && ty < gridSize &&
         (grid[ty][tx] === "🧱" || grid[ty][tx] === "💎") &&
-        structureHealth[key] < 100
+        structureHealth[key] < 80
       ) {
-        structureHealth[key] += 15;
+        structureHealth[key] += 4;
         updateDoc(doc(db, `games/${gameId}/structures/${key}`), {
           health: structureHealth[key]
         });
