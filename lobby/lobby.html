@@ -60,14 +60,17 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
- let username = autoUsername ? autoUsername.trim().toLowerCase() : "";
-  const urlParams = new URLSearchParams(window.location.search);
+const urlParams = new URLSearchParams(window.location.search);
 const autoUsername = urlParams.get("username");
-  if (username) {
+
+let username = autoUsername ? autoUsername.trim().toLowerCase() : "";
+let currentLobbyId = null;
+let isHost = false;
+
+if (username) {
   autoLogin(username);
 }
-  let currentLobbyId = null;
-  let isHost = false;
+
 
   async function login() {
     username = document.getElementById("username").value.trim();
