@@ -70,6 +70,10 @@
     🐦‍🔥 Phoenix Cheese (7, 🧀40)
   </p>
 </div>
+  <div id="returnButton" style="display:none; margin-top: 20px;">
+  <button onclick="returnToLobby()" style="padding: 10px 20px; font-size: 16px;">🔙 Return to Lobby</button>
+</div>
+
 
 <!-- 🔲 Main Game + Sidebar Layout -->
 <div style="display: flex; justify-content: center; align-items: flex-start; gap: 20px;">
@@ -405,6 +409,10 @@ function movePlayer(dx, dy) {
   renderGrid();
 }
 
+  function returnToLobby() {
+  window.location.href = `/lobby/lobby.html?username=${encodeURIComponent(username)}`;
+}
+
 function updateCatHealthBar() {
   const bar = document.getElementById("catHealthFill");
   const text = document.getElementById("catHealthText");
@@ -606,6 +614,7 @@ function turretAttack() {
           });
           if (catHealth <= 0) {
             document.getElementById("status").textContent = "🎉 Mice win!";
+            document.getElementById("returnButton").style.display = "block";
           }
           attacked = true;
         }
@@ -1136,6 +1145,7 @@ renderGrid();
   // 3. If no players and no phoenixes → Game Over
   if (!anyAlive && !phoenixExists) {
     document.getElementById("status").textContent = "💀 All mice are dead. Game Over!";
+    document.getElementById("returnButton").style.display = "block";
     document.getElementById("status").style.color = "red";
     document.getElementById("status").style.fontSize = "24px";
     document.getElementById("status").style.fontWeight = "bold";
