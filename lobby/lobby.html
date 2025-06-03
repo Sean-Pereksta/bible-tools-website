@@ -60,7 +60,12 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  let username = "";
+ let username = autoUsername ? autoUsername.trim().toLowerCase() : "";
+  const urlParams = new URLSearchParams(window.location.search);
+const autoUsername = urlParams.get("username");
+  if (username) {
+  autoLogin(username);
+}
   let currentLobbyId = null;
   let isHost = false;
 
@@ -151,6 +156,22 @@ async function loadLeaderboard() {
     leaderboardDiv.appendChild(div);
   });
 }
+  async function autoLogin(name) {
+  const userRef = doc(db, "users", name);
+  const userSnap = await getDoc(userRef);
+
+  if (!userSnap.exists()) {
+    document.getElementById("error").innerText = "❌ Username not found in system.";
+    return;
+  }
+
+  document.getElementById("loginForm").style.display = "none";
+  document.getElementById("lobbyInterface").style.display = "block";
+  loadLobbies();
+  loadLeaderboard();
+  setInterval(loadLobbies, 5000);
+}
+
  function listenToLobby() {
   const ref = doc(db, "lobbies", currentLobbyId);
   onSnapshot(ref, async (docSnap) => {
