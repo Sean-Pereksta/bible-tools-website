@@ -940,14 +940,25 @@ async function listenToGame() {
   });
 
 onSnapshot(collection(db, `games/${gameId}/traps`), (snap) => {
-  traps = []; // clear and rebuild the traps list
+  // 🧹 Clear all existing trap symbols from grid
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      if (grid[y][x] === "🪤") {
+        grid[y][x] = ""; // ✅ Clear old traps
+      }
+    }
+  }
+
+  traps = []; // clear and rebuild trap list
   for (let docSnap of snap.docs) {
     const data = docSnap.data();
     traps.push({ x: data.x, y: data.y, placedAt: data.placedAt });
     grid[data.y][data.x] = "🪤";
   }
+
   renderGrid();
 });
+
 
 
   onSnapshot(collection(db, `games/${gameId}/players`), (snap) => {
