@@ -409,9 +409,16 @@ function movePlayer(dx, dy) {
   renderGrid();
 }
 
-  function returnToLobby() {
-  window.location.href = `/lobby/lobby.html?username=${encodeURIComponent(username)}`;
+function returnToLobby() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const username = urlParams.get("username") || "";
+  const safeUsername = encodeURIComponent(username.trim().toLowerCase());
+  window.location.href = `/lobby/lobby.html?username=${safeUsername}`;
 }
+
+// ✅ Make it visible to inline HTML onclick
+window.returnToLobby = returnToLobby;
+
 
 function updateCatHealthBar() {
   const bar = document.getElementById("catHealthFill");
