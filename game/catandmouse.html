@@ -1000,16 +1000,15 @@ window.addEventListener("keydown", (e) => {
   // Prevent arrow key scrolling
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
 
-  // SPACE toggles upgrade menu
+  // Toggle upgrade menu
   if (e.key === " ") {
     upgradeMenuOpen = !upgradeMenuOpen;
     document.getElementById("upgradeMenu").style.display = upgradeMenuOpen ? "block" : "none";
     return;
   }
 
-  // If upgrade menu is open, use number keys for upgrades instead of building
-  if (upgradeMenuOpen) {
-  if (["1", "2", "3", "4", "5", "6"].includes(e.key) && advancementPoints > 0) {
+  // 💡 Upgrade selection ONLY when menu is open
+  if (upgradeMenuOpen && ["1", "2", "3", "4", "5", "6"].includes(e.key) && advancementPoints > 0) {
     let upgrade = "";
     if (e.key === "1") upgrade = "Speedster";
     else if (e.key === "2") upgrade = "Scavenger";
@@ -1017,7 +1016,6 @@ window.addEventListener("keydown", (e) => {
     else if (e.key === "4") upgrade = "Wall Master";
     else if (e.key === "5") upgrade = "Trapmaster";
     else if (e.key === "6") upgrade = "Blink";
-
 
     if (!selectedUpgrades.includes(upgrade)) {
       selectedUpgrades.push(upgrade);
@@ -1027,119 +1025,82 @@ window.addEventListener("keydown", (e) => {
       document.getElementById("chosenUpgrades").textContent = selectedUpgrades.join(", ");
       console.log(`🆙 Chose upgrade: ${upgrade}`);
 
-      // Apply effects
-      if (upgrade === "Speedster") {
-        moveCooldown = 50;
-      }
+      // Effects
+      if (upgrade === "Speedster") moveCooldown = 50;
+      if (upgrade === "Scavenger") cheesePickupBonus = 7;
+      if (upgrade === "Flea Master") fleaMasterActive = true;
+      if (upgrade === "Wall Master") wallMasterActive = true;
+      if (upgrade === "Trapmaster") trapmasterActive = true;
+      if (upgrade === "Blink") blinkActive = true;
+    }
+    return;
+  }
 
-      if (upgrade === "Scavenger") {
-        cheesePickupBonus = 7; // add to cheese per pickup
-      }
-
-      if (upgrade === "Flea Master") {
-        fleaMasterActive = true;
-      }
-
-      if (upgrade === "Wall Master") {
-        wallMasterActive = true; // implement later if needed
-      }
-      if (upgrade === "Trapmaster") {
-        trapmasterActive = true;
-      }
-      if (upgrade === "Blink") {
-        blinkActive = true;
-      }
-
+  // ✅ Movement (always allowed)
+  if (canMove) {
+    switch (e.key) {
+      case "ArrowUp": lastDirection = { dx: 0, dy: -1 }; movePlayer(0, -1); triggerMoveCooldown(); break;
+      case "ArrowDown": lastDirection = { dx: 0, dy: 1 }; movePlayer(0, 1); triggerMoveCooldown(); break;
+      case "ArrowLeft": lastDirection = { dx: -1, dy: 0 }; movePlayer(-1, 0); triggerMoveCooldown(); break;
+      case "ArrowRight": lastDirection = { dx: 1, dy: 0 }; movePlayer(1, 0); triggerMoveCooldown(); break;
     }
   }
-  return;
-}
 
+  // 🌀 Blink (always works if active)
+  if (blinkActive && e.key.toLowerCase() === "b") {
+    const now = Date.now();
+    if (now - lastBlinkTime >= 8000) {
+      const dx = lastDirection.dx;
+      const dy = lastDirection.dy;
+      const nx = playerPos.x + dx * 5;
+      const ny = playerPos.y + dy * 5;
 
-  // Movement (only if menu is not open)
- if (canMove) {
-  switch (e.key) {
-    case "ArrowUp":
-      lastDirection = { dx: 0, dy: -1 };
-      movePlayer(0, -1);
-      triggerMoveCooldown();
-      break;
-    case "ArrowDown":
-      lastDirection = { dx: 0, dy: 1 };
-      movePlayer(0, 1);
-      triggerMoveCooldown();
-      break;
-    case "ArrowLeft":
-      lastDirection = { dx: -1, dy: 0 };
-      movePlayer(-1, 0);
-      triggerMoveCooldown();
-      break;
-    case "ArrowRight":
-      lastDirection = { dx: 1, dy: 0 };
-      movePlayer(1, 0);
-      triggerMoveCooldown();
-      break;
-  }
-}
+      if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize && grid[ny][nx] === "") {
+        playerPos = { x: nx, y: ny };
+        lastBlinkTime = now;
+        console.log("🌀 Blink activated!");
+        savePosition();
+        renderGrid();
 
-// 🌀 Blink (press B to teleport 3 tiles in last direction)
-if (blinkActive && e.key.toLowerCase() === "b") {
-  const now = Date.now();
-  if (now - lastBlinkTime >= 8000) {
-    const dx = lastDirection.dx;
-    const dy = lastDirection.dy;
-    const nx = playerPos.x + dx * 5;
-    const ny = playerPos.y + dy * 5;
-
-    if (
-      nx >= 0 && nx < gridSize &&
-      ny >= 0 && ny < gridSize &&
-      grid[ny][nx] === ""
-    ) {
-      playerPos = { x: nx, y: ny };
-      lastBlinkTime = now;
-      console.log("🌀 Blink activated!");
-      savePosition();
-      renderGrid();
-
-      // Optional flash effect
-      const cell = document.getElementById(`cell-${nx}-${ny}`);
-      if (cell) {
-        cell.style.backgroundColor = "#b3f0ff";
-        setTimeout(() => {
-          cell.style.backgroundColor = "#c8f7c5";
-        }, 300);
+        const cell = document.getElementById(`cell-${nx}-${ny}`);
+        if (cell) {
+          cell.style.backgroundColor = "#b3f0ff";
+          setTimeout(() => {
+            cell.style.backgroundColor = "#c8f7c5";
+          }, 300);
+        }
+      } else {
+        console.log("🚫 Blink failed – tile blocked or out of bounds.");
       }
     } else {
-      console.log("🚫 Blink failed – target tile blocked or out of bounds.");
+      console.log("⌛ Blink on cooldown");
     }
-  } else {
-    console.log("⌛ Blink on cooldown");
-  }
-}
-
-
-  // Build selection (if menu is not open)
-  switch (e.key) {
-    case "1": selectedBuild = 1; document.getElementById("buildType").textContent = "Wall 🧱 (Cost: 1)"; break;
-    case "2": selectedBuild = 2; document.getElementById("buildType").textContent = "Turret 🔫 (Cost: 3)"; break;
-    case "3": selectedBuild = 3; document.getElementById("buildType").textContent = "Flea Nest 🪳 (Cost: 5)"; break;
-    case "4": selectedBuild = 4; document.getElementById("buildType").textContent = "Cheese Generator 🏭 (Cost: 4)"; break;
-    case "5": selectedBuild = 5; document.getElementById("buildType").textContent = "Super Wall 💎 (Cost: 6)"; break;
-    case "6": selectedBuild = 6; document.getElementById("buildType").textContent = "Cheese Beacon 🗼 (Cost: 24)"; break;
-    case "7": selectedBuild = 7; document.getElementById("buildType").textContent = "Phoenix Cheese 🐦‍🔥 (Cost: 40)"; break;
   }
 
-  // Build direction
+  // ✅ Trap placement (only if unlocked, always allowed regardless of menu state)
+  if (trapmasterActive && e.key.toLowerCase() === "t") {
+    placeTrap();
+  }
+
+  // ✅ Structure selection (ONLY if upgrade menu is closed)
+  if (!upgradeMenuOpen) {
+    switch (e.key) {
+      case "1": selectedBuild = 1; document.getElementById("buildType").textContent = "Wall 🧱 (Cost: 1)"; break;
+      case "2": selectedBuild = 2; document.getElementById("buildType").textContent = "Turret 🔫 (Cost: 3)"; break;
+      case "3": selectedBuild = 3; document.getElementById("buildType").textContent = "Flea Nest 🪳 (Cost: 5)"; break;
+      case "4": selectedBuild = 4; document.getElementById("buildType").textContent = "Cheese Generator 🏭 (Cost: 4)"; break;
+      case "5": selectedBuild = 5; document.getElementById("buildType").textContent = "Super Wall 💎 (Cost: 6)"; break;
+      case "6": selectedBuild = 6; document.getElementById("buildType").textContent = "Cheese Beacon 🗼 (Cost: 24)"; break;
+      case "7": selectedBuild = 7; document.getElementById("buildType").textContent = "Phoenix Cheese 🐦‍🔥 (Cost: 40)"; break;
+    }
+  }
+
+  // ✅ Build placement (always allowed)
   if (["w", "a", "s", "d"].includes(e.key)) {
     placeStructure(e.key);
   }
-if (trapmasterActive && e.key.toLowerCase() === 't') {
-  placeTrap();
-}
-
-
 });
+
 
 
 
