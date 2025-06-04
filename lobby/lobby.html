@@ -160,6 +160,7 @@ async function loadLeaderboard() {
   });
 }
   async function autoLogin(name) {
+    console.log("🔐 Attempting auto-login with username:", name);
   const userRef = doc(db, "users", name);
   const userSnap = await getDoc(userRef);
 
