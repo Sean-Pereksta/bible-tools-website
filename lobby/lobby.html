@@ -63,7 +63,7 @@
 const urlParams = new URLSearchParams(window.location.search);
 const autoUsername = urlParams.get("username");
 
-let username = autoUsername ? autoUsername.trim().toLowerCase() : "";
+let username = autoUsername ? autoUsername.trim() : "";
 let currentLobbyId = null;
 let isHost = false;
 
