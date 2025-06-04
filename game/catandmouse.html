@@ -413,7 +413,7 @@ function returnToLobby() {
   const urlParams = new URLSearchParams(window.location.search);
   const username = urlParams.get("username") || "";
   const safeUsername = encodeURIComponent(username.trim().toLowerCase());
-  window.location.href = `/lobby/lobby.html?username=${safeUsername}`;
+  window.location.href = `https://sean-pereksta.github.io/bible-tools-website/lobby/lobby.html?username=${safeUsername}`;
 }
 
 // ✅ Make it visible to inline HTML onclick
