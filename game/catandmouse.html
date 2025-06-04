@@ -412,7 +412,7 @@ function movePlayer(dx, dy) {
 function returnToLobby() {
   const urlParams = new URLSearchParams(window.location.search);
   const username = urlParams.get("username") || "";
-  const safeUsername = encodeURIComponent(username.trim().toLowerCase());
+  const safeUsername = encodeURIComponent(username.trim()); // ✅ no toLowerCase()
   window.location.href = `https://sean-pereksta.github.io/bible-tools-website/lobby/lobby.html?username=${safeUsername}`;
 }
 
